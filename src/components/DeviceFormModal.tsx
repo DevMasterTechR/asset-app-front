@@ -3,6 +3,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { DateTimePicker } from '@/components/ui/DateTimePicker';
+
+
 import {
   Dialog,
   DialogContent,
@@ -273,35 +276,31 @@ export default function DeviceFormModal({
             {/* Fecha de compra */}
             <div className="space-y-2">
               <Label htmlFor="purchaseDate">Fecha de Compra</Label>
-              <Input
-                id="purchaseDate"
-                type="datetime-local"
+              <DateTimePicker
                 value={formData.purchaseDate}
-                onChange={(e) => handleChange('purchaseDate', e.target.value)}
+                onChange={(value) => handleChange('purchaseDate', value)}
               />
             </div>
 
             {/* Fecha de entrega */}
             <div className="space-y-2">
               <Label htmlFor="deliveryDate">Fecha de Entrega</Label>
-              <Input
-                id="deliveryDate"
-                type="datetime-local"
+              <DateTimePicker
                 value={formData.deliveryDate}
-                onChange={(e) => handleChange('deliveryDate', e.target.value)}
+                onChange={(value) => handleChange('deliveryDate', value)}
               />
             </div>
 
             {/* Fecha de recepción */}
             <div className="space-y-2">
               <Label htmlFor="receivedDate">Fecha de Recepción</Label>
-              <Input
-                id="receivedDate"
-                type="datetime-local"
+              <DateTimePicker
                 value={formData.receivedDate}
-                onChange={(e) => handleChange('receivedDate', e.target.value)}
+                onChange={(value) => handleChange('receivedDate', value)}
               />
             </div>
+
+
           </div>
 
           {/* Notas */}
