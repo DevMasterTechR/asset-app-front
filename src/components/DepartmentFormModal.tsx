@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea'; // <-- Importa Textarea
 import {
   Dialog,
   DialogContent,
@@ -31,17 +32,20 @@ export default function DepartmentFormModal({
 }: DepartmentFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateDepartmentDto>({
-    name: ''
+    name: '',
+    description: ''
   });
 
   useEffect(() => {
     if (department && mode === 'edit') {
       setFormData({
-        name: department.name
+        name: department.name || '',
+        description: department.description || ''
       });
     } else if (mode === 'create') {
       setFormData({
-        name: ''
+        name: '',
+        description: ''
       });
     }
   }, [department, mode, open]);
@@ -49,7 +53,7 @@ export default function DepartmentFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    
+
     try {
       await onSave(formData);
       onOpenChange(false);
@@ -68,7 +72,7 @@ export default function DepartmentFormModal({
             {mode === 'create' ? 'Agregar Departamento' : 'Editar Departamento'}
           </DialogTitle>
           <DialogDescription>
-            {mode === 'create' 
+            {mode === 'create'
               ? 'Completa los datos del nuevo departamento'
               : 'Modifica los datos del departamento'}
           </DialogDescription>
@@ -82,9 +86,24 @@ export default function DepartmentFormModal({
             <Input
               id="name"
               value={formData.name}
-              onChange={(e) => setFormData({ name: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
               placeholder="Tecnología"
               required
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="description">Descripción</Label>
+            <Textarea
+              id="description"
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="Departamento encargado de sistemas y tecnología"
+              rows={3}  // más grande que input
             />
           </div>
 

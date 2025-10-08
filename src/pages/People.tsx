@@ -1,7 +1,9 @@
-import { useState } from 'react';
-import Layout from '@/components/Layout';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
+import { useState, useEffect } from "react";
+import Layout from "@/components/Layout";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -9,17 +11,22 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '@/components/ui/table';
-import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
-import { Search, Plus, Edit, Trash2, Users as UsersIcon } from 'lucide-react';
+} from "@/components/ui/table";
 import {
-  mockPeople,
-  getDepartmentName,
-  getRoleName,
-  getBranchName,
-  type Person,
-} from '@/data/mockDataExtended';
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Search, Plus, Pencil, Trash2 } from "lucide-react";
+import { type Person, getBranchName, getDepartmentName, getRoleName, mockBranches, mockDepartments, mockRoles } from "@/data/mockDataExtended";
+import { peopleApi, type CreatePersonDto } from "@/api/people";
+import PersonFormModal from "@/components/PersonFormModal";
+import { useToast } from "@/hooks/use-toast";
 
 const statusVariantMap = {
   active: 'success' as const,
@@ -34,8 +41,106 @@ const statusLabelMap = {
 };
 
 export default function People() {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [people] = useState<Person[]>(mockPeople);
+  const { toast } = useToast();
+  const [searchTerm, setSearchTerm] = useState("");
+  const [people, setPeople] = useState<Person[]>([]);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
+  const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [personToDelete, setPersonToDelete] = useState<string | null>(null);
+
+  useEffect(() => {
+    loadPeople();
+  }, []);
+
+  const loadPeople = async () => {
+    try {
+      const data = await peopleApi.getAll();
+      setPeople(data);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudieron cargar las personas",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleCreate = async (data: CreatePersonDto) => {
+    try {
+      await peopleApi.create(data);
+      await loadPeople();
+      toast({
+        title: "Éxito",
+        description: "Persona creada correctamente"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo crear la persona",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const handleUpdate = async (data: CreatePersonDto) => {
+    if (!selectedPerson) return;
+    try {
+      await peopleApi.update(selectedPerson.id, data);
+      await loadPeople();
+      toast({
+        title: "Éxito",
+        description: "Persona actualizada correctamente"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar la persona",
+        variant: "destructive"
+      });
+      throw error;
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!personToDelete) return;
+    try {
+      await peopleApi.delete(personToDelete);
+      await loadPeople();
+      toast({
+        title: "Éxito",
+        description: "Persona eliminada correctamente"
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "No se pudo eliminar la persona",
+        variant: "destructive"
+      });
+    } finally {
+      setDeleteDialogOpen(false);
+      setPersonToDelete(null);
+    }
+  };
+
+  const openCreateModal = () => {
+    setSelectedPerson(null);
+    setModalMode('create');
+    setModalOpen(true);
+  };
+
+  const openEditModal = (person: Person) => {
+    setSelectedPerson(person);
+    setModalMode('edit');
+    setModalOpen(true);
+  };
+
+  const openDeleteDialog = (personId: string) => {
+    setPersonToDelete(personId);
+    setDeleteDialogOpen(true);
+  };
 
   const filteredPeople = people.filter(
     (person) =>
@@ -50,21 +155,22 @@ export default function People() {
   };
 
   return (
-    <Layout>
-      <div className="p-6 space-y-6">
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-          <div>
-            <h1 className="text-3xl font-bold">Personas</h1>
-            <p className="text-muted-foreground mt-1">
-              Gestión de usuarios y empleados
-            </p>
+    <>
+      <Layout>
+        <div className="p-6 space-y-6">
+          {/* Header */}
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold">Personas</h1>
+              <p className="text-muted-foreground mt-1">
+                Gestión de usuarios y empleados
+              </p>
+            </div>
+            <Button className="gap-2" onClick={openCreateModal}>
+              <Plus className="h-4 w-4" />
+              Agregar Persona
+            </Button>
           </div>
-          <Button>
-            <Plus className="mr-2 h-4 w-4" />
-            Agregar Persona
-          </Button>
-        </div>
 
         {/* Search and Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -132,11 +238,21 @@ export default function People() {
                   </TableCell>
                   <TableCell className="text-right">
                     <div className="flex items-center justify-end gap-2">
-                      <Button variant="ghost" size="icon">
-                        <Edit className="h-4 w-4" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0"
+                        onClick={() => openEditModal(person)}
+                      >
+                        <Pencil className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon">
-                        <Trash2 className="h-4 w-4 text-destructive" />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                        onClick={() => openDeleteDialog(person.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
                       </Button>
                     </div>
                   </TableCell>
@@ -146,16 +262,44 @@ export default function People() {
           </Table>
         </div>
 
-        {filteredPeople.length === 0 && (
-          <div className="text-center py-12">
-            <UsersIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h3 className="text-lg font-semibold mb-2">No se encontraron personas</h3>
-            <p className="text-muted-foreground">
-              Intenta con otros términos de búsqueda
-            </p>
-          </div>
-        )}
-      </div>
-    </Layout>
+          {filteredPeople.length === 0 && (
+            <div className="text-center py-12">
+              <h3 className="text-lg font-semibold mb-2">No se encontraron personas</h3>
+              <p className="text-muted-foreground">
+                Intenta con otros términos de búsqueda
+              </p>
+            </div>
+          )}
+        </div>
+      </Layout>
+
+      <PersonFormModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        onSave={modalMode === 'create' ? handleCreate : handleUpdate}
+        person={selectedPerson}
+        mode={modalMode}
+        departments={mockDepartments}
+        roles={mockRoles}
+        branches={mockBranches}
+      />
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>¿Estás seguro?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta acción no se puede deshacer. Se eliminará permanentemente la persona.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete}>
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }

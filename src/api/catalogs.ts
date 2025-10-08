@@ -18,6 +18,7 @@ export interface CreateBranchDto {
 
 export interface CreateDepartmentDto {
   name: string;
+  description: string;
 }
 
 export interface CreateRoleDto {
@@ -70,15 +71,18 @@ export const getDepartments = async (): Promise<Department[]> => {
 };
 
 export const createDepartment = async (data: CreateDepartmentDto): Promise<Department> => {
-  // TODO: POST /api/departments
+  // Simulamos llamada a API
   await new Promise(resolve => setTimeout(resolve, 500));
+  
   const newDept: Department = {
     id: String(Date.now()),
-    ...data
+    ...data, // aquí entra name y description (si lo tiene)
   };
+  
   departments.push(newDept);
   return newDept;
 };
+
 
 export const updateDepartment = async (id: string, data: CreateDepartmentDto): Promise<Department> => {
   // TODO: PUT /api/departments/:id

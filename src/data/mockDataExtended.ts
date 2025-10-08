@@ -10,6 +10,7 @@ export interface Branch {
 export interface Department {
   id: string;
   name: string;
+  description: string;
 }
 
 export interface Role { 
@@ -128,11 +129,11 @@ export const mockBranches: Branch[] = [
 ];
 
 export const mockDepartments: Department[] = [
-  { id: '1', name: 'Tecnología' },
-  { id: '2', name: 'Recursos Humanos' },
-  { id: '3', name: 'Ventas' },
-  { id: '4', name: 'Administración' },
-  { id: '5', name: 'Operaciones' },
+  { id: '1', name: 'Tecnología', description: 'Encargado de sistemas, redes y soporte técnico.' },
+  { id: '2', name: 'Recursos Humanos', description: 'Gestión de personal y procesos administrativos.' },
+  { id: '3', name: 'Ventas', description: 'Responsable de comercialización de productos y servicios.' },
+  { id: '4', name: 'Administración', description: 'Control de finanzas y administración general.' },
+  { id: '5', name: 'Operaciones', description: 'Supervisión de actividades operativas.' },
 ];
 
 export const mockRoles: Role[] = [

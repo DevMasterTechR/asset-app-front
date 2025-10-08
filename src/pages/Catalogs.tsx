@@ -33,7 +33,7 @@ export default function Catalogs() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
-  
+
   // Data states
   const [branches, setBranches] = useState<Branch[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
@@ -160,7 +160,7 @@ export default function Catalogs() {
   // Delete handler
   const handleDelete = async () => {
     if (!deleteDialog) return;
-    
+
     try {
       switch (deleteDialog.type) {
         case 'branch':
@@ -255,15 +255,15 @@ export default function Catalogs() {
                       <TableCell>{branch.region}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => setBranchModal({ open: true, mode: 'edit', data: branch })}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => setDeleteDialog({ open: true, type: 'branch', id: branch.id, name: branch.name })}
                           >
@@ -293,6 +293,7 @@ export default function Catalogs() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Nombre</TableHead>
+                    <TableHead>Descripción</TableHead> {/* ← Nuevo */}
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -300,19 +301,27 @@ export default function Catalogs() {
                   {filteredDepartments.map((dept) => (
                     <TableRow key={dept.id}>
                       <TableCell className="font-medium">{dept.name}</TableCell>
+                      <TableCell>{dept.description}</TableCell> {/* ← Nuevo */}
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => setDepartmentModal({ open: true, mode: 'edit', data: dept })}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
-                            onClick={() => setDeleteDialog({ open: true, type: 'department', id: dept.id, name: dept.name })}
+                            onClick={() =>
+                              setDeleteDialog({
+                                open: true,
+                                type: 'department',
+                                id: dept.id,
+                                name: dept.name,
+                              })
+                            }
                           >
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
@@ -322,6 +331,7 @@ export default function Catalogs() {
                   ))}
                 </TableBody>
               </Table>
+
             </div>
           </TabsContent>
 
@@ -351,15 +361,15 @@ export default function Catalogs() {
                       <TableCell>{role.description}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => setRoleModal({ open: true, mode: 'edit', data: role })}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => setDeleteDialog({ open: true, type: 'role', id: role.id, name: role.name })}
                           >
