@@ -13,6 +13,7 @@ import Catalogs from "./pages/Catalogs";
 import Consumables from "./pages/Consumables";
 import NotFound from "./pages/NotFound";
 import Credentials from "./pages/Credentials";
+import { PrivateRoute } from "@/components/PrivateRout"
 
 
 
@@ -25,18 +26,50 @@ const App = () => (
         <Toaster />
         <Sonner />
         <BrowserRouter>
-          <Routes>
-            <Route path="/" element={<Index />} />
+        <Routes>
+            {/* Pública */}
             <Route path="/auth" element={<Auth />} />
-            <Route path="/devices" element={<Devices />} />
-            <Route path="/people" element={<People />} />
-            <Route path="/assignments" element={<Assignments />} />
-            <Route path="/catalogs" element={<Catalogs />} />
-            <Route path="/consumables" element={<Consumables />} />
-            <Route path="/credentials" element={<Credentials />} />
-            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+
+            {/* Protegidas */}
+            <Route path="/" element={
+              <PrivateRoute>
+                <Index />
+              </PrivateRoute>
+            } />
+            <Route path="/devices" element={
+              <PrivateRoute>
+                <Devices />
+              </PrivateRoute>
+            } />
+            <Route path="/people" element={
+              <PrivateRoute>
+                <People />
+              </PrivateRoute>
+            } />
+            <Route path="/assignments" element={
+              <PrivateRoute>
+                <Assignments />
+              </PrivateRoute>
+            } />
+            <Route path="/catalogs" element={
+              <PrivateRoute>
+                <Catalogs />
+              </PrivateRoute>
+            } />
+            <Route path="/consumables" element={
+              <PrivateRoute>
+                <Consumables />
+              </PrivateRoute>
+            } />
+            <Route path="/credentials" element={
+              <PrivateRoute>
+                <Credentials />
+              </PrivateRoute>
+            } />
+
+            {/* Ruta 404 */}
             <Route path="*" element={<NotFound />} />
-          </Routes>
+        </Routes>
         </BrowserRouter>
       </AuthProvider>
     </TooltipProvider>

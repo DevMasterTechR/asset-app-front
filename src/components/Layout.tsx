@@ -3,7 +3,6 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { IdCard, Key, LucideIcon } from "lucide-react";
 import {
   LayoutDashboard,
   Laptop,
@@ -15,17 +14,16 @@ import {
   Menu,
   Building2,
 } from 'lucide-react';
-import {useToast} from '@/hooks/use-toast';
+import { useToast } from '@/hooks/use-toast';
 
 interface LayoutProps {
   children: ReactNode;
 }
 
-
 interface NavItem {
   title: string;
   href: string;
-  icon: LucideIcon;
+  icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
 const navItems: NavItem[] = [
@@ -35,7 +33,6 @@ const navItems: NavItem[] = [
   { title: 'Asignaciones', href: '/assignments', icon: ClipboardList },
   { title: 'Catálogos', href: '/catalogs', icon: FolderTree },
   { title: 'Consumibles', href: '/consumables', icon: Package },
-  { title: 'Credenciales', href: '/credentials', icon: IdCard},
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -79,8 +76,12 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* User Info */}
       <div className="p-4 border-b bg-muted/30">
-        <p className="text-sm font-medium">{user?.name}</p>
-        <p className="text-xs text-muted-foreground">{user?.email}</p>
+        <p className="text-sm font-medium">{user?.username}</p>
+        <p className="text-xs text-muted-foreground">
+          {user?.firstName && user?.lastName 
+            ? `${user.firstName} ${user.lastName}` 
+            : user?.nationalId || 'Usuario'}
+        </p>
       </div>
 
       {/* Navigation */}
