@@ -1,13 +1,22 @@
-// API Mock para Catálogos - TODO: Reemplazar con llamadas REST reales
+// API para Catálogos - Conectado con Backend NestJS
 
 import { 
   Branch, 
   Department, 
   Role,
-  mockBranches,
-  mockDepartments,
-  mockRoles
 } from '@/data/mockDataExtended';
+
+// ============= CONFIGURACIÓN =============
+const API_URL = 'http://localhost:3000';
+
+// Helper para manejar errores de la API
+const handleApiError = async (response: Response) => {
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error desconocido' }));
+    throw new Error(error.message || `Error ${response.status}`);
+  }
+  return response;
+};
 
 // ============= TYPES =============
 export interface CreateBranchDto {
@@ -27,109 +36,154 @@ export interface CreateRoleDto {
 }
 
 // ============= BRANCHES =============
-let branches = [...mockBranches];
 
 export const getBranches = async (): Promise<Branch[]> => {
-  // TODO: GET /api/branches
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return branches;
+  const response = await fetch(`${API_URL}/branches`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include', // Envía cookies httpOnly
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createBranch = async (data: CreateBranchDto): Promise<Branch> => {
-  // TODO: POST /api/branches
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newBranch: Branch = {
-    id: String(Date.now()),
-    ...data
-  };
-  branches.push(newBranch);
-  return newBranch;
+  const response = await fetch(`${API_URL}/branches`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const updateBranch = async (id: string, data: CreateBranchDto): Promise<Branch> => {
-  // TODO: PUT /api/branches/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = branches.findIndex(b => b.id === id);
-  if (index === -1) throw new Error('Sucursal no encontrada');
-  branches[index] = { id, ...data };
-  return branches[index];
+  const response = await fetch(`${API_URL}/branches/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deleteBranch = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/branches/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  branches = branches.filter(b => b.id !== id);
+  const response = await fetch(`${API_URL}/branches/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
 };
 
 // ============= DEPARTMENTS =============
-let departments = [...mockDepartments];
 
 export const getDepartments = async (): Promise<Department[]> => {
-  // TODO: GET /api/departments
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return departments;
+  const response = await fetch(`${API_URL}/departments`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createDepartment = async (data: CreateDepartmentDto): Promise<Department> => {
-  // Simulamos llamada a API
-  await new Promise(resolve => setTimeout(resolve, 500));
-  
-  const newDept: Department = {
-    id: String(Date.now()),
-    ...data, // aquí entra name y description (si lo tiene)
-  };
-  
-  departments.push(newDept);
-  return newDept;
+  const response = await fetch(`${API_URL}/departments`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
-
 export const updateDepartment = async (id: string, data: CreateDepartmentDto): Promise<Department> => {
-  // TODO: PUT /api/departments/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = departments.findIndex(d => d.id === id);
-  if (index === -1) throw new Error('Departamento no encontrado');
-  departments[index] = { id, ...data };
-  return departments[index];
+  const response = await fetch(`${API_URL}/departments/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deleteDepartment = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/departments/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  departments = departments.filter(d => d.id !== id);
+  const response = await fetch(`${API_URL}/departments/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
 };
 
 // ============= ROLES =============
-let roles = [...mockRoles];
 
 export const getRoles = async (): Promise<Role[]> => {
-  // TODO: GET /api/roles
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return roles;
+  const response = await fetch(`${API_URL}/roles`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createRole = async (data: CreateRoleDto): Promise<Role> => {
-  // TODO: POST /api/roles
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newRole: Role = {
-    id: String(Date.now()),
-    ...data
-  };
-  roles.push(newRole);
-  return newRole;
+  const response = await fetch(`${API_URL}/roles`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const updateRole = async (id: string, data: CreateRoleDto): Promise<Role> => {
-  // TODO: PUT /api/roles/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = roles.findIndex(r => r.id === id);
-  if (index === -1) throw new Error('Rol no encontrado');
-  roles[index] = { id, ...data };
-  return roles[index];
+  const response = await fetch(`${API_URL}/roles/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(data),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deleteRole = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/roles/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  roles = roles.filter(r => r.id !== id);
+  const response = await fetch(`${API_URL}/roles/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
 };

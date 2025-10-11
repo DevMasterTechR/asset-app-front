@@ -24,8 +24,20 @@ interface UTPCableFormModalProps {
   mode: 'create' | 'edit';
 }
 
-// Tipo extendido solo para el estado local del formulario
-type UTPFormType = '' | 'indoor' | 'outdoor';
+// Tipo para las categorías de cable UTP
+type CableCategory = '' | 'Cat5' | 'Cat5e' | 'Cat6' | 'Cat6a' | 'Cat7' | 'Cat8';
+
+// Tipo para el formulario interno
+interface UTPCableFormData {
+  brand: string;
+  type: CableCategory;
+  material: string;
+  lengthMeters: number;
+  color: string;
+  purchaseDate: string;
+  usageDate: string;
+  notes: string;
+}
 
 // Función para obtener fecha y hora actual en formato YYYY-MM-DDTHH:mm
 function getCurrentDateTimeLocal(): string {
@@ -38,6 +50,22 @@ function getCurrentDateTimeLocal(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+// Función para convertir ISO string a formato datetime-local
+function formatDateTimeLocal(isoString?: string): string {
+  if (!isoString) return getCurrentDateTimeLocal();
+  
+  try {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return getCurrentDateTimeLocal();
+  }
+}
 
 export default function UTPCableFormModal({
   open,
@@ -47,7 +75,7 @@ export default function UTPCableFormModal({
   mode,
 }: UTPCableFormModalProps) {
   const [loading, setLoading] = useState(false);
-  const [formData, setFormData] = useState<Omit<CreateUTPCableDto, 'type'> & { type: UTPFormType }>({
+  const [formData, setFormData] = useState<UTPCableFormData>({
     brand: '',
     type: '',
     material: '',
@@ -62,12 +90,12 @@ export default function UTPCableFormModal({
     if (cable && mode === 'edit') {
       setFormData({
         brand: cable.brand,
-        type: cable.type,
-        material: cable.material,
-        lengthMeters: cable.lengthMeters,
-        color: cable.color,
-        purchaseDate: cable.purchaseDate || getCurrentDateTimeLocal(),
-        usageDate: cable.usageDate || getCurrentDateTimeLocal(),
+        type: (cable.type || '') as CableCategory,
+        material: cable.material || '',
+        lengthMeters: cable.lengthMeters || 0,
+        color: cable.color || '',
+        purchaseDate: formatDateTimeLocal(cable.purchaseDate),
+        usageDate: formatDateTimeLocal(cable.usageDate),
         notes: cable.notes || '',
       });
     } else if (mode === 'create') {
@@ -88,28 +116,54 @@ export default function UTPCableFormModal({
     e.preventDefault();
 
     if (formData.type === '') {
-      alert('Por favor selecciona un tipo válido (INTERIOR o EXTERIOR).');
+      alert('Por favor selecciona una categoría válida de cable.');
       return;
     }
 
     setLoading(true);
     try {
-      // Convertimos a CreateUTPCableDto eliminando la posibilidad de ''
+      // Construir objeto solo con campos obligatorios primero
       const cleanedData: CreateUTPCableDto = {
-        ...formData,
-        type: formData.type as 'indoor' | 'outdoor',
+        brand: formData.brand.trim(),
+        type: formData.type,
       };
+
+      // Agregar campos opcionales solo si tienen valor válido
+      if (formData.material && formData.material.trim() !== '') {
+        cleanedData.material = formData.material.trim();
+      }
+      
+      if (formData.lengthMeters && formData.lengthMeters > 0) {
+        cleanedData.lengthMeters = formData.lengthMeters;
+      }
+      
+      if (formData.color && formData.color.trim() !== '') {
+        cleanedData.color = formData.color.trim();
+      }
+      
+      if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
+        cleanedData.purchaseDate = formData.purchaseDate;
+      }
+      
+      if (formData.usageDate && formData.usageDate.trim() !== '') {
+        cleanedData.usageDate = formData.usageDate;
+      }
+      
+      if (formData.notes && formData.notes.trim() !== '') {
+        cleanedData.notes = formData.notes.trim();
+      }
 
       await onSave(cleanedData);
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
+      alert('Error al guardar el cable. Revisa la consola para más detalles.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (field: keyof typeof formData, value: string | number) => {
+  const handleChange = (field: keyof UTPCableFormData, value: string | number) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -144,7 +198,7 @@ export default function UTPCableFormModal({
 
           <div className="space-y-2">
             <Label htmlFor="type">
-              Tipo <span className="text-destructive">*</span>
+              Categoría <span className="text-destructive">*</span>
             </Label>
             <select
               id="type"
@@ -153,52 +207,47 @@ export default function UTPCableFormModal({
               required
               className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
             >
-              <option value="">Selecciona una opción</option>
-              <option value="indoor">INTERIOR</option>
-              <option value="outdoor">EXTERIOR</option>
+              <option value="">Selecciona una categoría</option>
+              <option value="Cat5">Cat5</option>
+              <option value="Cat5e">Cat5e</option>
+              <option value="Cat6">Cat6</option>
+              <option value="Cat6a">Cat6a</option>
+              <option value="Cat7">Cat7</option>
+              <option value="Cat8">Cat8</option>
             </select>
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="material">
-              Material <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="material">Material</Label>
             <Input
               id="material"
               value={formData.material}
               onChange={(e) => handleChange('material', e.target.value)}
               placeholder="Cobre"
               maxLength={100}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lengthMeters">
-              Longitud (metros) <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="lengthMeters">Longitud (metros)</Label>
             <Input
               id="lengthMeters"
               type="number"
               min="0"
-              step="0.1"
+              step="0.01"
               value={formData.lengthMeters}
               onChange={(e) => handleChange('lengthMeters', parseFloat(e.target.value) || 0)}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="color">
-              Color <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="color">Color</Label>
             <Input
               id="color"
               value={formData.color}
               onChange={(e) => handleChange('color', e.target.value)}
               placeholder="Azul"
               maxLength={50}
-              required
             />
           </div>
 

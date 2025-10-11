@@ -25,6 +25,7 @@ export interface Person {
   firstName: string;
   lastName: string;
   username: string;
+  password: string;
   status: 'active' | 'inactive' | 'suspended';
   departmentId: string;
   roleId: string;
@@ -150,6 +151,7 @@ export const mockPeople: Person[] = [
     firstName: 'Juan',
     lastName: 'Pérez',
     username: 'jperez',
+    password: '1234',
     status: 'active',
     departmentId: '1',
     roleId: '1',
@@ -161,6 +163,7 @@ export const mockPeople: Person[] = [
     firstName: 'María',
     lastName: 'González',
     username: 'mgonzalez',
+    password: '1234',
     status: 'active',
     departmentId: '2',
     roleId: '2',
@@ -172,6 +175,7 @@ export const mockPeople: Person[] = [
     firstName: 'Carlos',
     lastName: 'Rodríguez',
     username: 'crodriguez',
+    password: '1234',
     status: 'active',
     departmentId: '3',
     roleId: '3',

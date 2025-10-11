@@ -35,7 +35,22 @@ function getCurrentDateTimeLocal(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
-
+// Función para convertir ISO string a formato datetime-local
+function formatDateTimeLocal(isoString?: string): string {
+  if (!isoString) return getCurrentDateTimeLocal();
+  
+  try {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return getCurrentDateTimeLocal();
+  }
+}
 
 export default function RJ45ConnectorFormModal({
   open,
@@ -63,8 +78,8 @@ export default function RJ45ConnectorFormModal({
         quantityUnits: connector.quantityUnits,
         material: connector.material,
         type: connector.type,
-        purchaseDate: connector.purchaseDate || getCurrentDateTimeLocal(),
-        usageDate: connector.usageDate || getCurrentDateTimeLocal(),
+        purchaseDate: formatDateTimeLocal(connector.purchaseDate),
+        usageDate: formatDateTimeLocal(connector.usageDate),
         notes: connector.notes || '',
       });
     } else if (mode === 'create') {

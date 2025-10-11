@@ -35,6 +35,23 @@ function getCurrentDateTimeLocal(): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`;
 }
 
+// Función para convertir ISO string a formato datetime-local
+function formatDateTimeLocal(isoString?: string): string {
+  if (!isoString) return getCurrentDateTimeLocal();
+  
+  try {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return getCurrentDateTimeLocal();
+  }
+}
+
 export default function PowerStripFormModal({
   open,
   onOpenChange,
@@ -64,8 +81,8 @@ export default function PowerStripFormModal({
         lengthMeters: powerStrip.lengthMeters,
         color: powerStrip.color,
         capacity: powerStrip.capacity,
-        purchaseDate: powerStrip.purchaseDate || getCurrentDateTimeLocal(),
-        usageDate: powerStrip.usageDate || getCurrentDateTimeLocal(),
+        purchaseDate: formatDateTimeLocal(powerStrip.purchaseDate),
+        usageDate: formatDateTimeLocal(powerStrip.usageDate),
         notes: powerStrip.notes || ''
       });
     } else if (mode === 'create') {
@@ -88,10 +105,51 @@ export default function PowerStripFormModal({
     setLoading(true);
 
     try {
-      await onSave(formData);
+      // Solo model es obligatorio
+      const cleanedData: CreatePowerStripDto = {
+        model: formData.model.trim(),
+      };
+
+      // Agregar campos opcionales solo si tienen valor válido
+      if (formData.brand && formData.brand.trim() !== '') {
+        cleanedData.brand = formData.brand.trim();
+      }
+      
+      if (formData.outletCount && formData.outletCount > 0) {
+        cleanedData.outletCount = Number(formData.outletCount);
+      }
+      
+      if (formData.lengthMeters && formData.lengthMeters > 0) {
+        cleanedData.lengthMeters = Number(formData.lengthMeters);
+      }
+      
+      if (formData.color && formData.color.trim() !== '') {
+        cleanedData.color = formData.color.trim();
+      }
+      
+      if (formData.capacity && formData.capacity > 0) {
+        cleanedData.capacity = Number(formData.capacity);
+      }
+      
+      if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
+        cleanedData.purchaseDate = formData.purchaseDate;
+      }
+      
+      if (formData.usageDate && formData.usageDate.trim() !== '') {
+        cleanedData.usageDate = formData.usageDate;
+      }
+      
+      if (formData.notes && formData.notes.trim() !== '') {
+        cleanedData.notes = formData.notes.trim();
+      }
+
+      console.log('Datos preparados en el modal:', cleanedData);
+
+      await onSave(cleanedData);
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
+      alert('Error al guardar la regleta. Revisa la consola para más detalles.');
     } finally {
       setLoading(false);
     }
@@ -117,16 +175,13 @@ export default function PowerStripFormModal({
 
         <form onSubmit={handleSubmit} className="grid grid-cols-2 gap-4">
           <div className="space-y-2">
-            <Label htmlFor="brand">
-              Marca <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="brand">Marca</Label>
             <Input
               id="brand"
               value={formData.brand}
               onChange={(e) => handleChange('brand', e.target.value)}
               placeholder="Tripp Lite"
               maxLength={100}
-              required
             />
           </div>
 
@@ -145,59 +200,47 @@ export default function PowerStripFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="outletCount">
-              Número de Tomas <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="outletCount">Número de Tomas</Label>
             <Input
               id="outletCount"
               type="number"
               min="1"
               value={formData.outletCount}
               onChange={(e) => handleChange('outletCount', parseInt(e.target.value) || 0)}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="lengthMeters">
-              Longitud del Cable (m) <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="lengthMeters">Longitud del Cable (m)</Label>
             <Input
               id="lengthMeters"
               type="number"
               min="0"
-              step="0.1"
+              step="0.01"
               value={formData.lengthMeters}
               onChange={(e) => handleChange('lengthMeters', parseFloat(e.target.value) || 0)}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="capacity">
-              Capacidad (W) <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="capacity">Capacidad (W)</Label>
             <Input
               id="capacity"
               type="number"
               min="0"
               value={formData.capacity}
               onChange={(e) => handleChange('capacity', parseInt(e.target.value) || 0)}
-              required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="color">
-              Color <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="color">Color</Label>
             <Input
               id="color"
               value={formData.color}
               onChange={(e) => handleChange('color', e.target.value)}
               placeholder="Negro"
               maxLength={50}
-              required
             />
           </div>
 

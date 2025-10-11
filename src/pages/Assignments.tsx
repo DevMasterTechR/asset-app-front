@@ -30,8 +30,8 @@ import {
   getAssetInfo,
   getBranchName,
   mockAssets,
-  mockPeople,
-  mockBranches
+  mockBranches,
+  mockPeople
 } from "@/data/mockDataExtended";
 import { assignmentsApi, type CreateAssignmentDto } from "@/api/assignments";
 import AssignmentFormModal from "@/components/AssignmentFormModal";
@@ -217,11 +217,11 @@ export default function Assignments() {
   };
 
   const filteredAssignments = assignments.filter((assignment) => {
-    const personName = getPersonName(assignment.personId).toLowerCase();
+    //const personName = getPersonName(assignment.personId).toLowerCase();
     const assetInfo = getAssetInfo(assignment.assetId);
     const assetCode = assetInfo?.assetCode.toLowerCase() || '';
     return (
-      personName.includes(searchTerm.toLowerCase()) ||
+      //personName.includes(searchTerm.toLowerCase()) ||
       assetCode.includes(searchTerm.toLowerCase())
     );
   });
@@ -307,7 +307,7 @@ export default function Assignments() {
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">
-                        {getPersonName(assignment.personId)}
+                        // {getPersonName(assignment.personId)}
                       </TableCell>
                       <TableCell className="text-sm">{getBranchName(assignment.branchId)}</TableCell>
                       <TableCell className="text-sm">

@@ -23,9 +23,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Search, Plus, Pencil, Trash2 } from "lucide-react";
-import { type Person, getBranchName, getDepartmentName, getRoleName, mockBranches, mockDepartments, mockRoles } from "@/data/mockDataExtended";
+import { type Person } from "@/data/mockDataExtended";
 import { peopleApi, type CreatePersonDto } from "@/api/people";
-import PersonFormModal from "@/components/PersonFormModal";
+import * as catalogsApi from "@/api/catalogs";
+import PersonFormModal from "@/components/PeopleFormModal";
 import { useToast } from "@/hooks/use-toast";
 
 const statusVariantMap = {
@@ -44,6 +45,9 @@ export default function People() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [people, setPeople] = useState<Person[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: string; name: string }>>([]);
+  const [departments, setDepartments] = useState<Array<{ id: string; name: string }>>([]);
+  const [roles, setRoles] = useState<Array<{ id: string; name: string }>>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedPerson, setSelectedPerson] = useState<Person | null>(null);
@@ -51,17 +55,26 @@ export default function People() {
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    loadPeople();
+    loadData();
   }, []);
 
-  const loadPeople = async () => {
+  const loadData = async () => {
     try {
-      const data = await peopleApi.getAll();
-      setPeople(data);
+      const [peopleData, branchesData, departmentsData, rolesData] = await Promise.all([
+        peopleApi.getAll(),
+        catalogsApi.getBranches(),
+        catalogsApi.getDepartments(),
+        catalogsApi.getRoles(),
+      ]);
+      
+      setPeople(peopleData);
+      setBranches(branchesData.map(b => ({ id: b.id, name: b.name })));
+      setDepartments(departmentsData.map(d => ({ id: d.id, name: d.name })));
+      setRoles(rolesData.map(r => ({ id: r.id, name: r.name })));
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudieron cargar las personas",
+        description: "No se pudieron cargar los datos",
         variant: "destructive"
       });
     }
@@ -70,7 +83,7 @@ export default function People() {
   const handleCreate = async (data: CreatePersonDto) => {
     try {
       await peopleApi.create(data);
-      await loadPeople();
+      await loadData();
       toast({
         title: "Éxito",
         description: "Persona creada correctamente"
@@ -89,7 +102,7 @@ export default function People() {
     if (!selectedPerson) return;
     try {
       await peopleApi.update(selectedPerson.id, data);
-      await loadPeople();
+      await loadData();
       toast({
         title: "Éxito",
         description: "Persona actualizada correctamente"
@@ -108,7 +121,7 @@ export default function People() {
     if (!personToDelete) return;
     try {
       await peopleApi.delete(personToDelete);
-      await loadPeople();
+      await loadData();
       toast({
         title: "Éxito",
         description: "Persona eliminada correctamente"
@@ -147,11 +160,29 @@ export default function People() {
       person.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       person.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       person.nationalId.includes(searchTerm) ||
-      person.username.toLowerCase().includes(searchTerm.toLowerCase())
+      person.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
+  };
+
+  const getBranchName = (id?: string | number) => {
+    if (!id) return '-';
+    const branch = branches.find(b => b.id === String(id));
+    return branch?.name || '-';
+  };
+
+  const getDepartmentName = (id?: string | number) => {
+    if (!id) return '-';
+    const dept = departments.find(d => d.id === String(id));
+    return dept?.name || '-';
+  };
+
+  const getRoleName = (id?: string | number) => {
+    if (!id) return '-';
+    const role = roles.find(r => r.id === String(id));
+    return role?.name || '-';
   };
 
   return (
@@ -227,7 +258,7 @@ export default function People() {
                     </div>
                   </TableCell>
                   <TableCell className="font-mono text-sm">{person.nationalId}</TableCell>
-                  <TableCell className="text-sm">{person.username}</TableCell>
+                  <TableCell className="text-sm">{person.username || '-'}</TableCell>
                   <TableCell className="text-sm">{getDepartmentName(person.departmentId)}</TableCell>
                   <TableCell className="text-sm">{getRoleName(person.roleId)}</TableCell>
                   <TableCell className="text-sm">{getBranchName(person.branchId)}</TableCell>
@@ -279,9 +310,9 @@ export default function People() {
         onSave={modalMode === 'create' ? handleCreate : handleUpdate}
         person={selectedPerson}
         mode={modalMode}
-        departments={mockDepartments}
-        roles={mockRoles}
-        branches={mockBranches}
+        departments={departments}
+        roles={roles}
+        branches={branches}
       />
 
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>

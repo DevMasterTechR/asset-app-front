@@ -1,40 +1,63 @@
-// API Mock para Consumibles - TODO: Reemplazar con llamadas REST reales
+// API para Consumibles - Conectado con Backend NestJS
 
 import { 
   Ink, 
   UTPCable, 
   RJ45Connector, 
-  PowerStrip,
-  mockInks,
-  mockUTPCables,
-  mockRJ45Connectors,
-  mockPowerStrips
+  PowerStrip
 } from '@/data/mockDataExtended';
 
+// ============= CONFIGURACIÓN =============
+const API_URL = 'http://localhost:3000';
+
+// Helper para manejar errores de la API
+const handleApiError = async (response: Response) => {
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error desconocido' }));
+    throw new Error(error.message || `Error ${response.status}`);
+  }
+  return response;
+};
+
+// Helper para convertir fechas datetime-local a ISO
+const convertDatesToISO = <T extends Record<string, unknown>>(data: T): T => {
+  const converted: Record<string, unknown> = { ...data };
+  
+  // Convertir campos de fecha si existen y no están vacíos
+  if ('purchaseDate' in converted && typeof converted.purchaseDate === 'string' && converted.purchaseDate !== '') {
+    converted.purchaseDate = new Date(converted.purchaseDate).toISOString();
+  }
+  if ('usageDate' in converted && typeof converted.usageDate === 'string' && converted.usageDate !== '') {
+    converted.usageDate = new Date(converted.usageDate).toISOString();
+  }
+  
+  return converted as T;
+};
+
 // ============= TYPES =============
-export interface CreateInkDto {
+export interface CreateInkDto extends Record<string, unknown> {
   brand: string;
   model: string;
   color: string;
-  quantity: number;
-  inkType: string;
+  quantity?: number;
+  inkType?: string;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
 }
 
-export interface CreateUTPCableDto {
+export interface CreateUTPCableDto extends Record<string, unknown> {
   brand: string;
-  type: 'indoor' | 'outdoor';
-  material: string;
-  lengthMeters: number;
-  color: string;
+  type: string; // Cat5, Cat5e, Cat6, Cat6a, Cat7, Cat8
+  material?: string;
+  lengthMeters?: number; // Backend espera Int, así que redondeamos antes de enviar
+  color?: string;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
 }
 
-export interface CreateRJ45ConnectorDto {
+export interface CreateRJ45ConnectorDto extends Record<string, unknown> {
   model: string;
   quantityUnits: number;
   material: string;
@@ -44,155 +67,255 @@ export interface CreateRJ45ConnectorDto {
   notes?: string;
 }
 
-export interface CreatePowerStripDto {
-  brand: string;
-  model: string;
-  outletCount: number;
-  lengthMeters: number;
-  color: string;
-  capacity: number;
+export interface CreatePowerStripDto extends Record<string, unknown> {
+  brand?: string; // Opcional en el backend
+  model: string; // Obligatorio
+  outletCount?: number; // Opcional
+  lengthMeters?: number; // Opcional - acepta decimales
+  color?: string; // Opcional
+  capacity?: number; // Opcional - Int en el backend
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
 }
 
 // ============= INKS =============
-let inks = [...mockInks];
 
 export const getInks = async (): Promise<Ink[]> => {
-  // TODO: GET /api/inks
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return inks;
+  const response = await fetch(`${API_URL}/inks`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createInk = async (data: CreateInkDto): Promise<Ink> => {
-  // TODO: POST /api/inks
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newInk: Ink = {
-    id: String(Date.now()),
-    ...data
-  };
-  inks.push(newInk);
-  return newInk;
+  const convertedData = convertDatesToISO(data);
+  const response = await fetch(`${API_URL}/inks`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const updateInk = async (id: string, data: CreateInkDto): Promise<Ink> => {
-  // TODO: PUT /api/inks/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = inks.findIndex(i => i.id === id);
-  if (index === -1) throw new Error('Tinta no encontrada');
-  inks[index] = { id, ...data };
-  return inks[index];
+  const convertedData = convertDatesToISO(data);
+  const response = await fetch(`${API_URL}/inks/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deleteInk = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/inks/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  inks = inks.filter(i => i.id !== id);
+  const response = await fetch(`${API_URL}/inks/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
 };
 
 // ============= UTP CABLES =============
-let utpCables = [...mockUTPCables];
 
 export const getUTPCables = async (): Promise<UTPCable[]> => {
-  // TODO: GET /api/utp-cables
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return utpCables;
+  const response = await fetch(`${API_URL}/utp-cables`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createUTPCable = async (data: CreateUTPCableDto): Promise<UTPCable> => {
-  // TODO: POST /api/utp-cables
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newCable: UTPCable = {
-    id: String(Date.now()),
-    ...data
-  };
-  utpCables.push(newCable);
-  return newCable;
+  const convertedData = convertDatesToISO(data);
+  
+  // Backend espera lengthMeters como Int, así que redondeamos
+  if (convertedData.lengthMeters) {
+    convertedData.lengthMeters = Math.round(convertedData.lengthMeters as number);
+  }
+  
+  const response = await fetch(`${API_URL}/utp-cables`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const updateUTPCable = async (id: string, data: CreateUTPCableDto): Promise<UTPCable> => {
-  // TODO: PUT /api/utp-cables/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = utpCables.findIndex(c => c.id === id);
-  if (index === -1) throw new Error('Cable no encontrado');
-  utpCables[index] = { id, ...data };
-  return utpCables[index];
+  const convertedData = convertDatesToISO(data);
+  
+  // Backend espera lengthMeters como Int, así que redondeamos
+  if (convertedData.lengthMeters) {
+    convertedData.lengthMeters = Math.round(convertedData.lengthMeters as number);
+  }
+  
+  const response = await fetch(`${API_URL}/utp-cables/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deleteUTPCable = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/utp-cables/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  utpCables = utpCables.filter(c => c.id !== id);
+  const response = await fetch(`${API_URL}/utp-cables/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
 };
 
 // ============= RJ45 CONNECTORS =============
-let rj45Connectors = [...mockRJ45Connectors];
 
 export const getRJ45Connectors = async (): Promise<RJ45Connector[]> => {
-  // TODO: GET /api/rj45-connectors
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return rj45Connectors;
+  const response = await fetch(`${API_URL}/rj45-connectors`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createRJ45Connector = async (data: CreateRJ45ConnectorDto): Promise<RJ45Connector> => {
-  // TODO: POST /api/rj45-connectors
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newConnector: RJ45Connector = {
-    id: String(Date.now()),
-    ...data
-  };
-  rj45Connectors.push(newConnector);
-  return newConnector;
+  const convertedData = convertDatesToISO(data);
+  const response = await fetch(`${API_URL}/rj45-connectors`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const updateRJ45Connector = async (id: string, data: CreateRJ45ConnectorDto): Promise<RJ45Connector> => {
-  // TODO: PUT /api/rj45-connectors/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = rj45Connectors.findIndex(c => c.id === id);
-  if (index === -1) throw new Error('Conector no encontrado');
-  rj45Connectors[index] = { id, ...data };
-  return rj45Connectors[index];
+  const convertedData = convertDatesToISO(data);
+  const response = await fetch(`${API_URL}/rj45-connectors/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deleteRJ45Connector = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/rj45-connectors/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  rj45Connectors = rj45Connectors.filter(c => c.id !== id);
+  const response = await fetch(`${API_URL}/rj45-connectors/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
 };
 
 // ============= POWER STRIPS =============
-let powerStrips = [...mockPowerStrips];
 
 export const getPowerStrips = async (): Promise<PowerStrip[]> => {
-  // TODO: GET /api/power-strips
-  await new Promise(resolve => setTimeout(resolve, 300));
-  return powerStrips;
+  const response = await fetch(`${API_URL}/power-strips`, {
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const createPowerStrip = async (data: CreatePowerStripDto): Promise<PowerStrip> => {
-  // TODO: POST /api/power-strips
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const newStrip: PowerStrip = {
-    id: String(Date.now()),
-    ...data
-  };
-  powerStrips.push(newStrip);
-  return newStrip;
+  const convertedData = convertDatesToISO(data);
+  
+  // Backend espera capacity como Int, así que redondeamos
+  if (convertedData.capacity !== undefined) {
+    convertedData.capacity = Math.round(convertedData.capacity as number);
+  }
+  
+  console.log('Datos enviados al crear regleta:', convertedData);
+  
+  const response = await fetch(`${API_URL}/power-strips`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const updatePowerStrip = async (id: string, data: CreatePowerStripDto): Promise<PowerStrip> => {
-  // TODO: PUT /api/power-strips/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  const index = powerStrips.findIndex(p => p.id === id);
-  if (index === -1) throw new Error('Regleta no encontrada');
-  powerStrips[index] = { id, ...data };
-  return powerStrips[index];
+  const convertedData = convertDatesToISO(data);
+  
+  // Backend espera capacity como Int, así que redondeamos
+  if (convertedData.capacity !== undefined) {
+    convertedData.capacity = Math.round(convertedData.capacity as number);
+  }
+  
+  console.log('Datos enviados al actualizar regleta:', convertedData);
+  console.log('ID de la regleta:', id);
+  
+  const response = await fetch(`${API_URL}/power-strips/${id}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+    body: JSON.stringify(convertedData),
+  });
+  await handleApiError(response);
+  return response.json();
 };
 
 export const deletePowerStrip = async (id: string): Promise<void> => {
-  // TODO: DELETE /api/power-strips/:id
-  await new Promise(resolve => setTimeout(resolve, 500));
-  powerStrips = powerStrips.filter(p => p.id !== id);
-};
-
+  const response = await fetch(`${API_URL}/power-strips/${id}`, {
+    method: 'DELETE',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    credentials: 'include',
+  });
+  await handleApiError(response);
+}

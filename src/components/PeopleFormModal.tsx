@@ -18,13 +18,13 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Person } from '@/data/mockDataExtended';
-import { CreatePersonDto } from '@/api/people';
-import { Loader2 } from 'lucide-react';
+import { CreatePersonDto, UpdatePersonDto } from '@/api/people';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface PersonFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSave: (data: CreatePersonDto) => Promise<void>;
+  onSave: (data: CreatePersonDto | UpdatePersonDto) => Promise<void>;
   person?: Person | null;
   mode: 'create' | 'edit';
   departments: Array<{ id: string; name: string }>;
@@ -43,14 +43,17 @@ export default function PersonFormModal({
   branches
 }: PersonFormModalProps) {
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+
   const [formData, setFormData] = useState<CreatePersonDto>({
     firstName: '',
     lastName: '',
     nationalId: '',
     username: '',
-    departmentId: '',
-    roleId: '',
-    branchId: '',
+    password: '',
+    departmentId: undefined,
+    roleId: undefined,
+    branchId: undefined,
     status: 'active'
   });
 
@@ -61,9 +64,10 @@ export default function PersonFormModal({
         lastName: person.lastName,
         nationalId: person.nationalId,
         username: person.username,
-        departmentId: person.departmentId,
-        roleId: person.roleId,
-        branchId: person.branchId,
+        password: '', // 🛡️ nunca mostramos la contraseña real
+        departmentId: person.departmentId ? Number(person.departmentId) : undefined,
+        roleId: person.roleId ? Number(person.roleId) : undefined,
+        branchId: person.branchId ? Number(person.branchId) : undefined,
         status: person.status
       });
     } else if (mode === 'create') {
@@ -72,9 +76,10 @@ export default function PersonFormModal({
         lastName: '',
         nationalId: '',
         username: '',
-        departmentId: '',
-        roleId: '',
-        branchId: '',
+        password: '',
+        departmentId: undefined,
+        roleId: undefined,
+        branchId: undefined,
         status: 'active'
       });
     }
@@ -82,10 +87,44 @@ export default function PersonFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (mode === 'create' && formData.password.length < 6) {
+      alert('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
     setLoading(true);
-    
+
     try {
-      await onSave(formData);
+      const cleanedData: Partial<CreatePersonDto> = {
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        nationalId: formData.nationalId.trim(),
+        username: formData.username?.trim() || undefined,
+        status: formData.status,
+      };
+
+      if (mode === 'create' || (mode === 'edit' && formData.password.trim().length > 0)) {
+        cleanedData.password = formData.password;
+      }
+
+      if (formData.departmentId) {
+        cleanedData.departmentId = Number(formData.departmentId);
+      }
+      if (formData.roleId) {
+        cleanedData.roleId = Number(formData.roleId);
+      }
+      if (formData.branchId) {
+        cleanedData.branchId = Number(formData.branchId);
+      }
+
+      // ✅ Cast dependiendo del modo
+      if (mode === 'create') {
+        await onSave(cleanedData as CreatePersonDto);
+      } else {
+        await onSave(cleanedData as UpdatePersonDto);
+      }
+
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -94,7 +133,7 @@ export default function PersonFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreatePersonDto, value: string) => {
+  const handleChange = (field: keyof CreatePersonDto, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -113,11 +152,10 @@ export default function PersonFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Nombre y Apellido */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="firstName">
-                Nombre <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="firstName">Nombre <span className="text-destructive">*</span></Label>
               <Input
                 id="firstName"
                 value={formData.firstName}
@@ -126,11 +164,8 @@ export default function PersonFormModal({
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="lastName">
-                Apellido <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="lastName">Apellido <span className="text-destructive">*</span></Label>
               <Input
                 id="lastName"
                 value={formData.lastName}
@@ -141,11 +176,10 @@ export default function PersonFormModal({
             </div>
           </div>
 
+          {/* Cédula y Usuario */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nationalId">
-                Cédula <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="nationalId">Cédula <span className="text-destructive">*</span></Label>
               <Input
                 id="nationalId"
                 value={formData.nationalId}
@@ -154,30 +188,51 @@ export default function PersonFormModal({
                 required
               />
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="username">
-                Usuario <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="username">Usuario</Label>
               <Input
                 id="username"
                 value={formData.username}
                 onChange={(e) => handleChange('username', e.target.value)}
                 placeholder="juan.perez"
-                required
               />
             </div>
           </div>
 
+          {/* Contraseña con botón de mostrar/ocultar */}
+          <div className="space-y-2 relative">
+            <Label htmlFor="password">
+              Contraseña {mode === 'create' && <span className="text-destructive">*</span>}
+              {mode === 'edit' && (
+                <span className="text-muted-foreground text-xs"> (dejar vacío para no cambiar)</span>
+              )}
+            </Label>
+            <Input
+              id="password"
+              type={showPassword ? 'text' : 'password'}
+              value={formData.password}
+              onChange={(e) => handleChange('password', e.target.value)}
+              placeholder="••••••••"
+              minLength={6}
+              required={mode === 'create'}
+            />
+            <button
+              type="button"
+              className="absolute top-[34px] right-3 text-muted-foreground"
+              onClick={() => setShowPassword(prev => !prev)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            </button>
+          </div>
+
+          {/* Departamento y Rol */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="departmentId">
-                Departamento <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="departmentId">Departamento</Label>
               <Select
-                value={formData.departmentId}
+                value={formData.departmentId?.toString() || ''}
                 onValueChange={(value) => handleChange('departmentId', value)}
-                required
               >
                 <SelectTrigger id="departmentId">
                   <SelectValue placeholder="Selecciona departamento" />
@@ -191,15 +246,11 @@ export default function PersonFormModal({
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="roleId">
-                Rol <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="roleId">Rol</Label>
               <Select
-                value={formData.roleId}
+                value={formData.roleId?.toString() || ''}
                 onValueChange={(value) => handleChange('roleId', value)}
-                required
               >
                 <SelectTrigger id="roleId">
                   <SelectValue placeholder="Selecciona rol" />
@@ -215,15 +266,13 @@ export default function PersonFormModal({
             </div>
           </div>
 
+          {/* Sucursal y Estado */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="branchId">
-                Sucursal <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="branchId">Sucursal</Label>
               <Select
-                value={formData.branchId}
+                value={formData.branchId?.toString() || ''}
                 onValueChange={(value) => handleChange('branchId', value)}
-                required
               >
                 <SelectTrigger id="branchId">
                   <SelectValue placeholder="Selecciona sucursal" />
@@ -237,14 +286,13 @@ export default function PersonFormModal({
                 </SelectContent>
               </Select>
             </div>
-
             <div className="space-y-2">
-              <Label htmlFor="status">
-                Estado <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="status">Estado <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.status}
-                onValueChange={(value: 'active' | 'inactive' | 'suspended') => handleChange('status', value)}
+                onValueChange={(value: 'active' | 'inactive' | 'suspended') =>
+                  handleChange('status', value)
+                }
                 required
               >
                 <SelectTrigger id="status">
@@ -259,6 +307,7 @@ export default function PersonFormModal({
             </div>
           </div>
 
+          {/* Botones */}
           <DialogFooter>
             <Button
               type="button"

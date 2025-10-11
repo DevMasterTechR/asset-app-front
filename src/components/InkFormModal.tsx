@@ -38,6 +38,23 @@ function getCurrentDateTimeLocal(): string {
 }
 
 
+// Función para convertir ISO string a formato datetime-local
+function formatDateTimeLocal(isoString?: string): string {
+  if (!isoString) return getCurrentDateTimeLocal();
+  
+  try {
+    const date = new Date(isoString);
+    const year = date.getFullYear();
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const hours = `${date.getHours()}`.padStart(2, '0');
+    const minutes = `${date.getMinutes()}`.padStart(2, '0');
+    return `${year}-${month}-${day}T${hours}:${minutes}`;
+  } catch {
+    return getCurrentDateTimeLocal();
+  }
+}
+
 export default function InkFormModal({
   open,
   onOpenChange,
@@ -66,8 +83,8 @@ export default function InkFormModal({
         color: ink.color,
         quantity: ink.quantity,
         inkType: ink.inkType,
-        purchaseDate: ink.purchaseDate || getCurrentDateTimeLocal(),
-        usageDate: ink.usageDate || getCurrentDateTimeLocal(),
+        purchaseDate: formatDateTimeLocal(ink.purchaseDate),
+        usageDate: formatDateTimeLocal(ink.usageDate),
         notes: ink.notes || ''
       });
     } else if (mode === 'create') {
@@ -161,7 +178,7 @@ export default function InkFormModal({
 
           <div className="space-y-2">
             <Label htmlFor="inkType">
-              Tipo de Tinta <span className="text-destructive">*</span>
+              Tipo de Tinta
             </Label>
             <Input
               id="inkType"
@@ -169,13 +186,12 @@ export default function InkFormModal({
               onChange={(e) => handleChange('inkType', e.target.value)}
               placeholder="Original"
               maxLength={50}
-              required
             />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="quantity">
-              Cantidad <span className="text-destructive">*</span>
+              Cantidad
             </Label>
             <Input
               id="quantity"
@@ -185,7 +201,6 @@ export default function InkFormModal({
               onChange={(e) =>
                 handleChange('quantity', parseInt(e.target.value) || 0)
               }
-              required
             />
           </div>
 

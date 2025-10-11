@@ -35,6 +35,21 @@ import RJ45ConnectorFormModal from '@/components/RJ45ConnectorFormModal';
 import PowerStripFormModal from '@/components/PowerStripFormModal';
 import { useToast } from '@/hooks/use-toast';
 
+// Función para formatear fechas ISO a formato legible
+function formatDate(isoString?: string): string {
+  if (!isoString) return '-';
+  
+  try {
+    const date = new Date(isoString);
+    const day = `${date.getDate()}`.padStart(2, '0');
+    const month = `${date.getMonth() + 1}`.padStart(2, '0');
+    const year = date.getFullYear();
+    return `${day}/${month}/${year}`;
+  } catch {
+    return '-';
+  }
+}
+
 export default function Consumables() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -289,6 +304,7 @@ export default function Consumables() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Cantidad</TableHead>
                     <TableHead>Fecha Compra</TableHead>
+                    <TableHead>Fecha Uso</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -302,9 +318,10 @@ export default function Consumables() {
                         </div>
                       </TableCell>
                       <TableCell>{ink.color}</TableCell>
-                      <TableCell className="text-sm">{ink.inkType}</TableCell>
-                      <TableCell className="font-medium">{ink.quantity}</TableCell>
-                      <TableCell className="text-sm">{ink.purchaseDate || '-'}</TableCell>
+                      <TableCell className="text-sm">{ink.inkType || '-'}</TableCell>
+                      <TableCell className="font-medium">{ink.quantity || '-'}</TableCell>
+                      <TableCell className="text-sm">{formatDate(ink.purchaseDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(ink.usageDate)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
@@ -356,10 +373,12 @@ export default function Consumables() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Marca</TableHead>
-                    <TableHead>Tipo</TableHead>
+                    <TableHead>Categoría</TableHead>
                     <TableHead>Material</TableHead>
                     <TableHead>Longitud (m)</TableHead>
                     <TableHead>Color</TableHead>
+                    <TableHead>Fecha Compra</TableHead>
+                    <TableHead>Fecha Uso</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -367,10 +386,12 @@ export default function Consumables() {
                   {filteredCables.map((cable) => (
                     <TableRow key={cable.id}>
                       <TableCell className="font-medium">{cable.brand}</TableCell>
-                      <TableCell className="capitalize">{cable.type}</TableCell>
-                      <TableCell className="text-sm">{cable.material}</TableCell>
-                      <TableCell className="font-medium">{cable.lengthMeters}m</TableCell>
-                      <TableCell>{cable.color}</TableCell>
+                      <TableCell>{cable.type}</TableCell>
+                      <TableCell className="text-sm">{cable.material || '-'}</TableCell>
+                      <TableCell className="font-medium">{cable.lengthMeters ? `${cable.lengthMeters}m` : '-'}</TableCell>
+                      <TableCell>{cable.color || '-'}</TableCell>
+                      <TableCell className="text-sm">{formatDate(cable.purchaseDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(cable.usageDate)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
@@ -425,6 +446,8 @@ export default function Consumables() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Material</TableHead>
                     <TableHead>Cantidad</TableHead>
+                    <TableHead>Fecha Compra</TableHead>
+                    <TableHead>Fecha Uso</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -435,6 +458,8 @@ export default function Consumables() {
                       <TableCell>{connector.type}</TableCell>
                       <TableCell className="text-sm">{connector.material}</TableCell>
                       <TableCell className="font-medium">{connector.quantityUnits}</TableCell>
+                      <TableCell className="text-sm">{formatDate(connector.purchaseDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(connector.usageDate)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 
@@ -490,6 +515,8 @@ export default function Consumables() {
                     <TableHead>Longitud (m)</TableHead>
                     <TableHead>Capacidad (W)</TableHead>
                     <TableHead>Color</TableHead>
+                    <TableHead>Fecha Compra</TableHead>
+                    <TableHead>Fecha Uso</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -506,6 +533,8 @@ export default function Consumables() {
                       <TableCell>{strip.lengthMeters}m</TableCell>
                       <TableCell className="font-medium">{strip.capacity}W</TableCell>
                       <TableCell>{strip.color}</TableCell>
+                      <TableCell className="text-sm">{formatDate(strip.purchaseDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(strip.usageDate)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button 

@@ -1,4 +1,6 @@
-const API_URL = 'http://localhost:3000'; //URL del backend
+// authApi.ts - Para Vite
+
+const API_URL = 'http://localhost:3000';
 
 export interface LoginCredentials {
   username: string;
@@ -52,7 +54,6 @@ export const authApi = {
 
   /**
    * Verificar si el usuario está autenticado
-   * Puedes crear un endpoint en tu backend para esto si lo necesitas
    */
   verifyAuth: async (): Promise<AuthUser | null> => {
     try {
