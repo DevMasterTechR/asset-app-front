@@ -1,3 +1,4 @@
+// src/App.tsx - No necesita cambios, el auto-logout está en AuthContext
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,8 +14,7 @@ import Catalogs from "./pages/Catalogs";
 import Consumables from "./pages/Consumables";
 import NotFound from "./pages/NotFound";
 import Credentials from "./pages/Credentials";
-import { PrivateRoute } from "@/components/PrivateRout"
-
+import { PrivateRoute } from "@/components/PrivateRout";
 
 
 const queryClient = new QueryClient();
@@ -22,13 +22,13 @@ const queryClient = new QueryClient();
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
-      <AuthProvider>
-        <Toaster />
-        <Sonner />
-        <BrowserRouter>
-        <Routes>
+      <BrowserRouter>
+        <AuthProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
             {/* Pública */}
-            <Route path="/auth" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} /> 
 
             {/* Protegidas */}
             <Route path="/" element={
@@ -69,9 +69,9 @@ const App = () => (
 
             {/* Ruta 404 */}
             <Route path="*" element={<NotFound />} />
-        </Routes>
-        </BrowserRouter>
-      </AuthProvider>
+          </Routes>
+        </AuthProvider>
+      </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>
 );

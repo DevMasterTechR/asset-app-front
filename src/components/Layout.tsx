@@ -13,6 +13,7 @@ import {
   LogOut,
   Menu,
   Building2,
+  Key,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
@@ -33,6 +34,7 @@ const navItems: NavItem[] = [
   { title: 'Asignaciones', href: '/assignments', icon: ClipboardList },
   { title: 'Catálogos', href: '/catalogs', icon: FolderTree },
   { title: 'Consumibles', href: '/consumables', icon: Package },
+  { title: 'Credenciales', href: '/credentials', icon: Key },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -76,12 +78,12 @@ export default function Layout({ children }: LayoutProps) {
 
       {/* User Info */}
       <div className="p-4 border-b bg-muted/30">
-        <p className="text-sm font-medium">{user?.username}</p>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-sm font-medium">
           {user?.firstName && user?.lastName 
             ? `${user.firstName} ${user.lastName}` 
-            : user?.nationalId || 'Usuario'}
+            : user?.username || 'Usuario'}
         </p>
+        <p className="text-xs text-muted-foreground">@{user?.username}</p>
       </div>
 
       {/* Navigation */}

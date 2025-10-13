@@ -13,74 +13,115 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Key } from 'lucide-react';
-import { getPersonName } from '@/data/mockDataExtended';
+import { Search, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Key, Copy, Check } from 'lucide-react';
 import { 
   credentialsApi, 
-  initializeMockCredentials, 
   CreateCredentialDto, 
   UpdateCredentialDto,
   Credential 
 } from '@/api/credentials';
-import { mockCredentials } from '@/data/mockCredentials';
+import { peopleApi } from '@/api/people';
+import { Person } from '@/data/mockDataExtended';
 import CredentialFormModal from '@/components/CredentialFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 
 const systemColorMap = {
-  ERP: 'default' as const,
-  CRM: 'secondary' as const,
-  Email: 'outline' as const,
-  GLPI: 'success' as const,
+  erp: 'default' as const,
+  crm: 'secondary' as const,
+  email: 'outline' as const,
+  glpi: 'success' as const,
 };
 
-export default function Credentials() {
+const systemLabelMap = {
+  erp: 'ERP',
+  crm: 'CRM',
+  email: 'Email',
+  glpi: 'GLPI',
+};
+
+function CredentialsPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showPasswords, setShowPasswords] = useState<Record<string, boolean>>({});
+  const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
+  const [copiedPasswords, setCopiedPasswords] = useState<Record<number, boolean>>({});
   
-  // Estados para modales
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
   useEffect(() => {
-    loadCredentials();
+    loadData();
   }, []);
 
-  const loadCredentials = async () => {
+  const loadData = async () => {
     setLoading(true);
-    initializeMockCredentials(mockCredentials);
-    
-    const response = await credentialsApi.getAll();
-    if (response.success && response.data) {
-      setCredentials(response.data);
-    } else {
+    try {
+      const [credentialsData, peopleData] = await Promise.all([
+        credentialsApi.getAll(),
+        peopleApi.getAll(),
+      ]);
+      
+      console.log('✅ Credenciales cargadas:', credentialsData);
+      console.log('✅ Personas cargadas:', peopleData);
+      
+      setCredentials(credentialsData);
+      setPeople(peopleData);
+    } catch (error) {
+      console.error('❌ Error cargando datos:', error);
       toast({
         title: 'Error',
-        description: response.error || 'No se pudieron cargar las credenciales',
+        description: error instanceof Error ? error.message : 'No se pudieron cargar los datos',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
+  };
+
+  const getPersonName = (personId: number): string => {
+    const person = people.find(p => Number(p.id) === personId);
+    return person ? `${person.firstName} ${person.lastName}` : 'Desconocido';
   };
 
   const filteredCredentials = credentials.filter((cred) => {
     const personName = getPersonName(cred.personId).toLowerCase();
+    const search = searchTerm.toLowerCase();
     return (
-      personName.includes(searchTerm.toLowerCase()) ||
-      cred.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      cred.system.toLowerCase().includes(searchTerm.toLowerCase())
+      personName.includes(search) ||
+      cred.username.toLowerCase().includes(search) ||
+      cred.system.toLowerCase().includes(search)
     );
   });
 
-  const togglePasswordVisibility = (id: string) => {
+  const togglePasswordVisibility = (id: number) => {
     setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  // ========== CRUD HANDLERS ==========
+  const copyPasswordToClipboard = async (password: string, id: number) => {
+    try {
+      await navigator.clipboard.writeText(password);
+      setCopiedPasswords(prev => ({ ...prev, [id]: true }));
+      
+      toast({
+        title: 'Copiado',
+        description: 'Contraseña copiada al portapapeles',
+      });
+
+      setTimeout(() => {
+        setCopiedPasswords(prev => ({ ...prev, [id]: false }));
+      }, 2000);
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'No se pudo copiar la contraseña',
+        variant: 'destructive',
+      });
+    }
+  };
 
   const handleCreate = () => {
     setFormMode('create');
@@ -100,67 +141,56 @@ export default function Credentials() {
   };
 
   const handleSave = async (data: CreateCredentialDto) => {
-    let response;
-    
-    if (formMode === 'create') {
-      response = await credentialsApi.create(data);
-    } else if (selectedCredential) {
-      const updateData: UpdateCredentialDto = { ...data, id: selectedCredential.id };
-      response = await credentialsApi.update(updateData);
-    }
-
-    if (response?.success) {
-      toast({
-        title: 'Éxito',
-        description: formMode === 'create' 
-          ? 'Credencial creada correctamente'
-          : 'Credencial actualizada correctamente',
-      });
-      await loadCredentials();
+    try {
+      if (formMode === 'create') {
+        await credentialsApi.create(data);
+        toast({
+          title: 'Éxito',
+          description: 'Credencial creada correctamente',
+        });
+      } else if (selectedCredential) {
+        await credentialsApi.update(selectedCredential.id, data);
+        toast({
+          title: 'Éxito',
+          description: 'Credencial actualizada correctamente',
+        });
+      }
+      
+      await loadData();
       setFormModalOpen(false);
-    } else {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: response?.error || 'No se pudo guardar la credencial',
+        description: error instanceof Error ? error.message : 'No se pudo guardar la credencial',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 
   const handleDelete = async () => {
     if (!selectedCredential) return;
 
-    const response = await credentialsApi.delete(selectedCredential.id);
-
-    if (response.success) {
+    try {
+      await credentialsApi.delete(selectedCredential.id);
       toast({
         title: 'Éxito',
         description: 'Credencial eliminada correctamente',
       });
-      await loadCredentials();
-    } else {
+      await loadData();
+      setDeleteModalOpen(false);
+    } catch (error) {
       toast({
         title: 'Error',
-        description: response.error || 'No se pudo eliminar la credencial',
+        description: error instanceof Error ? error.message : 'No se pudo eliminar la credencial',
         variant: 'destructive',
       });
     }
   };
 
-  // Agrupar credenciales por persona
-  const credentialsByPerson = filteredCredentials.reduce((acc, cred) => {
-    const personName = getPersonName(cred.personId);
-    if (!acc[personName]) {
-      acc[personName] = [];
-    }
-    acc[personName].push(cred);
-    return acc;
-  }, {} as Record<string, Credential[]>);
-
   return (
     <Layout>
       <div className="p-6 space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Credenciales</h1>
@@ -174,7 +204,6 @@ export default function Credentials() {
           </Button>
         </div>
 
-        {/* Search and Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-3">
             <div className="relative">
@@ -196,34 +225,33 @@ export default function Credentials() {
           </div>
         </div>
 
-        {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <>
-            <div className="border rounded-lg bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Persona</TableHead>
-                    <TableHead>Sistema</TableHead>
-                    <TableHead>Usuario</TableHead>
-                    <TableHead>Contraseña</TableHead>
-                    <TableHead>Notas</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCredentials.map((credential) => (
+          <div className="border rounded-lg bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Persona</TableHead>
+                  <TableHead>Sistema</TableHead>
+                  <TableHead>Usuario</TableHead>
+                  <TableHead>Contraseña</TableHead>
+                  <TableHead>Notas</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredCredentials.length > 0 ? (
+                  filteredCredentials.map((credential) => (
                     <TableRow key={credential.id}>
                       <TableCell className="font-medium">
                         {getPersonName(credential.personId)}
                       </TableCell>
                       <TableCell>
                         <Badge variant={systemColorMap[credential.system]}>
-                          {credential.system}
+                          {systemLabelMap[credential.system]}
                         </Badge>
                       </TableCell>
                       <TableCell className="font-mono text-sm">
@@ -242,11 +270,25 @@ export default function Credentials() {
                             size="icon"
                             className="h-6 w-6"
                             onClick={() => togglePasswordVisibility(credential.id)}
+                            title={showPasswords[credential.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
                           >
                             {showPasswords[credential.id] ? (
                               <EyeOff className="h-3 w-3" />
                             ) : (
                               <Eye className="h-3 w-3" />
+                            )}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-6 w-6"
+                            onClick={() => copyPasswordToClipboard(credential.password, credential.id)}
+                            title="Copiar contraseña"
+                          >
+                            {copiedPasswords[credential.id] ? (
+                              <Check className="h-3 w-3 text-green-500" />
+                            ) : (
+                              <Copy className="h-3 w-3" />
                             )}
                           </Button>
                         </div>
@@ -273,31 +315,35 @@ export default function Credentials() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {filteredCredentials.length === 0 && (
-              <div className="text-center py-12">
-                <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No se encontraron credenciales</h3>
-                <p className="text-muted-foreground">
-                  Intenta con otros términos de búsqueda
-                </p>
-              </div>
-            )}
-          </>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={6} className="text-center py-12">
+                      <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        No se encontraron credenciales
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {searchTerm 
+                          ? 'Intenta con otros términos de búsqueda' 
+                          : 'Comienza agregando una credencial'}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
-      {/* Modales */}
       <CredentialFormModal
         open={formModalOpen}
         onOpenChange={setFormModalOpen}
         onSave={handleSave}
         credential={selectedCredential}
         mode={formMode}
+        people={people}
       />
 
       <DeleteConfirmationModal
@@ -306,8 +352,10 @@ export default function Credentials() {
         onConfirm={handleDelete}
         title="¿Eliminar credencial?"
         description="Esta acción no se puede deshacer. La credencial será eliminada permanentemente."
-        itemName={selectedCredential ? `${selectedCredential.username} - ${selectedCredential.system}` : undefined}
+        itemName={selectedCredential ? `${selectedCredential.username} - ${systemLabelMap[selectedCredential.system]}` : undefined}
       />
     </Layout>
   );
 }
+
+export default CredentialsPage;

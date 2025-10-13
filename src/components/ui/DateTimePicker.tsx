@@ -1,11 +1,12 @@
 // src/components/ui/DateTimePicker.tsx
-
 import React from 'react';
+import { Button } from '@/components/ui/button';
+import { Calendar } from 'lucide-react';
 
 interface DateTimePickerProps {
   value: string; // ISO 8601 format: "YYYY-MM-DDTHH:mm"
   onChange: (value: string) => void;
-  
+  placeholder?: string;
 }
 
 export const DateTimePicker: React.FC<DateTimePickerProps> = ({ value, onChange }) => {

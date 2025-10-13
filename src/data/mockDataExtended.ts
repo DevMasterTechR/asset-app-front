@@ -1,20 +1,20 @@
 // Mock data extendido para todas las entidades del sistema
 
 export interface Branch {
-  id: string;
+  id: number;
   name: string;
   address: string;
   region: string;
 }
 
 export interface Department {
-  id: string;
+  id: number;
   name: string;
   description: string;
 }
 
 export interface Role { 
-  id: string;
+  id: number;
   name: string;
   description: string;
 }
@@ -27,9 +27,9 @@ export interface Person {
   username: string;
   password: string;
   status: 'active' | 'inactive' | 'suspended';
-  departmentId: string;
-  roleId: string;
-  branchId: string;
+  departmentId: number;
+  roleId: number;
+  branchId: number;
 }
 
 export interface AssetAttributes {
@@ -40,7 +40,6 @@ export interface AssetAttributes {
     capacity: number;
   };
   charger?: boolean;
-  // Añade más propiedades según necesidad
 }
 
 export interface Asset {
@@ -51,7 +50,7 @@ export interface Asset {
   brand: string;
   model: string;
   status: 'available' | 'assigned' | 'maintenance' | 'decommissioned';
-  branchId: string;
+  branchId: number;
   assignedPersonId?: string;
   purchaseDate?: string;
   deliveryDate?: string;
@@ -64,7 +63,7 @@ export interface Assignment {
   id: string;
   assetId: string;
   personId: string;
-  branchId: string;
+  branchId: number;
   assignmentDate: string;
   returnDate?: string;
   deliveryCondition: 'excellent' | 'good' | 'fair' | 'poor';
@@ -124,24 +123,24 @@ export interface PowerStrip {
 // ============= MOCK DATA =============
 
 export const mockBranches: Branch[] = [
-  { id: '1', name: 'Oficina Principal', address: 'Av. Principal 123', region: 'Centro' },
-  { id: '2', name: 'Sucursal Norte', address: 'Calle Norte 456', region: 'Norte' },
-  { id: '3', name: 'Sucursal Sur', address: 'Av. Sur 789', region: 'Sur' },
+  { id: 1, name: 'Oficina Principal', address: 'Av. Principal 123', region: 'Centro' },
+  { id: 2, name: 'Sucursal Norte', address: 'Calle Norte 456', region: 'Norte' },
+  { id: 3, name: 'Sucursal Sur', address: 'Av. Sur 789', region: 'Sur' },
 ];
 
 export const mockDepartments: Department[] = [
-  { id: '1', name: 'Tecnología', description: 'Encargado de sistemas, redes y soporte técnico.' },
-  { id: '2', name: 'Recursos Humanos', description: 'Gestión de personal y procesos administrativos.' },
-  { id: '3', name: 'Ventas', description: 'Responsable de comercialización de productos y servicios.' },
-  { id: '4', name: 'Administración', description: 'Control de finanzas y administración general.' },
-  { id: '5', name: 'Operaciones', description: 'Supervisión de actividades operativas.' },
+  { id: 1, name: 'Tecnología', description: 'Encargado de sistemas, redes y soporte técnico.' },
+  { id: 2, name: 'Recursos Humanos', description: 'Gestión de personal y procesos administrativos.' },
+  { id: 3, name: 'Ventas', description: 'Responsable de comercialización de productos y servicios.' },
+  { id: 4, name: 'Administración', description: 'Control de finanzas y administración general.' },
+  { id: 5, name: 'Operaciones', description: 'Supervisión de actividades operativas.' },
 ];
 
 export const mockRoles: Role[] = [
-  { id: '1', name: 'Admin', description: 'Administrador del sistema' },
-  { id: '2', name: 'Manager', description: 'Gerente de área' },
-  { id: '3', name: 'Employee', description: 'Empleado estándar' },
-  { id: '4', name: 'IT Support', description: 'Soporte técnico' },
+  { id: 1, name: 'Admin', description: 'Administrador del sistema' },
+  { id: 2, name: 'Manager', description: 'Gerente de área' },
+  { id: 3, name: 'Employee', description: 'Empleado estándar' },
+  { id: 4, name: 'IT Support', description: 'Soporte técnico' },
 ];
 
 export const mockPeople: Person[] = [
@@ -153,9 +152,9 @@ export const mockPeople: Person[] = [
     username: 'jperez',
     password: '1234',
     status: 'active',
-    departmentId: '1',
-    roleId: '1',
-    branchId: '1',
+    departmentId: 1,
+    roleId: 1,
+    branchId: 1,
   },
   {
     id: '2',
@@ -165,9 +164,9 @@ export const mockPeople: Person[] = [
     username: 'mgonzalez',
     password: '1234',
     status: 'active',
-    departmentId: '2',
-    roleId: '2',
-    branchId: '1',
+    departmentId: 2,
+    roleId: 2,
+    branchId: 1,
   },
   {
     id: '3',
@@ -177,9 +176,9 @@ export const mockPeople: Person[] = [
     username: 'crodriguez',
     password: '1234',
     status: 'active',
-    departmentId: '3',
-    roleId: '3',
-    branchId: '2',
+    departmentId: 3,
+    roleId: 3,
+    branchId: 2,
   },
 ];
 
@@ -192,7 +191,7 @@ export const mockAssets: Asset[] = [
     brand: 'Dell',
     model: 'Latitude 5420',
     status: 'assigned',
-    branchId: '1',
+    branchId: 1,
     assignedPersonId: '1',
     purchaseDate: '2024-01-15',
     attributes: {
@@ -210,7 +209,7 @@ export const mockAssets: Asset[] = [
     brand: 'Samsung',
     model: 'Galaxy S23',
     status: 'assigned',
-    branchId: '1',
+    branchId: 1,
     assignedPersonId: '2',
     purchaseDate: '2024-02-10',
     attributes: {
@@ -227,7 +226,7 @@ export const mockAssets: Asset[] = [
     brand: 'Logitech',
     model: 'M720',
     status: 'available',
-    branchId: '1',
+    branchId: 1,
     purchaseDate: '2024-03-05',
   },
   {
@@ -238,7 +237,7 @@ export const mockAssets: Asset[] = [
     brand: 'Logitech',
     model: 'K380',
     status: 'available',
-    branchId: '2',
+    branchId: 2,
     purchaseDate: '2024-03-05',
   },
 ];
@@ -248,7 +247,7 @@ export const mockAssignments: Assignment[] = [
     id: '1',
     assetId: '1',
     personId: '1',
-    branchId: '1',
+    branchId: 1,
     assignmentDate: '2024-01-20',
     deliveryCondition: 'excellent',
     deliveryNotes: 'Equipo nuevo entregado',
@@ -257,7 +256,7 @@ export const mockAssignments: Assignment[] = [
     id: '2',
     assetId: '2',
     personId: '2',
-    branchId: '1',
+    branchId: 1,
     assignmentDate: '2024-02-15',
     deliveryCondition: 'good',
     deliveryNotes: 'Celular con cargador incluido',
@@ -322,9 +321,9 @@ export const mockPowerStrips: PowerStrip[] = [
 ];
 
 // Helper functions
-export const getBranchName = (id: string) => mockBranches.find(b => b.id === id)?.name || 'N/A';
-export const getDepartmentName = (id: string) => mockDepartments.find(d => d.id === id)?.name || 'N/A';
-export const getRoleName = (id: string) => mockRoles.find(r => r.id === id)?.name || 'N/A';
+export const getBranchName = (id: number) => mockBranches.find(b => b.id === id)?.name || 'N/A';
+export const getDepartmentName = (id: number) => mockDepartments.find(d => d.id === id)?.name || 'N/A';
+export const getRoleName = (id: number) => mockRoles.find(r => r.id === id)?.name || 'N/A';
 export const getPersonName = (id: string) => {
   const person = mockPeople.find(p => p.id === id);
   return person ? `${person.firstName} ${person.lastName}` : 'N/A';

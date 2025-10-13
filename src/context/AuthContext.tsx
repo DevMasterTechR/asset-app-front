@@ -1,7 +1,7 @@
+// src/context/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authApi, AuthUser } from '@/api/auth';
-import { useInactivityLogout } from '@/hooks/useInactivityLogout';
-import { toast } from '@/hooks/use-toast';
+import { useAutoLogout } from '@/hooks/useAutoLogout';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -44,27 +44,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Sistema de cierre automático por inactividad (5 minutos)
-  useInactivityLogout({
-    inactivityTime: 5 * 60 * 1000, // 5 minutos
-    warningTime: 60 * 1000, // Advertencia 1 minuto antes
-    enabled: !!user, // Solo activo cuando hay usuario autenticado
-    onWarning: () => {
-      toast({
-        title: '⚠️ Sesión por expirar',
-        description: 'Tu sesión se cerrará en 1 minuto por inactividad.',
-        duration: 10000,
-      });
-    },
-    onInactive: async () => {
-      toast({
-        title: '🔒 Sesión cerrada',
-        description: 'Tu sesión se cerró por inactividad.',
-        variant: 'destructive',
-      });
-      await logout();
-    },
-  });
+  // Sistema de cierre automático por inactividad usando useAutoLogout
+  // Solo se activa cuando hay un usuario autenticado
+  useAutoLogout(
+    logout,
+    {
+      timeout: 15 * 60 * 1000, // 15 minutos (puedes cambiarlo a 5 * 60 * 1000 para 5 minutos)
+      events: ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'mousemove'],
+      trackFetch: true,
+    }
+  );
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password });

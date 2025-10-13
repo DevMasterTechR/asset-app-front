@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Credential, CreateCredentialDto, SystemType } from '@/api/credentials';
-import { mockPeople } from '@/data/mockDataExtended';
+import { Person } from '@/data/mockDataExtended';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface CredentialFormModalProps {
@@ -29,13 +29,14 @@ interface CredentialFormModalProps {
   onSave: (data: CreateCredentialDto) => Promise<void>;
   credential?: Credential | null;
   mode: 'create' | 'edit';
+  people?: Person[];
 }
 
 const systemOptions: { value: SystemType; label: string }[] = [
-  { value: 'ERP', label: 'ERP - Sistema de Planificación' },
-  { value: 'CRM', label: 'CRM - Gestión de Clientes' },
-  { value: 'Email', label: 'Email - Correo Electrónico' },
-  { value: 'GLPI', label: 'GLPI - Gestión de Inventario' },
+  { value: 'erp', label: 'ERP - Sistema de Planificación' },
+  { value: 'crm', label: 'CRM - Gestión de Clientes' },
+  { value: 'email', label: 'Email - Correo Electrónico' },
+  { value: 'glpi', label: 'GLPI - Gestión de Inventario' },
 ];
 
 export default function CredentialFormModal({
@@ -43,15 +44,16 @@ export default function CredentialFormModal({
   onOpenChange,
   onSave,
   credential,
-  mode
+  mode,
+  people
 }: CredentialFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [formData, setFormData] = useState<CreateCredentialDto>({
-    personId: '',
+    personId: 0,
     username: '',
     password: '',
-    system: 'ERP',
+    system: 'erp',
     notes: ''
   });
 
@@ -66,10 +68,10 @@ export default function CredentialFormModal({
       });
     } else if (mode === 'create') {
       setFormData({
-        personId: '',
+        personId: 0,
         username: '',
         password: '',
-        system: 'ERP',
+        system: 'erp',
         notes: ''
       });
     }
@@ -78,6 +80,12 @@ export default function CredentialFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!formData.personId || formData.personId === 0) {
+      alert('Por favor selecciona una persona');
+      return;
+    }
+
     setLoading(true);
     
     try {
@@ -90,7 +98,7 @@ export default function CredentialFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreateCredentialDto, value: string | undefined) => {
+  const handleChange = (field: keyof CreateCredentialDto, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -115,18 +123,24 @@ export default function CredentialFormModal({
               Persona <span className="text-destructive">*</span>
             </Label>
             <Select
-              value={formData.personId}
-              onValueChange={(value) => handleChange('personId', value)}
+              value={formData.personId ? formData.personId.toString() : ''}
+              onValueChange={(value) => handleChange('personId', Number(value))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecciona una persona" />
               </SelectTrigger>
               <SelectContent>
-                {mockPeople.map(person => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.firstName} {person.lastName} ({person.username})
+                {people && people.length > 0 ? (
+                  people.map(person => (
+                    <SelectItem key={person.id} value={person.id.toString()}>
+                      {person.firstName} {person.lastName} ({person.username})
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="0" disabled>
+                    No hay personas disponibles
                   </SelectItem>
-                ))}
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -188,6 +202,7 @@ export default function CredentialFormModal({
                 size="icon"
                 className="absolute right-0 top-0 h-full"
                 onClick={() => setShowPassword(!showPassword)}
+                tabIndex={-1}
               >
                 {showPassword ? (
                   <EyeOff className="h-4 w-4" />

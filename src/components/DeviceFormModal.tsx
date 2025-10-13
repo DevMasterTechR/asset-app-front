@@ -3,9 +3,6 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { DateTimePicker } from '@/components/ui/DateTimePicker';
-
-
 import {
   Dialog,
   DialogContent,
@@ -22,45 +19,58 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Asset, mockBranches } from '@/data/mockDataExtended';
-import { CreateDeviceDto } from '@/api/devices';
+import { Checkbox } from '@/components/ui/checkbox';
+import { DateTimePicker } from '@/components/ui/DateTimePicker';
+import { Device, CreateDeviceDto, DeviceStatus } from '@/api/devices';
+import { Person } from '@/data/mockDataExtended';
 import { Loader2 } from 'lucide-react';
 
 interface DeviceFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSave: (data: CreateDeviceDto) => Promise<void>;
-  device?: Asset | null;
+  device?: Device | null;
   mode: 'create' | 'edit';
+  branches: Array<{ id: number; name: string }>;
+  people?: Person[];
 }
 
 const deviceTypes = [
   { value: 'laptop', label: 'Laptop' },
   { value: 'smartphone', label: 'Smartphone' },
+  { value: 'tablet', label: 'Tablet' },
+  { value: 'monitor', label: 'Monitor' },
   { value: 'mouse', label: 'Mouse' },
   { value: 'keyboard', label: 'Teclado' },
-  { value: 'monitor', label: 'Monitor' },
-  { value: 'tablet', label: 'Tablet' },
   { value: 'server', label: 'Servidor' },
 ];
 
-const statusOptions = [
+const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
   { value: 'available', label: 'Disponible' },
   { value: 'assigned', label: 'Asignado' },
   { value: 'maintenance', label: 'Mantenimiento' },
   { value: 'decommissioned', label: 'Dado de baja' },
 ];
 
-function getCurrentDateTimeLocal() {
-  return new Date().toISOString().slice(0, 16); // YYYY-MM-DDTHH:mm
-}
+// Función helper para obtener fecha/hora actual en formato ISO
+const getCurrentDateTime = (): string => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  const hours = String(now.getHours()).padStart(2, '0');
+  const minutes = String(now.getMinutes()).padStart(2, '0');
+  return `${year}-${month}-${day}T${hours}:${minutes}`;
+};
 
 export default function DeviceFormModal({
   open,
   onOpenChange,
   onSave,
   device,
-  mode
+  mode,
+  branches,
+  people = [],
 }: DeviceFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateDeviceDto>({
@@ -70,12 +80,13 @@ export default function DeviceFormModal({
     model: '',
     serialNumber: '',
     status: 'available',
-    branchId: '1',
+    branchId: undefined,
     assignedPersonId: undefined,
-    purchaseDate: getCurrentDateTimeLocal(),
-    deliveryDate: getCurrentDateTimeLocal(),
-    receivedDate: getCurrentDateTimeLocal(),
-    notes: ''
+    purchaseDate: '',
+    deliveryDate: '',
+    receivedDate: '',
+    notes: '',
+    attributesJson: {},
   });
 
   useEffect(() => {
@@ -83,18 +94,21 @@ export default function DeviceFormModal({
       setFormData({
         assetCode: device.assetCode,
         assetType: device.assetType,
-        brand: device.brand,
-        model: device.model,
+        brand: device.brand || '',
+        model: device.model || '',
         serialNumber: device.serialNumber || '',
         status: device.status,
         branchId: device.branchId,
         assignedPersonId: device.assignedPersonId,
-        purchaseDate: device.purchaseDate || getCurrentDateTimeLocal(),
-        deliveryDate: device.deliveryDate || getCurrentDateTimeLocal(),
-        receivedDate: device.receivedDate || getCurrentDateTimeLocal(),
-        notes: device.notes || ''
+        purchaseDate: device.purchaseDate?.substring(0, 16) || '',
+        deliveryDate: device.deliveryDate?.substring(0, 16) || '',
+        receivedDate: device.receivedDate?.substring(0, 16) || '',
+        notes: device.notes || '',
+        attributesJson: device.attributesJson || {},
       });
     } else if (mode === 'create') {
+      // Cuando es modo crear, establecer las fechas automáticamente
+      const currentDateTime = getCurrentDateTime();
       setFormData({
         assetCode: '',
         assetType: 'laptop',
@@ -102,12 +116,13 @@ export default function DeviceFormModal({
         model: '',
         serialNumber: '',
         status: 'available',
-        branchId: '1',
+        branchId: undefined,
         assignedPersonId: undefined,
-        purchaseDate: getCurrentDateTimeLocal(),
-        deliveryDate: getCurrentDateTimeLocal(),
-        receivedDate: getCurrentDateTimeLocal(),
-        notes: ''
+        purchaseDate: currentDateTime,
+        deliveryDate: currentDateTime,
+        receivedDate: currentDateTime,
+        notes: '',
+        attributesJson: {},
       });
     }
   }, [device, mode, open]);
@@ -117,13 +132,24 @@ export default function DeviceFormModal({
     setLoading(true);
 
     try {
-      console.log('Guardando con fechas:', {
-        purchaseDate: formData.purchaseDate,
-        deliveryDate: formData.deliveryDate,
-        receivedDate: formData.receivedDate,
-      });
+      // Limpiar campos vacíos para enviar al backend
+      const cleanData: CreateDeviceDto = {
+        assetCode: formData.assetCode,
+        assetType: formData.assetType,
+        brand: formData.brand || undefined,
+        model: formData.model || undefined,
+        serialNumber: formData.serialNumber || undefined,
+        status: formData.status,
+        branchId: formData.branchId || undefined,
+        assignedPersonId: formData.assignedPersonId || undefined,
+        purchaseDate: formData.purchaseDate || undefined,
+        deliveryDate: formData.deliveryDate || undefined,
+        receivedDate: formData.receivedDate || undefined,
+        notes: formData.notes || undefined,
+        attributesJson: Object.keys(formData.attributesJson || {}).length > 0 ? formData.attributesJson : undefined,
+      };
 
-      await onSave(formData);
+      await onSave(cleanData);
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -132,13 +158,251 @@ export default function DeviceFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreateDeviceDto, value: string | undefined) => {
+  const handleChange = (field: keyof CreateDeviceDto, value: string | number | DeviceStatus | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  const handleAttributeChange = (key: string, value: string | number | boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      attributesJson: { ...(prev.attributesJson || {}), [key]: value },
+    }));
+  };
+
+  const getAttrValue = (key: string): string | number | boolean | undefined => {
+    const attrs = formData.attributesJson;
+    if (!attrs) return undefined;
+    return attrs[key];
+  };
+
+  const renderDynamicAttributes = () => {
+    switch (formData.assetType) {
+      case 'laptop':
+      case 'server':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>CPU/Procesador</Label>
+              <Input
+                value={String(getAttrValue('cpu') || '')}
+                onChange={(e) => handleAttributeChange('cpu', e.target.value)}
+                placeholder="Intel Core i5-1135G7"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>RAM (GB)</Label>
+              <Input
+                type="number"
+                value={Number(getAttrValue('ram')) || ''}
+                onChange={(e) => handleAttributeChange('ram', e.target.value ? Number(e.target.value) : 0)}
+                placeholder="16"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Almacenamiento</Label>
+              <Input
+                value={String(getAttrValue('storage') || '')}
+                onChange={(e) => handleAttributeChange('storage', e.target.value)}
+                placeholder="512GB SSD"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasCharger"
+                checked={Boolean(getAttrValue('hasCharger'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasCharger', checked === true)}
+              />
+              <Label htmlFor="hasCharger" className="cursor-pointer">¿Tiene cargador?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasBag"
+                checked={Boolean(getAttrValue('hasBag'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasBag', checked === true)}
+              />
+              <Label htmlFor="hasBag" className="cursor-pointer">¿Tiene maletín/bolso?</Label>
+            </div>
+          </>
+        );
+
+      case 'smartphone':
+      case 'tablet':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Procesador</Label>
+              <Input
+                value={String(getAttrValue('cpu') || '')}
+                onChange={(e) => handleAttributeChange('cpu', e.target.value)}
+                placeholder="Snapdragon 8 Gen 2"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>RAM (GB)</Label>
+              <Input
+                type="number"
+                value={Number(getAttrValue('ram')) || ''}
+                onChange={(e) => handleAttributeChange('ram', e.target.value ? Number(e.target.value) : 0)}
+                placeholder="8"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Almacenamiento</Label>
+              <Input
+                value={String(getAttrValue('storage') || '')}
+                onChange={(e) => handleAttributeChange('storage', e.target.value)}
+                placeholder="256GB"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tamaño de pantalla (pulgadas)</Label>
+              <Input
+                type="number"
+                step="0.1"
+                value={Number(getAttrValue('screenSize')) || ''}
+                onChange={(e) => handleAttributeChange('screenSize', e.target.value ? parseFloat(e.target.value) : 0)}
+                placeholder="6.1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Operador (SIM)</Label>
+              <Input
+                value={String(getAttrValue('carrier') || '')}
+                onChange={(e) => handleAttributeChange('carrier', e.target.value)}
+                placeholder="Claro, Movistar, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Número telefónico</Label>
+              <Input
+                value={String(getAttrValue('phoneNumber') || '')}
+                onChange={(e) => handleAttributeChange('phoneNumber', e.target.value)}
+                placeholder="+593 99 123 4567"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasCharger"
+                checked={Boolean(getAttrValue('hasCharger'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasCharger', checked === true)}
+              />
+              <Label htmlFor="hasCharger" className="cursor-pointer">¿Tiene cargador?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasCase"
+                checked={Boolean(getAttrValue('hasCase'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasCase', checked === true)}
+              />
+              <Label htmlFor="hasCase" className="cursor-pointer">¿Tiene funda/case?</Label>
+            </div>
+          </>
+        );
+
+      case 'monitor':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tamaño (pulgadas)</Label>
+              <Input
+                type="number"
+                value={Number(getAttrValue('screenSize')) || ''}
+                onChange={(e) => handleAttributeChange('screenSize', e.target.value ? Number(e.target.value) : 0)}
+                placeholder="24"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Resolución</Label>
+              <Input
+                value={String(getAttrValue('resolution') || '')}
+                onChange={(e) => handleAttributeChange('resolution', e.target.value)}
+                placeholder="1920x1080"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de panel</Label>
+              <Input
+                value={String(getAttrValue('panelType') || '')}
+                onChange={(e) => handleAttributeChange('panelType', e.target.value)}
+                placeholder="IPS, TN, VA..."
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasHDMI"
+                checked={Boolean(getAttrValue('hasHDMI'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasHDMI', checked === true)}
+              />
+              <Label htmlFor="hasHDMI" className="cursor-pointer">¿Tiene HDMI?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasVGA"
+                checked={Boolean(getAttrValue('hasVGA'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasVGA', checked === true)}
+              />
+              <Label htmlFor="hasVGA" className="cursor-pointer">¿Tiene VGA?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasPowerCable"
+                checked={Boolean(getAttrValue('hasPowerCable'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasPowerCable', checked === true)}
+              />
+              <Label htmlFor="hasPowerCable" className="cursor-pointer">¿Tiene cable de poder?</Label>
+            </div>
+          </>
+        );
+
+      case 'mouse':
+      case 'keyboard':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tipo de conexión</Label>
+              <Select
+                value={String(getAttrValue('connectionType') || 'none')}
+                onValueChange={(value) => handleAttributeChange('connectionType', value === 'none' ? '' : value)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecciona tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Ninguno</SelectItem>
+                  <SelectItem value="USB">USB</SelectItem>
+                  <SelectItem value="Bluetooth">Bluetooth</SelectItem>
+                  <SelectItem value="Wireless">Inalámbrico (2.4GHz)</SelectItem>
+                  <SelectItem value="Wired">Cable</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={(e) => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, Blanco..."
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasBatteries"
+                checked={Boolean(getAttrValue('hasBatteries'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasBatteries', checked === true)}
+              />
+              <Label htmlFor="hasBatteries" className="cursor-pointer">¿Requiere baterías?</Label>
+            </div>
+          </>
+        );
+
+      default:
+        return null;
+    }
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {mode === 'create' ? 'Agregar Dispositivo' : 'Editar Dispositivo'}
@@ -151,14 +415,11 @@ export default function DeviceFormModal({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
+          {/* Información básica */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Código */}
             <div className="space-y-2">
-              <Label htmlFor="assetCode">
-                Código <span className="text-destructive">*</span>
-              </Label>
+              <Label>Código <span className="text-destructive">*</span></Label>
               <Input
-                id="assetCode"
                 value={formData.assetCode}
                 onChange={(e) => handleChange('assetCode', e.target.value)}
                 placeholder="LAPTOP-001"
@@ -166,11 +427,8 @@ export default function DeviceFormModal({
               />
             </div>
 
-            {/* Tipo */}
             <div className="space-y-2">
-              <Label htmlFor="assetType">
-                Tipo <span className="text-destructive">*</span>
-              </Label>
+              <Label>Tipo <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.assetType}
                 onValueChange={(value) => handleChange('assetType', value)}
@@ -188,55 +446,38 @@ export default function DeviceFormModal({
               </Select>
             </div>
 
-            {/* Marca */}
             <div className="space-y-2">
-              <Label htmlFor="brand">
-                Marca <span className="text-destructive">*</span>
-              </Label>
+              <Label>Marca</Label>
               <Input
-                id="brand"
                 value={formData.brand}
                 onChange={(e) => handleChange('brand', e.target.value)}
                 placeholder="Dell, HP, Logitech..."
-                required
               />
             </div>
 
-            {/* Modelo */}
             <div className="space-y-2">
-              <Label htmlFor="model">
-                Modelo <span className="text-destructive">*</span>
-              </Label>
+              <Label>Modelo</Label>
               <Input
-                id="model"
                 value={formData.model}
                 onChange={(e) => handleChange('model', e.target.value)}
                 placeholder="Latitude 5420"
-                required
               />
             </div>
 
-            {/* Serial */}
             <div className="space-y-2">
-              <Label htmlFor="serialNumber">Número de Serie</Label>
+              <Label>Número de Serie</Label>
               <Input
-                id="serialNumber"
                 value={formData.serialNumber}
                 onChange={(e) => handleChange('serialNumber', e.target.value)}
                 placeholder="SN123456"
               />
             </div>
 
-            {/* Estado */}
             <div className="space-y-2">
-              <Label htmlFor="status">
-                Estado <span className="text-destructive">*</span>
-              </Label>
+              <Label>Estado <span className="text-destructive">*</span></Label>
               <Select
                 value={formData.status}
-                onValueChange={(value) =>
-                  handleChange('status', value as 'available' | 'assigned' | 'maintenance' | 'decommissioned')
-                }
+                onValueChange={(value: DeviceStatus) => handleChange('status', value)}
               >
                 <SelectTrigger>
                   <SelectValue />
@@ -251,21 +492,19 @@ export default function DeviceFormModal({
               </Select>
             </div>
 
-            {/* Sucursal */}
             <div className="space-y-2">
-              <Label htmlFor="branchId">
-                Sucursal <span className="text-destructive">*</span>
-              </Label>
+              <Label>Sucursal</Label>
               <Select
-                value={formData.branchId}
-                onValueChange={(value) => handleChange('branchId', value)}
+                value={formData.branchId?.toString() || 'none'}
+                onValueChange={(value) => handleChange('branchId', value === 'none' ? undefined : Number(value))}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecciona sucursal" />
                 </SelectTrigger>
                 <SelectContent>
-                  {mockBranches.map(branch => (
-                    <SelectItem key={branch.id} value={branch.id}>
+                  <SelectItem value="none">Sin sucursal</SelectItem>
+                  {branches.map(branch => (
+                    <SelectItem key={branch.id} value={branch.id.toString()}>
                       {branch.name}
                     </SelectItem>
                   ))}
@@ -273,41 +512,73 @@ export default function DeviceFormModal({
               </Select>
             </div>
 
-            {/* Fecha de compra */}
             <div className="space-y-2">
-              <Label htmlFor="purchaseDate">Fecha de Compra</Label>
-              <DateTimePicker
-                value={formData.purchaseDate}
-                onChange={(value) => handleChange('purchaseDate', value)}
-              />
+              <Label>Asignado a</Label>
+              <Select
+                value={formData.assignedPersonId?.toString() || 'none'}
+                onValueChange={(value) => handleChange('assignedPersonId', value === 'none' ? undefined : Number(value))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Sin asignar" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Sin asignar</SelectItem>
+                  {people.map(person => (
+                    <SelectItem key={person.id} value={person.id.toString()}>
+                      {person.firstName} {person.lastName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
+          </div>
 
-            {/* Fecha de entrega */}
-            <div className="space-y-2">
-              <Label htmlFor="deliveryDate">Fecha de Entrega</Label>
-              <DateTimePicker
-                value={formData.deliveryDate}
-                onChange={(value) => handleChange('deliveryDate', value)}
-              />
+          {/* Atributos dinámicos según tipo */}
+          {renderDynamicAttributes() && (
+            <>
+              <div className="border-t pt-4">
+                <h3 className="text-sm font-semibold mb-3">Atributos específicos</h3>
+                <div className="grid grid-cols-2 gap-4">
+                  {renderDynamicAttributes()}
+                </div>
+              </div>
+            </>
+          )}
+
+          {/* Fechas */}
+          <div className="border-t pt-4">
+            <h3 className="text-sm font-semibold mb-3">Fechas</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Fecha de compra</Label>
+                <DateTimePicker
+                  value={formData.purchaseDate}
+                  onChange={(value) => handleChange('purchaseDate', value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Fecha de entrega</Label>
+                <DateTimePicker
+                  value={formData.deliveryDate}
+                  onChange={(value) => handleChange('deliveryDate', value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label>Fecha de recepción</Label>
+                <DateTimePicker
+                  value={formData.receivedDate}
+                  onChange={(value) => handleChange('receivedDate', value)}
+                />
+              </div>
             </div>
-
-            {/* Fecha de recepción */}
-            <div className="space-y-2">
-              <Label htmlFor="receivedDate">Fecha de Recepción</Label>
-              <DateTimePicker
-                value={formData.receivedDate}
-                onChange={(value) => handleChange('receivedDate', value)}
-              />
-            </div>
-
-
           </div>
 
           {/* Notas */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
+            <Label>Notas</Label>
             <Textarea
-              id="notes"
               value={formData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
               placeholder="Observaciones adicionales..."

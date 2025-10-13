@@ -69,15 +69,25 @@ export const peopleApi = {
   },
 
   async create(data: CreatePersonDto): Promise<Person> {
-    // Convertir IDs de string a number si es necesario
-    const cleanedData = {
-      ...data,
-      departmentId: data.departmentId ? Number(data.departmentId) : undefined,
-      roleId: data.roleId ? Number(data.roleId) : undefined,
-      branchId: data.branchId ? Number(data.branchId) : undefined,
+    const cleanedData: CreatePersonDto = {
+      nationalId: data.nationalId.trim(),
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      password: data.password,
+      username: data.username?.trim() || undefined,
+      status: data.status || 'active',
     };
 
-    console.log('Datos enviados al crear persona:', cleanedData);
+    if (data.departmentId !== undefined && data.departmentId !== null) {
+      cleanedData.departmentId = Number(data.departmentId);
+    }
+    if (data.roleId !== undefined && data.roleId !== null) {
+      cleanedData.roleId = Number(data.roleId);
+    }
+    if (data.branchId !== undefined && data.branchId !== null) {
+      cleanedData.branchId = Number(data.branchId);
+    }
+
 
     const response = await fetch(`${API_URL}/people`, {
       method: 'POST',
@@ -92,16 +102,25 @@ export const peopleApi = {
   },
 
   async update(id: string, data: UpdatePersonDto): Promise<Person> {
-    // Convertir IDs de string a number si es necesario
-    const cleanedData = {
-      ...data,
-      departmentId: data.departmentId ? Number(data.departmentId) : undefined,
-      roleId: data.roleId ? Number(data.roleId) : undefined,
-      branchId: data.branchId ? Number(data.branchId) : undefined,
-    };
+    const cleanedData: UpdatePersonDto = {};
 
-    console.log('Datos enviados al actualizar persona:', cleanedData);
-    console.log('ID de la persona:', id);
+    if (data.nationalId) cleanedData.nationalId = data.nationalId.trim();
+    if (data.firstName) cleanedData.firstName = data.firstName.trim();
+    if (data.lastName) cleanedData.lastName = data.lastName.trim();
+    if (data.username) cleanedData.username = data.username.trim();
+    if (data.password && data.password.length > 0) cleanedData.password = data.password;
+    if (data.status) cleanedData.status = data.status;
+
+    if (data.departmentId !== undefined && data.departmentId !== null) {
+      cleanedData.departmentId = Number(data.departmentId);
+    }
+    if (data.roleId !== undefined && data.roleId !== null) {
+      cleanedData.roleId = Number(data.roleId);
+    }
+    if (data.branchId !== undefined && data.branchId !== null) {
+      cleanedData.branchId = Number(data.branchId);
+    }
+
 
     const response = await fetch(`${API_URL}/people/${id}`, {
       method: 'PUT',

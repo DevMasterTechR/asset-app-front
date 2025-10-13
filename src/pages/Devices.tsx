@@ -13,11 +13,26 @@ import {
 } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Edit, Trash2, Laptop, Smartphone, Mouse, Keyboard, Loader2, Monitor, Server, Tablet } from 'lucide-react';
-import { mockAssets, getBranchName, getPersonName, type Asset } from '@/data/mockDataExtended';
-import { devicesApi, initializeMockData, CreateDeviceDto, UpdateDeviceDto } from '@/api/devices';
+import {
+  Search,
+  Plus,
+  Edit,
+  Trash2,
+  Loader2,
+  Laptop,
+  Smartphone,
+  Mouse,
+  Keyboard,
+  Monitor,
+  Server,
+  Tablet,
+} from 'lucide-react';
+import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
+import { peopleApi } from '@/api/people';
+import * as catalogsApi from '@/api/catalogs';
 import DeviceFormModal from '@/components/DeviceFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import { Person } from '@/data/mockDataExtended';
 
 const statusVariantMap = {
   available: 'success' as const,
@@ -33,66 +48,88 @@ const statusLabelMap = {
   decommissioned: 'Dado de baja',
 };
 
-const typeIconMap: Record<string, React.ComponentType<object>> = {
+const typeIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
   laptop: Laptop,
   smartphone: Smartphone,
+  tablet: Tablet,
   mouse: Mouse,
   keyboard: Keyboard,
   monitor: Monitor,
   server: Server,
-  tablet: Tablet,
 };
 
-
-export default function Devices() {
+function DevicesPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
-  const [devices, setDevices] = useState<Asset[]>([]);
+  const [devices, setDevices] = useState<Device[]>([]);
+  const [people, setPeople] = useState<Person[]>([]);
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
-  
-  // Estados para modales
+
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
-  const [selectedDevice, setSelectedDevice] = useState<Asset | null>(null);
+  const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
 
-  // Cargar dispositivos al montar el componente
   useEffect(() => {
-    loadDevices();
+    loadData();
   }, []);
 
-  const loadDevices = async () => {
+  const loadData = async () => {
     setLoading(true);
-    // Inicializar datos mock (solo la primera vez)
-    initializeMockData(mockAssets);
-    
-    const response = await devicesApi.getAll();
-    if (response.success && response.data) {
-      setDevices(response.data);
-    } else {
+    try {
+      const [devicesData, peopleData, branchesData] = await Promise.all([
+        devicesApi.getAll(),
+        peopleApi.getAll(),
+        catalogsApi.getBranches(),
+      ]);
+
+      console.log('✅ Dispositivos cargados:', devicesData);
+      console.log('✅ Personas cargadas:', peopleData);
+      console.log('✅ Sucursales cargadas:', branchesData);
+
+      setDevices(devicesData);
+      setPeople(peopleData);
+      setBranches(branchesData.map(b => ({ id: Number(b.id), name: b.name })));
+    } catch (error) {
+      console.error('❌ Error cargando datos:', error);
       toast({
         title: 'Error',
-        description: response.error || 'No se pudieron cargar los dispositivos',
+        description: error instanceof Error ? error.message : 'No se pudieron cargar los datos',
         variant: 'destructive',
       });
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   };
 
-  const filteredDevices = devices.filter(
-    (device) =>
-      device.assetCode.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.model.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      device.serialNumber?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const getPersonName = (personId?: number): string => {
+    if (!personId) return '-';
+    const person = people.find(p => Number(p.id) === personId);
+    return person ? `${person.firstName} ${person.lastName}` : 'Desconocido';
+  };
+
+  const getBranchName = (branchId?: number): string => {
+    if (!branchId) return '-';
+    const branch = branches.find(b => b.id === branchId);
+    return branch?.name || '-';
+  };
+
+  const filteredDevices = devices.filter((device) => {
+    const search = searchTerm.toLowerCase();
+    return (
+      device.assetCode.toLowerCase().includes(search) ||
+      device.brand?.toLowerCase().includes(search) ||
+      device.model?.toLowerCase().includes(search) ||
+      device.serialNumber?.toLowerCase().includes(search) ||
+      device.assetType.toLowerCase().includes(search)
+    );
+  });
 
   const getTypeIcon = (type: string) => {
     const Icon = typeIconMap[type] || Laptop;
     return <Icon className="h-4 w-4" />;
   };
-
-  // ========== CRUD HANDLERS ==========
 
   const handleCreate = () => {
     setFormMode('create');
@@ -100,60 +137,60 @@ export default function Devices() {
     setFormModalOpen(true);
   };
 
-  const handleEdit = (device: Asset) => {
+  const handleEdit = (device: Device) => {
     setFormMode('edit');
     setSelectedDevice(device);
     setFormModalOpen(true);
   };
 
-  const handleDeleteClick = (device: Asset) => {
+  const handleDeleteClick = (device: Device) => {
     setSelectedDevice(device);
     setDeleteModalOpen(true);
   };
 
   const handleSave = async (data: CreateDeviceDto) => {
-    let response;
-    
-    if (formMode === 'create') {
-      response = await devicesApi.create(data);
-    } else if (selectedDevice) {
-      const updateData: UpdateDeviceDto = { ...data, id: selectedDevice.id };
-      response = await devicesApi.update(updateData);
-    }
+    try {
+      if (formMode === 'create') {
+        await devicesApi.create(data);
+        toast({
+          title: 'Éxito',
+          description: 'Dispositivo creado correctamente',
+        });
+      } else if (selectedDevice) {
+        await devicesApi.update(selectedDevice.id, data);
+        toast({
+          title: 'Éxito',
+          description: 'Dispositivo actualizado correctamente',
+        });
+      }
 
-    if (response?.success) {
-      toast({
-        title: 'Éxito',
-        description: formMode === 'create' 
-          ? 'Dispositivo creado correctamente'
-          : 'Dispositivo actualizado correctamente',
-      });
-      await loadDevices();
+      await loadData();
       setFormModalOpen(false);
-    } else {
+    } catch (error) {
       toast({
         title: 'Error',
-        description: response?.error || 'No se pudo guardar el dispositivo',
+        description: error instanceof Error ? error.message : 'No se pudo guardar el dispositivo',
         variant: 'destructive',
       });
+      throw error;
     }
   };
 
   const handleDelete = async () => {
     if (!selectedDevice) return;
 
-    const response = await devicesApi.delete(selectedDevice.id);
-
-    if (response.success) {
+    try {
+      await devicesApi.delete(selectedDevice.id);
       toast({
         title: 'Éxito',
         description: 'Dispositivo eliminado correctamente',
       });
-      await loadDevices();
-    } else {
+      await loadData();
+      setDeleteModalOpen(false);
+    } catch (error) {
       toast({
         title: 'Error',
-        description: response.error || 'No se pudo eliminar el dispositivo',
+        description: 'No se pudo eliminar el dispositivo',
         variant: 'destructive',
       });
     }
@@ -162,12 +199,11 @@ export default function Devices() {
   return (
     <Layout>
       <div className="p-6 space-y-6">
-        {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Dispositivos</h1>
             <p className="text-muted-foreground mt-1">
-              Gestión de activos tecnológicos
+              Gestión de dispositivos tecnológicos
             </p>
           </div>
           <Button onClick={handleCreate}>
@@ -176,7 +212,6 @@ export default function Devices() {
           </Button>
         </div>
 
-        {/* Search and Stats */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-3">
             <div className="relative">
@@ -198,29 +233,28 @@ export default function Devices() {
           </div>
         </div>
 
-        {/* Table */}
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <>
-            <div className="border rounded-lg bg-card">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Código</TableHead>
-                    <TableHead>Marca / Modelo</TableHead>
-                    <TableHead>Serial</TableHead>
-                    <TableHead>Estado</TableHead>
-                    <TableHead>Sucursal</TableHead>
-                    <TableHead>Asignado a</TableHead>
-                    <TableHead className="text-right">Acciones</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDevices.map((device) => (
+          <div className="border rounded-lg bg-card">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Código</TableHead>
+                  <TableHead>Marca / Modelo</TableHead>
+                  <TableHead>Serial</TableHead>
+                  <TableHead>Estado</TableHead>
+                  <TableHead>Sucursal</TableHead>
+                  <TableHead>Asignado a</TableHead>
+                  <TableHead className="text-right">Acciones</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {filteredDevices.length > 0 ? (
+                  filteredDevices.map((device) => (
                     <TableRow key={device.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
@@ -235,27 +269,25 @@ export default function Devices() {
                           <p className="text-sm text-muted-foreground">{device.model}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="text-sm">{device.serialNumber}</TableCell>
+                      <TableCell className="text-sm">{device.serialNumber || '-'}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariantMap[device.status]}>
                           {statusLabelMap[device.status]}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
-                      <TableCell className="text-sm">
-                        {device.assignedPersonId ? getPersonName(device.assignedPersonId) : '-'}
-                      </TableCell>
+                      <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleEdit(device)}
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="ghost" 
+                          <Button
+                            variant="ghost"
                             size="icon"
                             onClick={() => handleDeleteClick(device)}
                           >
@@ -264,31 +296,36 @@ export default function Devices() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-
-            {filteredDevices.length === 0 && (
-              <div className="text-center py-12">
-                <Laptop className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">No se encontraron dispositivos</h3>
-                <p className="text-muted-foreground">
-                  Intenta con otros términos de búsqueda
-                </p>
-              </div>
-            )}
-          </>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell colSpan={8} className="text-center py-12">
+                      <Laptop className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                      <h3 className="text-lg font-semibold mb-2">
+                        No se encontraron dispositivos
+                      </h3>
+                      <p className="text-muted-foreground">
+                        {searchTerm
+                          ? 'Intenta con otros términos de búsqueda'
+                          : 'Comienza agregando un dispositivo'}
+                      </p>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </div>
 
-      {/* Modales */}
       <DeviceFormModal
         open={formModalOpen}
         onOpenChange={setFormModalOpen}
         onSave={handleSave}
         device={selectedDevice}
         mode={formMode}
+        branches={branches}
+        people={people}
       />
 
       <DeleteConfirmationModal
@@ -302,3 +339,5 @@ export default function Devices() {
     </Layout>
   );
 }
+
+export default DevicesPage;
