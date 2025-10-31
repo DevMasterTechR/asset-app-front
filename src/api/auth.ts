@@ -56,19 +56,25 @@ export const authApi = {
    * Verificar si el usuario está autenticado
    */
   verifyAuth: async (): Promise<AuthUser | null> => {
-    try {
-      const response = await fetch(`${API_URL}/auth/me`, {
-        method: 'GET',
-        credentials: 'include',
-      });
+  try {
+    const response = await fetch(`${API_URL}/auth/me`, {
+      method: 'GET',
+      credentials: 'include',
+      headers: {
+        'Accept': 'application/json',
+      },
+    });
 
-      if (!response.ok) {
-        return null;
-      }
-
-      return response.json();
-    } catch (error) {
+    if (!response.ok) {
+      // 401 o 403 → usuario no autenticado
       return null;
     }
-  },
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Error verifying auth:', error);
+    return null;
+  }
+},
 };

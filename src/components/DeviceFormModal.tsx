@@ -199,7 +199,7 @@ export default function DeviceFormModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Almacenamiento</Label>
+              <Label>Almacenamiento (GB)</Label>
               <Input
                 value={String(getAttrValue('storage') || '')}
                 onChange={(e) => handleAttributeChange('storage', e.target.value)}
@@ -247,7 +247,7 @@ export default function DeviceFormModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Almacenamiento</Label>
+              <Label>Almacenamiento (GB)</Label>
               <Input
                 value={String(getAttrValue('storage') || '')}
                 onChange={(e) => handleAttributeChange('storage', e.target.value)}
@@ -312,7 +312,7 @@ export default function DeviceFormModal({
               />
             </div>
             <div className="space-y-2">
-              <Label>Resolución</Label>
+              <Label>Resolución (px)</Label>
               <Input
                 value={String(getAttrValue('resolution') || '')}
                 onChange={(e) => handleAttributeChange('resolution', e.target.value)}
@@ -474,16 +474,18 @@ export default function DeviceFormModal({
             </div>
 
             <div className="space-y-2">
-              <Label>Estado <span className="text-destructive">*</span></Label>
+              <Label>
+                Estado <span className="text-destructive">*</span>
+              </Label>
               <Select
-                value={formData.status}
+                value={formData.status || ''}
                 onValueChange={(value: DeviceStatus) => handleChange('status', value)}
               >
                 <SelectTrigger>
-                  <SelectValue />
+                  <SelectValue placeholder="Selecciona estado" />
                 </SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map(status => (
+                  {statusOptions.map((status) => (
                     <SelectItem key={status.value} value={status.value}>
                       {status.label}
                     </SelectItem>
@@ -495,15 +497,16 @@ export default function DeviceFormModal({
             <div className="space-y-2">
               <Label>Sucursal</Label>
               <Select
-                value={formData.branchId?.toString() || 'none'}
-                onValueChange={(value) => handleChange('branchId', value === 'none' ? undefined : Number(value))}
+                value={formData.branchId?.toString() || ''}
+                onValueChange={(value) =>
+                  handleChange('branchId', value === '' ? undefined : Number(value))
+                }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Selecciona sucursal" />
+                  <SelectValue placeholder="Sin sucursal" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin sucursal</SelectItem>
-                  {branches.map(branch => (
+                  {branches.map((branch) => (
                     <SelectItem key={branch.id} value={branch.id.toString()}>
                       {branch.name}
                     </SelectItem>
@@ -515,22 +518,25 @@ export default function DeviceFormModal({
             <div className="space-y-2">
               <Label>Asignado a</Label>
               <Select
-                value={formData.assignedPersonId?.toString() || 'none'}
-                onValueChange={(value) => handleChange('assignedPersonId', value === 'none' ? undefined : Number(value))}
+                value={formData.assignedPersonId?.toString() || ''}
+                onValueChange={(value) =>
+                  handleChange('assignedPersonId', value === '' ? undefined : Number(value))
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Sin asignar" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="none">Sin asignar</SelectItem>
-                  {people.map(person => (
+                  {people.map((person) => (
                     <SelectItem key={person.id} value={person.id.toString()}>
                       {person.firstName} {person.lastName}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+
             </div>
+
           </div>
 
           {/* Atributos dinámicos según tipo */}

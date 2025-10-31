@@ -17,7 +17,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Verificar sesión al cargar la app
+    //Verificar sesión al cargar la app
     const checkSession = async () => {
       try {
         const currentUser = await authApi.verifyAuth();

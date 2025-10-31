@@ -38,25 +38,43 @@ export const assignmentsApi = {
   },
 
   create: async (data: CreateAssignmentDto): Promise<Assignment> => {
-    await delay(500)
-    const newAssignment: Assignment = {
-      id: `A${Date.now()}`,
-      ...data,
-      returnDate: undefined,
-      returnCondition: undefined,
-    }
-    assignmentsData.push(newAssignment)
-    return newAssignment
-  },
+  await delay(500)
 
-  update: async (id: string, data: UpdateAssignmentDto): Promise<Assignment> => {
-    await delay(500)
-    const index = assignmentsData.findIndex((a) => a.id === id)
-    if (index === -1) throw new Error("Asignación no encontrada")
+  const newAssignment: Assignment = {
+    id: `A${Date.now()}`,
+    ...data,
+    branchId: Number(data.branchId), // ✅ convertir string → number
+    returnDate: undefined,
+    returnCondition: undefined,
+  }
 
-    assignmentsData[index] = { ...assignmentsData[index], ...data }
-    return assignmentsData[index]
-  },
+  assignmentsData.push(newAssignment)
+  return newAssignment
+},
+
+update: async (id: string, data: UpdateAssignmentDto): Promise<Assignment> => {
+  await delay(500)
+  const index = assignmentsData.findIndex((a) => a.id === id)
+  if (index === -1) throw new Error("Asignación no encontrada")
+
+  const existing = assignmentsData[index]
+
+  const updated: Assignment = {
+    ...existing,
+    ...data,
+    branchId:
+      data.branchId !== undefined && data.branchId !== null
+        ? Number(data.branchId)
+        : existing.branchId, // ✅ conserva el valor anterior si no se envía uno nuevo
+  }
+
+  if (Number.isNaN(updated.branchId)) {
+    throw new Error("branchId inválido en la actualización")
+  }
+
+  assignmentsData[index] = updated
+  return assignmentsData[index]
+},
 
   registerReturn: async (
     id: string,
