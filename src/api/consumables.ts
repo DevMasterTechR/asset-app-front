@@ -8,7 +8,7 @@ import {
 } from '@/data/mockDataExtended';
 
 // ============= CONFIGURACIÓN =============
-const API_URL = 'http://localhost:3000';
+import { API_URL } from '@/lib/config';
 
 // Helper para manejar errores de la API
 const handleApiError = async (response: Response) => {

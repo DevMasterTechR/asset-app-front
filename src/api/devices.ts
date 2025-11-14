@@ -1,5 +1,5 @@
 // src/api/devices.ts
-const API_URL = 'http://localhost:3000';
+import { API_URL } from '@/lib/config';
 
 export type DeviceStatus = 'available' | 'assigned' | 'maintenance' | 'decommissioned';
 

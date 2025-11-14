@@ -72,6 +72,23 @@ export const useAutoLogout = (
       originalFetch = window.fetch;
       window.fetch = async (...args) => {
         resetTimer(); // Resetear al hacer request
+
+        // Añadir Authorization si existe token en localStorage
+        try {
+          const token = localStorage.getItem('access_token');
+          if (token) {
+            // args puede ser (input) o (input, init)
+            const [resource, init] = args as [RequestInfo, RequestInit | undefined];
+            const newInit: RequestInit = Object.assign({}, init || {});
+            newInit.headers = Object.assign({}, (init && init.headers) || {}, {
+              Authorization: `Bearer ${token}`,
+            });
+            return originalFetch(resource, newInit);
+          }
+        } catch (e) {
+          // ignorar problemas con localStorage
+        }
+
         return originalFetch(...args);
       };
     }

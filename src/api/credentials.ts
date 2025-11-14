@@ -1,6 +1,5 @@
 // src/api/credentials.ts
-
-const API_URL = 'http://localhost:3000';
+import { API_URL } from '@/lib/config';
 
 export type SystemType = 'erp' | 'crm' | 'email' | 'glpi';
 

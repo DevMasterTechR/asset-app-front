@@ -1,6 +1,5 @@
 // authApi.ts - Para Vite
-
-const API_URL = 'http://localhost:3000';
+import { API_URL } from '@/lib/config';
 
 export interface LoginCredentials {
   username: string;
@@ -35,7 +34,18 @@ export const authApi = {
       throw new Error(error.message || 'Credenciales incorrectas');
     }
 
-    return response.json();
+    const data = await response.json();
+
+    // Si el backend devuelve access_token, guardarlo para usar Authorization
+    if (data?.access_token) {
+      try {
+        localStorage.setItem('access_token', data.access_token);
+      } catch (e) {
+        console.warn('No se pudo guardar access_token en localStorage', e);
+      }
+    }
+
+    return data;
   },
 
   /**
@@ -50,6 +60,12 @@ export const authApi = {
     if (!response.ok) {
       throw new Error('Error al cerrar sesión');
     }
+
+    try {
+      localStorage.removeItem('access_token');
+    } catch (e) {
+      console.warn('Error removing access_token', e);
+    }
   },
 
   /**
@@ -57,12 +73,14 @@ export const authApi = {
    */
   verifyAuth: async (): Promise<AuthUser | null> => {
   try {
+    const token = localStorage.getItem('access_token');
+    const headers: Record<string, string> = { Accept: 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+
     const response = await fetch(`${API_URL}/auth/me`, {
       method: 'GET',
       credentials: 'include',
-      headers: {
-        'Accept': 'application/json',
-      },
+      headers,
     });
 
     if (!response.ok) {
