@@ -1,5 +1,6 @@
 // src/api/credentials.ts
 import { API_URL } from '@/lib/config';
+import apiFetch from '@/lib/fetchClient';
 
 export type SystemType = 'erp' | 'crm' | 'email' | 'glpi';
 
@@ -41,25 +42,13 @@ const handleApiError = async (response: Response) => {
 
 export const credentialsApi = {
   async getAll(): Promise<Credential[]> {
-    const response = await fetch(`${API_URL}/credentials`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`${API_URL}/credentials`, { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
 
   async getById(id: number): Promise<Credential> {
-    const response = await fetch(`${API_URL}/credentials/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`${API_URL}/credentials/${id}`, { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
@@ -75,14 +64,7 @@ export const credentialsApi = {
 
     console.log('📤 Datos enviados al crear credencial:', cleanedData);
 
-    const response = await fetch(`${API_URL}/credentials`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(cleanedData),
-    });
+    const response = await apiFetch(`${API_URL}/credentials`, { method: 'POST', body: JSON.stringify(cleanedData) });
     await handleApiError(response);
     return response.json();
   },
@@ -98,26 +80,13 @@ export const credentialsApi = {
 
     console.log('📤 Datos enviados al actualizar credencial:', cleanedData);
 
-    const response = await fetch(`${API_URL}/credentials/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(cleanedData),
-    });
+    const response = await apiFetch(`${API_URL}/credentials/${id}`, { method: 'PUT', body: JSON.stringify(cleanedData) });
     await handleApiError(response);
     return response.json();
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/credentials/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`${API_URL}/credentials/${id}`, { method: 'DELETE' });
     await handleApiError(response);
   },
 };

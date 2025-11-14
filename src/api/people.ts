@@ -4,6 +4,7 @@ import { Person } from '@/data/mockDataExtended';
 
 // ============= CONFIGURACIÓN =============
 import { API_URL } from '@/lib/config';
+import apiFetch from '@/lib/fetchClient';
 
 // Helper para manejar errores de la API
 const handleApiError = async (response: Response) => {
@@ -45,25 +46,13 @@ export interface UpdatePersonDto {
 
 export const peopleApi = {
   async getAll(): Promise<Person[]> {
-    const response = await fetch(`${API_URL}/people`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`${API_URL}/people`, { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
 
   async getOne(id: string): Promise<Person> {
-    const response = await fetch(`${API_URL}/people/${id}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`${API_URL}/people/${id}`, { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
@@ -89,14 +78,7 @@ export const peopleApi = {
     }
 
 
-    const response = await fetch(`${API_URL}/people`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(cleanedData),
-    });
+    const response = await apiFetch(`${API_URL}/people`, { method: 'POST', body: JSON.stringify(cleanedData) });
     await handleApiError(response);
     return response.json();
   },
@@ -122,26 +104,13 @@ export const peopleApi = {
     }
 
 
-    const response = await fetch(`${API_URL}/people/${id}`, {
-      method: 'PUT',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-      body: JSON.stringify(cleanedData),
-    });
+    const response = await apiFetch(`${API_URL}/people/${id}`, { method: 'PUT', body: JSON.stringify(cleanedData) });
     await handleApiError(response);
     return response.json();
   },
 
   async delete(id: string): Promise<void> {
-    const response = await fetch(`${API_URL}/people/${id}`, {
-      method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`${API_URL}/people/${id}`, { method: 'DELETE' });
     await handleApiError(response);
   },
 };

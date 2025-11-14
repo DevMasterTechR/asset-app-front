@@ -1,7 +1,8 @@
 // src/context/AuthContext.tsx
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { authApi, AuthUser } from '@/api/auth';
-import { useAutoLogout } from '@/hooks/useAutoLogout';
+import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -44,16 +45,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Sistema de cierre automático por inactividad usando useAutoLogout
-  // Solo se activa cuando hay un usuario autenticado
-  useAutoLogout(
-    logout,
-    {
-      timeout: 15 * 60 * 1000, // 15 minutos (puedes cambiarlo a 5 * 60 * 1000 para 5 minutos)
-      events: ['mousedown', 'keydown', 'scroll', 'touchstart', 'click', 'mousemove'],
-      trackFetch: true,
+  const navigate = useNavigate();
+
+  // Redirigir al login cuando se cierre sesión desde el contexto (auto-logout o logout programático)
+  const logoutAndRedirect = async () => {
+    await logout();
+    try {
+      navigate('/auth');
+    } catch (e) {
+      // ignorar si navigate no está disponible
     }
-  );
+  };
+
+  // Mantener la sesión viva en el servidor y mostrar advertencia previa
+  // Para pruebas rápidas usamos 1 minuto; cambiar a 15 en producción
+  useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password });

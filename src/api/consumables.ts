@@ -9,6 +9,7 @@ import {
 
 // ============= CONFIGURACIÓN =============
 import { API_URL } from '@/lib/config';
+import apiFetch from '@/lib/fetchClient';
 
 // Helper para manejar errores de la API
 const handleApiError = async (response: Response) => {
@@ -82,66 +83,34 @@ export interface CreatePowerStripDto extends Record<string, unknown> {
 // ============= INKS =============
 
 export const getInks = async (): Promise<Ink[]> => {
-  const response = await fetch(`${API_URL}/inks`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/inks`, { method: 'GET' });
   await handleApiError(response);
   return response.json();
 };
 
 export const createInk = async (data: CreateInkDto): Promise<Ink> => {
   const convertedData = convertDatesToISO(data);
-  const response = await fetch(`${API_URL}/inks`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/inks`, { method: 'POST', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
 
 export const updateInk = async (id: string, data: CreateInkDto): Promise<Ink> => {
   const convertedData = convertDatesToISO(data);
-  const response = await fetch(`${API_URL}/inks/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/inks/${id}`, { method: 'PUT', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
 
 export const deleteInk = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/inks/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/inks/${id}`, { method: 'DELETE' });
   await handleApiError(response);
 };
 
 // ============= UTP CABLES =============
 
 export const getUTPCables = async (): Promise<UTPCable[]> => {
-  const response = await fetch(`${API_URL}/utp-cables`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/utp-cables`, { method: 'GET' });
   await handleApiError(response);
   return response.json();
 };
@@ -154,14 +123,7 @@ export const createUTPCable = async (data: CreateUTPCableDto): Promise<UTPCable>
     convertedData.lengthMeters = Math.round(convertedData.lengthMeters as number);
   }
   
-  const response = await fetch(`${API_URL}/utp-cables`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/utp-cables`, { method: 'POST', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
@@ -174,92 +136,47 @@ export const updateUTPCable = async (id: string, data: CreateUTPCableDto): Promi
     convertedData.lengthMeters = Math.round(convertedData.lengthMeters as number);
   }
   
-  const response = await fetch(`${API_URL}/utp-cables/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/utp-cables/${id}`, { method: 'PUT', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
 
 export const deleteUTPCable = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/utp-cables/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/utp-cables/${id}`, { method: 'DELETE' });
   await handleApiError(response);
 };
 
 // ============= RJ45 CONNECTORS =============
 
 export const getRJ45Connectors = async (): Promise<RJ45Connector[]> => {
-  const response = await fetch(`${API_URL}/rj45-connectors`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/rj45-connectors`, { method: 'GET' });
   await handleApiError(response);
   return response.json();
 };
 
 export const createRJ45Connector = async (data: CreateRJ45ConnectorDto): Promise<RJ45Connector> => {
   const convertedData = convertDatesToISO(data);
-  const response = await fetch(`${API_URL}/rj45-connectors`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/rj45-connectors`, { method: 'POST', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
 
 export const updateRJ45Connector = async (id: string, data: CreateRJ45ConnectorDto): Promise<RJ45Connector> => {
   const convertedData = convertDatesToISO(data);
-  const response = await fetch(`${API_URL}/rj45-connectors/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/rj45-connectors/${id}`, { method: 'PUT', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
 
 export const deleteRJ45Connector = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/rj45-connectors/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/rj45-connectors/${id}`, { method: 'DELETE' });
   await handleApiError(response);
 };
 
 // ============= POWER STRIPS =============
 
 export const getPowerStrips = async (): Promise<PowerStrip[]> => {
-  const response = await fetch(`${API_URL}/power-strips`, {
-    method: 'GET',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/power-strips`, { method: 'GET' });
   await handleApiError(response);
   return response.json();
 };
@@ -274,14 +191,7 @@ export const createPowerStrip = async (data: CreatePowerStripDto): Promise<Power
   
   console.log('Datos enviados al crear regleta:', convertedData);
   
-  const response = await fetch(`${API_URL}/power-strips`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/power-strips`, { method: 'POST', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
@@ -297,25 +207,12 @@ export const updatePowerStrip = async (id: string, data: CreatePowerStripDto): P
   console.log('Datos enviados al actualizar regleta:', convertedData);
   console.log('ID de la regleta:', id);
   
-  const response = await fetch(`${API_URL}/power-strips/${id}`, {
-    method: 'PUT',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-    body: JSON.stringify(convertedData),
-  });
+  const response = await apiFetch(`${API_URL}/power-strips/${id}`, { method: 'PUT', body: JSON.stringify(convertedData) });
   await handleApiError(response);
   return response.json();
 };
 
 export const deletePowerStrip = async (id: string): Promise<void> => {
-  const response = await fetch(`${API_URL}/power-strips/${id}`, {
-    method: 'DELETE',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    credentials: 'include',
-  });
+  const response = await apiFetch(`${API_URL}/power-strips/${id}`, { method: 'DELETE' });
   await handleApiError(response);
 }

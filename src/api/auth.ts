@@ -1,5 +1,6 @@
 // authApi.ts - Para Vite
 import { API_URL } from '@/lib/config';
+import apiFetch from '@/lib/fetchClient';
 
 export interface LoginCredentials {
   username: string;
@@ -95,4 +96,14 @@ export const authApi = {
     return null;
   }
 },
+
+  /** Keepalive: refresca última actividad en servidor (SessionGuard) */
+  keepAlive: async (): Promise<boolean> => {
+    try {
+      const res = await apiFetch('/auth/keepalive', { method: 'GET' });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  },
 };
