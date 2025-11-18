@@ -54,23 +54,11 @@ const handleApiError = async (response: Response) => {
   return response;
 };
 
-const buildHeaders = (withJson = true): Record<string, string> => {
-  const headers: Record<string, string> = { Accept: 'application/json' };
-  if (withJson) headers['Content-Type'] = 'application/json';
-  try {
-    const token = localStorage.getItem('access_token');
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-  } catch (e) {
-    // localStorage may be unavailable in some environments
-  }
-  return headers;
-};
-
 export const devicesApi = {
   async getAll(): Promise<Device[]> {
     const response = await fetch(`${API_URL}/assets`, {
       method: 'GET',
-      headers: buildHeaders(true),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     await handleApiError(response);
@@ -80,7 +68,7 @@ export const devicesApi = {
   async getById(id: number): Promise<Device> {
     const response = await fetch(`${API_URL}/assets/${id}`, {
       method: 'GET',
-      headers: buildHeaders(true),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     await handleApiError(response);
@@ -92,7 +80,7 @@ export const devicesApi = {
 
     const response = await fetch(`${API_URL}/assets`, {
       method: 'POST',
-      headers: buildHeaders(true),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(data),
     });
@@ -105,7 +93,7 @@ export const devicesApi = {
 
     const response = await fetch(`${API_URL}/assets/${id}`, {
       method: 'PUT',
-      headers: buildHeaders(true),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
       body: JSON.stringify(data),
     });
@@ -116,7 +104,7 @@ export const devicesApi = {
   async delete(id: number): Promise<void> {
     const response = await fetch(`${API_URL}/assets/${id}`, {
       method: 'DELETE',
-      headers: buildHeaders(true),
+      headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
     });
     await handleApiError(response);

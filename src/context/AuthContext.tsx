@@ -59,7 +59,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Mantener la sesión viva en el servidor y mostrar advertencia previa
   // Para pruebas rápidas usamos 1 minuto; cambiar a 15 en producción
-  useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
+  useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 10, warningSeconds: 30 });
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password });
