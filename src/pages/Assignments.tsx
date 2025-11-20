@@ -24,16 +24,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import {
-  type Assignment,
-  getPersonName,
-  getAssetInfo,
-  getBranchName,
-  mockAssets,
-  mockBranches,
-  mockPeople
-} from "@/data/mockDataExtended";
+import { type Assignment } from "@/data/mockDataExtended";
 import { assignmentsApi, type CreateAssignmentDto } from "@/api/assignments";
+import { peopleApi } from '@/api/people';
+import { devicesApi } from '@/api/devices';
+import { getBranches } from '@/api/catalogs';
 import AssignmentFormModal from "@/components/AssignmentFormModal";
 import ReturnAssignmentModal from "@/components/ReturnAssignmentModal";
 import { useToast } from "@/hooks/use-toast";
@@ -84,6 +79,9 @@ export default function Assignments() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
+  const [assets, setAssets] = useState<Array<{ id: string; code: string; name: string }>>([]);
+  const [people, setPeople] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+  const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
@@ -98,12 +96,27 @@ export default function Assignments() {
 
   const loadAssignments = async () => {
     try {
-      const data = await assignmentsApi.getAll();
+      const [data, peopleList, assetList, branchList] = await Promise.all([
+        assignmentsApi.getAll(),
+        peopleApi.getAll(),
+        devicesApi.getAll(),
+        getBranches(),
+      ]);
+
       setAssignments(data);
+
+      setPeople(peopleList.map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName })));
+      // Mostrar únicamente activos disponibles para asignación
+      setAssets(
+        assetList
+          .filter((a: any) => a.status === 'available')
+          .map((a: any) => ({ id: String(a.id), code: a.assetCode || a.assetCode, name: `${a.brand || ''} ${a.model || ''}`.trim() })),
+      );
+      setBranches(branchList.map((b: any) => ({ id: b.id, name: b.name })));
     } catch (error) {
       toast({
         title: "Error",
-        description: "No se pudieron cargar las asignaciones",
+        description: "No se pudieron cargar las asignaciones o datos relacionados",
         variant: "destructive"
       });
     }
@@ -115,8 +128,22 @@ export default function Assignments() {
         ...data,
         assignmentDate: convertLocalToUTCISOString(data.assignmentDate)
       };
-      await assignmentsApi.create(converted);
-      await loadAssignments();
+      const result = await assignmentsApi.create(converted);
+
+      // Insertar la nueva asignación en el estado local
+      setAssignments((prev) => [result.assignment, ...prev]);
+
+      // Si el backend devolvió el asset actualizado (ahora asignado), eliminarlo
+      // de la lista de assets disponibles para asignación
+      if (result.asset) {
+        setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
+        // Notificar a otras páginas (Devices) que el asset fue actualizado
+        try {
+          window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+        } catch (e) {
+          // noop
+        }
+      }
       toast({
         title: "Éxito",
         description: "Asignación creada correctamente"
@@ -157,8 +184,31 @@ export default function Assignments() {
   const handleReturn = async (returnCondition: 'excellent' | 'good' | 'fair' | 'poor', returnNotes?: string) => {
     if (!assignmentToReturn) return;
     try {
-      await assignmentsApi.registerReturn(assignmentToReturn, returnCondition, returnNotes);
-      await loadAssignments();
+      const result = await assignmentsApi.registerReturn(assignmentToReturn, returnCondition, returnNotes);
+
+      // Actualizar estado local de assignments: reemplazar la asignación actualizada
+      setAssignments((prev) => prev.map((a) => (String(a.id) === String(result.assignment.id) ? result.assignment : a)));
+
+      // Si el backend devolvió el asset actualizado, agregar/actualizar en assets (solo si está disponible)
+      if (result.asset) {
+        const assetStatus = (result.asset.status as string) || '';
+        setAssets((prev) => {
+          // Si el asset ahora está disponible y no está en la lista, añadirlo
+          const exists = prev.some((x) => String(x.id) === String(result.asset.id));
+          if (assetStatus === 'available' && !exists) {
+            return [{ id: String(result.asset.id), code: result.asset.assetCode || result.asset.assetCode, name: `${result.asset.brand || ''} ${result.asset.model || ''}`.trim() }, ...prev];
+          }
+          // Si ya existe, devolver prev sin cambios (la UI de assets puede refrescarse donde aplique)
+          return prev;
+        });
+        // Notificar a otras páginas (Devices) que el asset fue actualizado
+        try {
+          window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+        } catch (e) {
+          // noop
+        }
+      }
+
       toast({
         title: "Éxito",
         description: "Devolución registrada correctamente"
@@ -217,13 +267,12 @@ export default function Assignments() {
   };
 
   const filteredAssignments = assignments.filter((assignment) => {
-    //const personName = getPersonName(assignment.personId).toLowerCase();
-    const assetInfo = getAssetInfo(assignment.assetId);
-    const assetCode = assetInfo?.assetCode.toLowerCase() || '';
-    return (
-      //personName.includes(searchTerm.toLowerCase()) ||
-      assetCode.includes(searchTerm.toLowerCase())
-    );
+    const asset = assets.find(a => a.id === String(assignment.assetId));
+    const person = people.find(p => p.id === String(assignment.personId));
+    const assetCode = asset?.code?.toLowerCase() || '';
+    const personName = person ? `${person.firstName} ${person.lastName}`.toLowerCase() : '';
+    const term = searchTerm.toLowerCase();
+    return assetCode.includes(term) || personName.includes(term);
   });
 
   return (
@@ -295,21 +344,19 @@ export default function Assignments() {
               </TableHeader>
               <TableBody>
                 {filteredAssignments.map((assignment) => {
-                  const asset = getAssetInfo(assignment.assetId);
+                  const asset = assets.find(a => a.id === String(assignment.assetId));
+                  const person = people.find(p => p.id === String(assignment.personId));
+                  const branch = branches.find(b => b.id === Number(assignment.branchId));
                   return (
                     <TableRow key={assignment.id}>
                       <TableCell>
                         <div>
-                          <p className="font-medium">{asset?.assetCode}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {asset?.brand} {asset?.model}
-                          </p>
+                          <p className="font-medium">{asset?.code}</p>
+                          <p className="text-sm text-muted-foreground">{asset?.name}</p>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">
-                        // {getPersonName(assignment.personId)}
-                      </TableCell>
-                      <TableCell className="text-sm">{getBranchName(assignment.branchId)}</TableCell>
+                      <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
+                      <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
                       <TableCell className="text-sm">
                         {format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}
                       </TableCell>
@@ -388,9 +435,9 @@ export default function Assignments() {
         onSave={modalMode === 'create' ? handleCreate : handleUpdate}
         assignment={selectedAssignment}
         mode={modalMode}
-        assets={mockAssets.map(a => ({ id: a.id, code: a.assetCode, name: `${a.brand} ${a.model}` }))}
-        people={mockPeople.map(p => ({ id: p.id, firstName: p.firstName, lastName: p.lastName }))}
-        branches={mockBranches}
+        assets={assets}
+        people={people}
+        branches={branches}
       />
 
       <ReturnAssignmentModal

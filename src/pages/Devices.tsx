@@ -75,6 +75,23 @@ function DevicesPage() {
     loadData();
   }, []);
 
+  // Escuchar eventos de asset actualizado para actualizar el listado local sin recargar
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent;
+      const asset = custom.detail;
+      if (!asset) return;
+      setDevices((prev) => {
+        const exists = prev.some(d => String(d.id) === String(asset.id));
+        if (!exists) return prev; // solo actualizamos si existe en la lista local
+        return prev.map(d => String(d.id) === String(asset.id) ? { ...d, status: asset.status, assignedPersonId: asset.assignedPersonId ?? null, branchId: asset.branchId ?? d.branchId } : d);
+      });
+    };
+
+    window.addEventListener('asset-updated', handler as EventListener);
+    return () => window.removeEventListener('asset-updated', handler as EventListener);
+  }, []);
+
   const loadData = async () => {
     setLoading(true);
     try {
@@ -113,6 +130,17 @@ function DevicesPage() {
     if (!branchId) return '-';
     const branch = branches.find(b => b.id === branchId);
     return branch?.name || '-';
+  };
+
+  const formatDate = (value?: string) => {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('es-ES');
+    } catch (e) {
+      return '-';
+    }
   };
 
   const filteredDevices = devices.filter((device) => {
@@ -245,6 +273,9 @@ function DevicesPage() {
                   <TableHead>Tipo</TableHead>
                   <TableHead>Código</TableHead>
                   <TableHead>Marca / Modelo</TableHead>
+                  <TableHead>Fecha Compra</TableHead>
+                  <TableHead>Fecha Entrega</TableHead>
+                  <TableHead>Fecha Recepción</TableHead>
                   <TableHead>Serial</TableHead>
                   <TableHead>Estado</TableHead>
                   <TableHead>Sucursal</TableHead>
@@ -269,6 +300,11 @@ function DevicesPage() {
                           <p className="text-sm text-muted-foreground">{device.model}</p>
                         </div>
                       </TableCell>
+
+                      <TableCell className="text-sm">{formatDate(device.purchaseDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(device.deliveryDate)}</TableCell>
+                      <TableCell className="text-sm">{formatDate(device.receivedDate)}</TableCell>
+
                       <TableCell className="text-sm">{device.serialNumber || '-'}</TableCell>
                       <TableCell>
                         <Badge variant={statusVariantMap[device.status]}>

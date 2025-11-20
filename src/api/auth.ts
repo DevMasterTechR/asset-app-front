@@ -37,14 +37,15 @@ export const authApi = {
 
     const data = await response.json();
 
-    // Si el backend devuelve access_token, guardarlo para usar Authorization
-    if (data?.access_token) {
-      try {
-        localStorage.setItem('access_token', data.access_token);
-      } catch (e) {
-        console.warn('No se pudo guardar access_token en localStorage', e);
-      }
+    // Debug: loguear respuesta para verificar que backend devuelve access_token
+    try {
+      // eslint-disable-next-line no-console
+      console.log('[authApi] login response', data);
+    } catch (e) {
+      // noop
     }
+
+    // No guardamos el token en localStorage: usamos la cookie HttpOnly enviada por el backend.
 
     return data;
   },
@@ -62,11 +63,7 @@ export const authApi = {
       throw new Error('Error al cerrar sesión');
     }
 
-    try {
-      localStorage.removeItem('access_token');
-    } catch (e) {
-      console.warn('Error removing access_token', e);
-    }
+    // No hay token en localStorage que limpiar.
   },
 
   /**
@@ -74,14 +71,10 @@ export const authApi = {
    */
   verifyAuth: async (): Promise<AuthUser | null> => {
   try {
-    const token = localStorage.getItem('access_token');
-    const headers: Record<string, string> = { Accept: 'application/json' };
-    if (token) headers['Authorization'] = `Bearer ${token}`;
-
     const response = await fetch(`${API_URL}/auth/me`, {
       method: 'GET',
       credentials: 'include',
-      headers,
+      headers: { Accept: 'application/json' },
     });
 
     if (!response.ok) {

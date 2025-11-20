@@ -31,9 +31,15 @@ export async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<
   const headers = normalizeHeaders(init);
   headers['Accept'] = headers['Accept'] || 'application/json';
 
+  // Si hay body y no se especificó Content-Type, asumimos JSON
+  const hasBody = merged.body !== undefined && merged.body !== null;
+  if (hasBody && !('content-type' in Object.keys(headers).reduce((acc, k) => ({ ...acc, [k.toLowerCase()]: true }), {}))) {
+    headers['Content-Type'] = 'application/json';
+  }
+
   try {
-    const token = localStorage.getItem('access_token');
-    if (token) headers['Authorization'] = `Bearer ${token}`;
+    // Ahora confiamos en la cookie HttpOnly que pone el backend.
+    // No leemos ni añadimos tokens desde localStorage por razones de seguridad.
   } catch (e) {
     // Ignorar errores de localStorage
   }

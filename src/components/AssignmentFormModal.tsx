@@ -28,7 +28,7 @@ interface AssignmentFormModalProps {
   mode: "create" | "edit"
   assets: Array<{ id: string; code: string; name: string }>
   people: Array<{ id: string; firstName: string; lastName: string }>
-  branches: Array<{ id: string; name: string }>
+  branches: Array<{ id: number; name: string }>
 }
 
 function getLocalDateTimeString(date = new Date()): string {
@@ -74,7 +74,7 @@ export default function AssignmentFormModal({
       setFormData({
         assetId: assignment.assetId,
         personId: assignment.personId,
-        branchId: assignment.branchId,
+        branchId: String(assignment.branchId ?? ''),
         assignmentDate: localDateTime,
         deliveryCondition: assignment.deliveryCondition,
         deliveryNotes: assignment.deliveryNotes || "",
@@ -166,7 +166,7 @@ export default function AssignmentFormModal({
               </SelectTrigger>
               <SelectContent>
                 {branches.map((branch) => (
-                  <SelectItem key={branch.id} value={branch.id}>
+                  <SelectItem key={branch.id} value={String(branch.id)}>
                     {branch.name}
                   </SelectItem>
                 ))}
@@ -174,7 +174,7 @@ export default function AssignmentFormModal({
             </Select>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="assignmentDate">
                 Fecha de Asignación <span className="text-destructive">*</span>

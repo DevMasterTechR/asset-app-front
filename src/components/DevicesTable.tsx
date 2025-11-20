@@ -10,6 +10,9 @@ export interface Device {
   brand: string;
   model: string;
   serialNumber: string;
+  purchaseDate?: string;
+  deliveryDate?: string;
+  receivedDate?: string;
   status: DeviceStatus;
   assignedTo?: string;
 }
@@ -53,6 +56,16 @@ const getStatusBadge = (status: DeviceStatus) => {
 };
 
 export const DevicesTable = ({ devices }: DevicesTableProps) => {
+  const formatDate = (value?: string) => {
+    if (!value) return '-';
+    try {
+      const d = new Date(value);
+      if (isNaN(d.getTime())) return '-';
+      return d.toLocaleDateString('es-ES');
+    } catch (e) {
+      return '-';
+    }
+  };
   return (
     <div className="rounded-lg border bg-card">
       <Table>
@@ -61,6 +74,9 @@ export const DevicesTable = ({ devices }: DevicesTableProps) => {
             <TableHead>Tipo</TableHead>
             <TableHead>Marca</TableHead>
             <TableHead>Modelo</TableHead>
+            <TableHead>Fecha Compra</TableHead>
+            <TableHead>Fecha Entrega</TableHead>
+            <TableHead>Fecha Recepción</TableHead>
             <TableHead>Número de Serie</TableHead>
             <TableHead>Estado</TableHead>
             <TableHead>Asignado a</TableHead>
@@ -77,6 +93,9 @@ export const DevicesTable = ({ devices }: DevicesTableProps) => {
               </TableCell>
               <TableCell>{device.brand}</TableCell>
               <TableCell>{device.model}</TableCell>
+              <TableCell className="text-sm">{formatDate(device.purchaseDate)}</TableCell>
+              <TableCell className="text-sm">{formatDate(device.deliveryDate)}</TableCell>
+              <TableCell className="text-sm">{formatDate(device.receivedDate)}</TableCell>
               <TableCell className="font-mono text-sm">{device.serialNumber}</TableCell>
               <TableCell>{getStatusBadge(device.status)}</TableCell>
               <TableCell>

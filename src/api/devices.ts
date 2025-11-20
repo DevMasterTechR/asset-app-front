@@ -1,6 +1,6 @@
 // src/api/devices.ts
 import { API_URL } from '@/lib/config';
-
+import apiFetch from '@/lib/fetchClient';
 export type DeviceStatus = 'available' | 'assigned' | 'maintenance' | 'decommissioned';
 
 export interface Device {
@@ -56,32 +56,22 @@ const handleApiError = async (response: Response) => {
 
 export const devicesApi = {
   async getAll(): Promise<Device[]> {
-    const response = await fetch(`${API_URL}/assets`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
+    const response = await apiFetch('/assets', { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
 
   async getById(id: number): Promise<Device> {
-    const response = await fetch(`${API_URL}/assets/${id}`, {
-      method: 'GET',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`/assets/${id}`, { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
 
   async create(data: CreateDeviceDto): Promise<Device> {
     console.log('📤 Creando dispositivo:', data);
-
-    const response = await fetch(`${API_URL}/assets`, {
+    const response = await apiFetch('/assets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify(data),
     });
     await handleApiError(response);
@@ -90,11 +80,9 @@ export const devicesApi = {
 
   async update(id: number, data: UpdateDeviceDto): Promise<Device> {
     console.log('📤 Actualizando dispositivo:', id, data);
-
-    const response = await fetch(`${API_URL}/assets/${id}`, {
+    const response = await apiFetch(`/assets/${id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
       body: JSON.stringify(data),
     });
     await handleApiError(response);
@@ -102,11 +90,7 @@ export const devicesApi = {
   },
 
   async delete(id: number): Promise<void> {
-    const response = await fetch(`${API_URL}/assets/${id}`, {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-    });
+    const response = await apiFetch(`/assets/${id}`, { method: 'DELETE' });
     await handleApiError(response);
   },
 };

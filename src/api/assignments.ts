@@ -1,101 +1,106 @@
-import { mockAssignments, type Assignment } from "@/data/mockDataExtended"
+import apiFetch from '@/lib/fetchClient'
+
+// Helper para manejar errores de la API (local, igual que en otros módulos)
+const handleApiError = async (response: Response) => {
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({ message: 'Error desconocido' }));
+    throw new Error(error.message || `Error ${response.status}`);
+  }
+  return response;
+}
+import type { Assignment } from '@/data/mockDataExtended'
 
 export interface CreateAssignmentDto {
-  assetId: string
-  personId: string
-  branchId: string
-  assignmentDate: string
-  deliveryCondition: "excellent" | "good" | "fair" | "poor"
+  assetId: string | number
+  personId: string | number
+  branchId?: string | number
+  assignmentDate?: string
+  deliveryCondition: 'excellent' | 'good' | 'fair' | 'poor'
   deliveryNotes?: string
 }
 
 export interface UpdateAssignmentDto extends Partial<CreateAssignmentDto> {
   returnDate?: string
-  returnCondition?: "excellent" | "good" | "fair" | "poor"
+  returnCondition?: 'excellent' | 'good' | 'fair' | 'poor'
   returnNotes?: string
 }
 
-let assignmentsData = [...mockAssignments]
-
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms))
-
-function getLocalISOString(date = new Date()): string {
-  const year = date.getFullYear()
-  const month = String(date.getMonth() + 1).padStart(2, "0")
-  const day = String(date.getDate()).padStart(2, "0")
-  const hours = String(date.getHours()).padStart(2, "0")
-  const minutes = String(date.getMinutes()).padStart(2, "0")
-  const seconds = String(date.getSeconds()).padStart(2, "0")
-
-  // Retorna en formato ISO pero con la hora local, no UTC
-  return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`
+const mapBackendToFrontend = (b: any): Assignment => {
+  return {
+    id: String(b.id),
+    assetId: String(b.assetId),
+    personId: String(b.personId),
+    branchId: b.branchId ?? 0,
+    assignmentDate: b.assignmentDate ? new Date(b.assignmentDate).toISOString() : new Date().toISOString(),
+    returnDate: b.returnDate ? new Date(b.returnDate).toISOString() : undefined,
+    deliveryCondition: b.deliveryCondition || 'good',
+    returnCondition: b.returnCondition,
+    deliveryNotes: b.deliveryNotes,
+    returnNotes: b.returnNotes,
+  }
 }
 
 export const assignmentsApi = {
-  getAll: async (): Promise<Assignment[]> => {
-    await delay(300)
-    return [...assignmentsData]
+  async getAll(): Promise<Assignment[]> {
+    const res = await apiFetch('/assignment-history', { method: 'GET' })
+    await handleApiError(res)
+    const data = await res.json()
+    return data.map(mapBackendToFrontend)
   },
 
-  create: async (data: CreateAssignmentDto): Promise<Assignment> => {
-  await delay(500)
-
-  const newAssignment: Assignment = {
-    id: `A${Date.now()}`,
-    ...data,
-    branchId: Number(data.branchId), // ✅ convertir string → number
-    returnDate: undefined,
-    returnCondition: undefined,
-  }
-
-  assignmentsData.push(newAssignment)
-  return newAssignment
-},
-
-update: async (id: string, data: UpdateAssignmentDto): Promise<Assignment> => {
-  await delay(500)
-  const index = assignmentsData.findIndex((a) => a.id === id)
-  if (index === -1) throw new Error("Asignación no encontrada")
-
-  const existing = assignmentsData[index]
-
-  const updated: Assignment = {
-    ...existing,
-    ...data,
-    branchId:
-      data.branchId !== undefined && data.branchId !== null
-        ? Number(data.branchId)
-        : existing.branchId, // ✅ conserva el valor anterior si no se envía uno nuevo
-  }
-
-  if (Number.isNaN(updated.branchId)) {
-    throw new Error("branchId inválido en la actualización")
-  }
-
-  assignmentsData[index] = updated
-  return assignmentsData[index]
-},
-
-  registerReturn: async (
-    id: string,
-    returnCondition: "excellent" | "good" | "fair" | "poor",
-    returnNotes?: string,
-  ): Promise<Assignment> => {
-    await delay(500)
-    const index = assignmentsData.findIndex((a) => a.id === id)
-    if (index === -1) throw new Error("Asignación no encontrada")
-
-    assignmentsData[index] = {
-      ...assignmentsData[index],
-      returnDate: getLocalISOString(),
-      returnCondition,
-      returnNotes: returnNotes || assignmentsData[index].returnNotes,
+  async create(payload: CreateAssignmentDto): Promise<{ assignment: Assignment; asset?: any }> {
+    const body = {
+      assetId: Number(payload.assetId),
+      personId: Number(payload.personId),
+      branchId: payload.branchId !== undefined ? Number(payload.branchId) : undefined,
+      assignmentDate: payload.assignmentDate,
+      deliveryCondition: payload.deliveryCondition,
+      deliveryNotes: payload.deliveryNotes,
     }
-    return assignmentsData[index]
+    const res = await apiFetch('/assignment-history', { method: 'POST', body: JSON.stringify(body) })
+    await handleApiError(res)
+    const data = await res.json()
+    // Si el backend devuelve { assignment, asset }
+    if (data && data.assignment) {
+      return { assignment: mapBackendToFrontend(data.assignment), asset: data.asset }
+    }
+    // Compatibilidad: si devuelve solo el assignment
+    return { assignment: mapBackendToFrontend(data), asset: undefined }
   },
 
-  delete: async (id: string): Promise<void> => {
-    await delay(500)
-    assignmentsData = assignmentsData.filter((a) => a.id !== id)
+  async update(id: string, payload: UpdateAssignmentDto): Promise<Assignment> {
+    const body: any = {}
+    if (payload.assetId !== undefined) body.assetId = Number(payload.assetId)
+    if (payload.personId !== undefined) body.personId = Number(payload.personId)
+    if (payload.branchId !== undefined) body.branchId = Number(payload.branchId)
+    if (payload.assignmentDate !== undefined) body.assignmentDate = payload.assignmentDate
+    if (payload.deliveryCondition !== undefined) body.deliveryCondition = payload.deliveryCondition
+    if (payload.deliveryNotes !== undefined) body.deliveryNotes = payload.deliveryNotes
+    if (payload.returnDate !== undefined) body.returnDate = payload.returnDate
+    if (payload.returnCondition !== undefined) body.returnCondition = payload.returnCondition
+    if (payload.returnNotes !== undefined) body.returnNotes = payload.returnNotes
+
+    const res = await apiFetch(`/assignment-history/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    await handleApiError(res)
+    const data = await res.json()
+    return mapBackendToFrontend(data)
+  },
+
+  async registerReturn(id: string, returnCondition: 'excellent' | 'good' | 'fair' | 'poor', returnNotes?: string): Promise<{ assignment: Assignment; asset?: any }> {
+    const body = { returnDate: new Date().toISOString(), returnCondition, returnNotes }
+    const res = await apiFetch(`/assignment-history/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    await handleApiError(res)
+    const data = await res.json()
+    // Si el backend devuelve { assignment, asset }
+    if (data && data.assignment) {
+      return { assignment: mapBackendToFrontend(data.assignment), asset: data.asset }
+    }
+    // Compatibilidad: si devuelve solo el assignment
+    return { assignment: mapBackendToFrontend(data), asset: undefined }
+  },
+
+  async delete(id: string): Promise<void> {
+    const res = await apiFetch(`/assignment-history/${id}`, { method: 'DELETE' })
+    await handleApiError(res)
   },
 }

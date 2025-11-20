@@ -484,13 +484,15 @@ export default function DeviceFormModal({
                 <SelectTrigger>
                   <SelectValue placeholder="Selecciona estado" />
                 </SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map((status) => (
-                    <SelectItem key={status.value} value={status.value}>
-                      {status.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                  <SelectContent>
+                    {statusOptions
+                      .filter((s) => (mode === 'create' ? s.value !== 'assigned' : true))
+                      .map((status) => (
+                        <SelectItem key={status.value} value={status.value}>
+                          {status.label}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
               </Select>
             </div>
 
