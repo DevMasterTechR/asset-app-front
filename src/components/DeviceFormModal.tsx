@@ -22,6 +22,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { Device, CreateDeviceDto, DeviceStatus } from '@/api/devices';
+import { assignmentsApi } from '@/api/assignments';
 import { Person } from '@/data/mockDataExtended';
 import { Loader2 } from 'lucide-react';
 
@@ -47,7 +48,6 @@ const deviceTypes = [
 
 const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
   { value: 'available', label: 'Disponible' },
-  { value: 'assigned', label: 'Asignado' },
   { value: 'maintenance', label: 'Mantenimiento' },
   { value: 'decommissioned', label: 'Dado de baja' },
 ];
@@ -88,6 +88,9 @@ export default function DeviceFormModal({
     notes: '',
     attributesJson: {},
   });
+  const [pendingReceived, setPendingReceived] = useState(false);
+  // Fecha de entrega calculada automáticamente a partir de la última asignación
+  const [deliveryDateAuto, setDeliveryDateAuto] = useState<string>('');
 
   useEffect(() => {
     if (device && mode === 'edit') {
@@ -97,7 +100,8 @@ export default function DeviceFormModal({
         brand: device.brand || '',
         model: device.model || '',
         serialNumber: device.serialNumber || '',
-        status: device.status,
+        // Si el dispositivo no tiene estado definido en BDD, usar 'available'
+        status: device.status || 'available',
         branchId: device.branchId,
         assignedPersonId: device.assignedPersonId,
         purchaseDate: device.purchaseDate?.substring(0, 16) || '',
@@ -106,9 +110,34 @@ export default function DeviceFormModal({
         notes: device.notes || '',
         attributesJson: device.attributesJson || {},
       });
+      // Obtener la última asignación relacionada con este activo
+      (async () => {
+        try {
+          const all = await assignmentsApi.getAll();
+          const related = all
+            .filter(a => String(a.assetId) === String(device.id))
+            .sort((a, b) => (a.assignmentDate > b.assignmentDate ? -1 : 1));
+          const latest = related[0];
+          if (latest) {
+            // Si la asignación todavía no tiene returnDate, usamos la fecha de asignación
+            if (!latest.returnDate) {
+              // Convertir ISO a formato 'YYYY-MM-DDTHH:mm' si viene en ISO
+              const d = new Date(latest.assignmentDate);
+              const iso = isNaN(d.getTime()) ? '' : `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+              setDeliveryDateAuto(iso);
+            } else {
+              // Asignación completada -> fecha de entrega vacía
+              setDeliveryDateAuto('');
+            }
+          } else {
+            setDeliveryDateAuto('');
+          }
+        } catch (e) {
+          setDeliveryDateAuto('');
+        }
+      })();
     } else if (mode === 'create') {
-      // Cuando es modo crear, establecer las fechas automáticamente
-      const currentDateTime = getCurrentDateTime();
+      // En modo crear permitimos que las fechas queden vacías por defecto
       setFormData({
         assetCode: '',
         assetType: 'laptop',
@@ -118,14 +147,19 @@ export default function DeviceFormModal({
         status: 'available',
         branchId: undefined,
         assignedPersonId: undefined,
-        purchaseDate: currentDateTime,
-        deliveryDate: currentDateTime,
-        receivedDate: currentDateTime,
+        purchaseDate: '',
+        deliveryDate: '',
+        receivedDate: '',
         notes: '',
         attributesJson: {},
       });
     }
   }, [device, mode, open]);
+
+  // Sincronizar checkbox de recepción pendiente con el formData
+  useEffect(() => {
+    setPendingReceived(!formData.receivedDate);
+  }, [formData.receivedDate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -139,11 +173,13 @@ export default function DeviceFormModal({
         brand: formData.brand || undefined,
         model: formData.model || undefined,
         serialNumber: formData.serialNumber || undefined,
-        status: formData.status,
+        // Garantizar un estado válido por defecto para evitar enviar cadena vacía
+        status: formData.status || 'available',
         branchId: formData.branchId || undefined,
         assignedPersonId: formData.assignedPersonId || undefined,
         purchaseDate: formData.purchaseDate || undefined,
-        deliveryDate: formData.deliveryDate || undefined,
+        // Priorizar la fecha de entrega automática calculada por última asignación
+        deliveryDate: deliveryDateAuto || formData.deliveryDate || undefined,
         receivedDate: formData.receivedDate || undefined,
         notes: formData.notes || undefined,
         attributesJson: Object.keys(formData.attributesJson || {}).length > 0 ? formData.attributesJson : undefined,
@@ -517,27 +553,7 @@ export default function DeviceFormModal({
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Asignado a</Label>
-              <Select
-                value={formData.assignedPersonId?.toString() || ''}
-                onValueChange={(value) =>
-                  handleChange('assignedPersonId', value === '' ? undefined : Number(value))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin asignar" />
-                </SelectTrigger>
-                <SelectContent>
-                  {people.map((person) => (
-                    <SelectItem key={person.id} value={person.id.toString()}>
-                      {person.firstName} {person.lastName}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-            </div>
+            {/* Campo 'Asignado a' eliminado: se rellena automáticamente al crear una asignación */}
 
           </div>
 
@@ -557,7 +573,7 @@ export default function DeviceFormModal({
           <div className="border-t pt-4">
             <h3 className="text-sm font-semibold mb-3">Fechas</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
+              <div className="space-y-2 md:pr-4 md:border-r md:border-muted">
                 <Label>Fecha de compra</Label>
                 <DateTimePicker
                   value={formData.purchaseDate}
@@ -565,20 +581,42 @@ export default function DeviceFormModal({
                 />
               </div>
 
-              <div className="space-y-2">
+              <div className="space-y-2 md:pl-4">
                 <Label>Fecha de entrega</Label>
-                <DateTimePicker
-                  value={formData.deliveryDate}
-                  onChange={(value) => handleChange('deliveryDate', value)}
-                />
+                <div className="text-sm text-muted-foreground">
+                  {deliveryDateAuto
+                    ? deliveryDateAuto.replace('T', ' ')
+                    : 'Sin fecha (pendiente o asignación completada)'}
+                </div>
               </div>
 
-              <div className="space-y-2">
-                <Label>Fecha de recepción</Label>
-                <DateTimePicker
-                  value={formData.receivedDate}
-                  onChange={(value) => handleChange('receivedDate', value)}
-                />
+              <div className="space-y-2 md:col-span-2 flex justify-center items-center">
+                <div className="w-full max-w-xl">
+                  <Label className="text-center">Fecha de recepción</Label>
+                  <div className="flex items-center gap-3 mt-2">
+                    <div className="flex-1">
+                      <DateTimePicker
+                        value={formData.receivedDate}
+                        onChange={(value) => handleChange('receivedDate', value)}
+                      />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <input
+                        id="pendingReceived"
+                        type="checkbox"
+                        checked={pendingReceived}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setPendingReceived(checked);
+                          if (checked) {
+                            handleChange('receivedDate', '');
+                          }
+                        }}
+                      />
+                      <Label htmlFor="pendingReceived" className="cursor-pointer">Recepción pendiente</Label>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

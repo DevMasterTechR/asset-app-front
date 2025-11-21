@@ -21,6 +21,8 @@ import {
   Credential 
 } from '@/api/credentials';
 import { peopleApi } from '@/api/people';
+import { sortPeopleByName } from '@/lib/sort';
+import { useSort } from '@/lib/useSort';
 import { Person } from '@/data/mockDataExtended';
 import CredentialFormModal from '@/components/CredentialFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -69,7 +71,7 @@ function CredentialsPage() {
       console.log('✅ Personas cargadas:', peopleData);
       
       setCredentials(credentialsData);
-      setPeople(peopleData);
+      setPeople(sortPeopleByName(peopleData));
     } catch (error) {
       console.error('❌ Error cargando datos:', error);
       toast({
@@ -95,6 +97,14 @@ function CredentialsPage() {
       cred.username.toLowerCase().includes(search) ||
       cred.system.toLowerCase().includes(search)
     );
+  });
+
+  const sort = useSort();
+
+  const displayedCredentials = sort.apply(filteredCredentials, {
+    person: (c: any) => getPersonName(c.personId).toString(),
+    system: (c: any) => c.system || '',
+    username: (c: any) => c.username || '',
   });
 
   const togglePasswordVisibility = (id: number) => {
@@ -218,10 +228,10 @@ function CredentialsPage() {
             </div>
           </div>
           <div className="flex items-center justify-center bg-muted rounded-lg p-4">
-            <div className="text-center">
-              <p className="text-2xl font-bold">{filteredCredentials.length}</p>
-              <p className="text-sm text-muted-foreground">Credenciales</p>
-            </div>
+              <div className="text-center">
+                <p className="text-2xl font-bold">{displayedCredentials.length}</p>
+                <p className="text-sm text-muted-foreground">Credenciales</p>
+              </div>
           </div>
         </div>
 
@@ -231,20 +241,20 @@ function CredentialsPage() {
           </div>
         ) : (
           <div className="border rounded-lg bg-card">
-            <Table>
+              <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Persona</TableHead>
-                  <TableHead>Sistema</TableHead>
-                  <TableHead>Usuario</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('system')}>Sistema {sort.key === 'system' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario {sort.key === 'username' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead>Contraseña</TableHead>
                   <TableHead>Notas</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredCredentials.length > 0 ? (
-                  filteredCredentials.map((credential) => (
+                {displayedCredentials.length > 0 ? (
+                  displayedCredentials.map((credential) => (
                     <TableRow key={credential.id}>
                       <TableCell className="font-medium">
                         {getPersonName(credential.personId)}

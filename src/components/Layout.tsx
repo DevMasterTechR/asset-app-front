@@ -1,4 +1,4 @@
-import { ReactNode, useState } from 'react';
+import { ReactNode, useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,7 @@ import {
   Key,
 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { authApi } from '@/api/auth';
 
 interface LayoutProps {
   children: ReactNode;
@@ -43,10 +44,12 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [sessionCountdown, setSessionCountdown] = useState<number | null>(null);
 
   const handleLogout = async () => {
     try {
       await logout();
+      try { localStorage.setItem('session:logout', String(Date.now())); } catch (e) {}
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
@@ -58,6 +61,33 @@ export default function Layout({ children }: LayoutProps) {
         description: 'No se pudo cerrar la sesión.',
         variant: 'destructive',
       });
+    }
+  };
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const custom = e as CustomEvent;
+      const remaining = custom?.detail?.remaining;
+      // remaining can be number or null
+      if (remaining === null) {
+        setSessionCountdown(null);
+      } else if (typeof remaining === 'number') {
+        setSessionCountdown(remaining);
+      }
+    };
+
+    window.addEventListener('session-countdown', handler as EventListener);
+    return () => window.removeEventListener('session-countdown', handler as EventListener);
+  }, []);
+
+  const handleStayConnected = async () => {
+    try {
+      await authApi.keepAlive();
+      setSessionCountdown(null);
+      try { localStorage.setItem('session:keepalive', String(Date.now())); localStorage.removeItem('session:warning'); } catch (e) {}
+      toast({ title: 'Sesión extendida', description: 'Se ha mantenido la sesión activa.' });
+    } catch (e) {
+      toast({ title: 'Error', description: 'No se pudo extender la sesión', variant: 'destructive' });
     }
   };
 
@@ -149,6 +179,13 @@ export default function Layout({ children }: LayoutProps) {
       {/* Main Content */}
       <main className="flex-1 overflow-auto">
         <div className="md:hidden h-16" /> {/* Spacer for mobile header */}
+        {/* Session countdown badge */}
+        {sessionCountdown !== null && sessionCountdown > 0 && (
+          <div className="fixed top-4 right-4 z-50 flex items-center gap-2 bg-destructive/10 border border-destructive rounded-md p-2">
+            <span className="text-sm font-medium">Sesión expira en {sessionCountdown}s</span>
+            <Button size="sm" onClick={handleStayConnected}>Permanecer conectado</Button>
+          </div>
+        )}
         {children}
       </main>
     </div>

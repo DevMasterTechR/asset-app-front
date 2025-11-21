@@ -3,6 +3,7 @@ import { createContext, useContext, useState, useEffect, ReactNode } from 'react
 import { useNavigate } from 'react-router-dom';
 import { authApi, AuthUser } from '@/api/auth';
 import useSessionKeepAlive from '@/hooks/useSessionKeepAlive';
+import { useToast } from '@/hooks/use-toast';
 
 interface AuthContextType {
   user: AuthUser | null;
@@ -16,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
     //Verificar sesión al cargar la app
@@ -41,6 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error en logout:', error);
     } finally {
+      try { localStorage.setItem('session:logout', String(Date.now())); } catch (e) {}
       setUser(null);
     }
   };
@@ -51,15 +54,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logoutAndRedirect = async () => {
     await logout();
     try {
-      navigate('/auth');
+      // Mostrar notificación al usuario informando por qué se redirige
+      toast({
+        title: 'Sesión cerrada',
+        description: 'La sesión se ha cerrado por inactividad. Serás redirigido al login.',
+        variant: 'destructive',
+      });
+      // dejar 2 segundos para que el usuario lea el mensaje
+      setTimeout(() => {
+        try { navigate('/auth'); } catch (e) {}
+      }, 2000);
     } catch (e) {
       // ignorar si navigate no está disponible
     }
   };
 
   // Mantener la sesión viva en el servidor y mostrar advertencia previa
-  // Para pruebas rápidas usamos 1 minuto; cambiar a 15 en producción
-  useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 10, warningSeconds: 30 });
+  // Usar 15 minutos de sesión y advertir 30 segundos antes
+  useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password });

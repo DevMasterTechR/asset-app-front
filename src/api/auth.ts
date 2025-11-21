@@ -99,4 +99,22 @@ export const authApi = {
       return false;
     }
   },
+
+  sessionStatus: async (): Promise<{ remainingSeconds: number | null; lastActivityAt?: string | null; timeoutMinutes: number } | null> => {
+    try {
+      const response = await fetch(`${API_URL}/auth/session`, {
+        method: 'GET',
+        credentials: 'include',
+        headers: { Accept: 'application/json' },
+      });
+
+      if (!response.ok) return null;
+      const data = await response.json();
+      // sessionStatus obtained
+      return data;
+    } catch (e) {
+      console.error('Error fetching session status', e);
+      return null;
+    }
+  },
 };

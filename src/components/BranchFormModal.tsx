@@ -36,12 +36,20 @@ export default function BranchFormModal({
     region: ''
   });
 
+  const normalizeRegion = (r: string | undefined) => {
+    if (!r) return '';
+    const s = String(r).trim();
+    if (!s) return '';
+    // Capitalize first letter and lowercase the rest to match options
+    return s.charAt(0).toUpperCase() + s.slice(1).toLowerCase();
+  };
+
   useEffect(() => {
     if (branch && mode === 'edit') {
       setFormData({
         name: branch.name,
         address: branch.address,
-        region: branch.region
+        region: normalizeRegion(branch.region)
       });
     } else if (mode === 'create') {
       setFormData({
@@ -57,7 +65,9 @@ export default function BranchFormModal({
     setLoading(true);
     
     try {
-      await onSave(formData);
+      // Ensure region matches expected capitalization before sending
+      const payload = { ...formData, region: normalizeRegion(formData.region) };
+      await onSave(payload);
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -112,18 +122,21 @@ export default function BranchFormModal({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="region">
-              Región <span className="text-destructive">*</span>
-            </Label>
-            <Input
-              id="region"
-              value={formData.region}
-              onChange={(e) => handleChange('region', e.target.value)}
-              placeholder="Centro"
-              required
-            />
-          </div>
-
+  <label htmlFor="region-select">Elige una Región:</label>
+  <select
+    id="region-select"
+    name="region"
+    value={formData.region}
+    onChange={(e) => handleChange('region', e.target.value)}
+    required
+    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+  >
+    <option value="">Selecciona región</option>
+    <option value="Costa">Costa</option>
+    <option value="Sierra">Sierra</option>
+    <option value="Oriente">Oriente</option>
+  </select>
+</div>   
           <DialogFooter>
             <Button
               type="button"

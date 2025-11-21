@@ -28,6 +28,8 @@ import { peopleApi, type CreatePersonDto } from "@/api/people";
 import * as catalogsApi from "@/api/catalogs";
 import PersonFormModal from "@/components/PeopleFormModal";
 import { useToast } from "@/hooks/use-toast";
+import { sortPeopleByName, sortBranchesByName, sortByString } from '@/lib/sort';
+import { useSort } from '@/lib/useSort';
 
 const statusVariantMap = {
   active: 'success' as const,
@@ -67,10 +69,10 @@ export default function People() {
         catalogsApi.getRoles(),
       ]);
       
-      setPeople(peopleData);
-      setBranches(branchesData.map(b => ({ id: Number(b.id), name: b.name })));
-      setDepartments(departmentsData.map(d => ({ id: Number(d.id), name: d.name })));
-      setRoles(rolesData.map(r => ({ id: Number(r.id), name: r.name })));
+      setPeople(sortPeopleByName(peopleData));
+      setBranches(sortBranchesByName(branchesData.map(b => ({ id: Number(b.id), name: b.name }))));
+      setDepartments(sortByString(departmentsData.map(d => ({ id: Number(d.id), name: d.name })), d => d.name));
+      setRoles(sortByString(rolesData.map(r => ({ id: Number(r.id), name: r.name })), r => r.name));
     } catch (error) {
       toast({
         title: "Error",
@@ -127,11 +129,41 @@ export default function People() {
         description: "Persona eliminada correctamente"
       });
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo eliminar la persona",
-        variant: "destructive"
-      });
+      const msg = error instanceof Error ? error.message : String(error);
+
+      // Detectar errores comunes y mostrar mensajes amigables
+      const isFk = /foreign key constraint|violates foreign key constraint/i.test(msg);
+      const isAssignment = /assignment|assignmenthistory|AssignmentHistory|AssignmentHistory_personId_fkey|assignment_history/i.test(msg);
+      const isCredential = /credential|credentials|Credential|Credentials_personId_fkey|credentials_personid_fkey/i.test(msg);
+
+      if (isFk && isAssignment) {
+        toast({
+          title: "No se puede eliminar",
+          description:
+            "La persona tiene asignaciones activas. Finaliza o devuelve las asignaciones antes de eliminarla.",
+          variant: "destructive",
+        });
+      } else if (isFk && isCredential) {
+        toast({
+          title: "No se puede eliminar",
+          description:
+            "La persona tiene credenciales activas. Elimina o desactiva las credenciales antes de eliminar este usuario.",
+          variant: "destructive",
+        });
+      } else if (isFk) {
+        toast({
+          title: "No se puede eliminar",
+          description:
+            "La persona está relacionada con otros registros y no se puede eliminar actualmente.",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: "No se pudo eliminar la persona",
+          variant: "destructive",
+        });
+      }
     } finally {
       setDeleteDialogOpen(false);
       setPersonToDelete(null);
@@ -162,6 +194,18 @@ export default function People() {
       person.nationalId.includes(searchTerm) ||
       person.username?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const sort = useSort();
+
+  const displayedPeople = sort.apply(filteredPeople, {
+    name: (p: any) => `${p.lastName || ''} ${p.firstName || ''}`.trim(),
+    nationalId: (p: any) => p.nationalId || '',
+    username: (p: any) => p.username || '',
+    department: (p: any) => getDepartmentName(p.departmentId),
+    role: (p: any) => getRoleName(p.roleId),
+    branch: (p: any) => getBranchName(p.branchId),
+    status: (p: any) => p.status || '',
+  });
 
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
@@ -202,7 +246,7 @@ export default function People() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
             <div className="lg:col-span-3">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -216,8 +260,8 @@ export default function People() {
               </div>
             </div>
             <div className="flex items-center justify-center bg-muted rounded-lg p-4">
-              <div className="text-center">
-                <p className="text-2xl font-bold">{filteredPeople.length}</p>
+                <div className="text-center">
+                <p className="text-2xl font-bold">{displayedPeople.length}</p>
                 <p className="text-sm text-muted-foreground">Personas</p>
               </div>
             </div>
@@ -227,18 +271,18 @@ export default function People() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Persona</TableHead>
-                  <TableHead>Cédula</TableHead>
-                  <TableHead>Usuario</TableHead>
-                  <TableHead>Departamento</TableHead>
-                  <TableHead>Rol</TableHead>
-                  <TableHead>Sucursal</TableHead>
-                  <TableHead>Estado</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Persona {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('nationalId')}>Cédula {sort.key === 'nationalId' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario {sort.key === 'username' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('department')}>Departamento {sort.key === 'department' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('role')}>Rol {sort.key === 'role' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('status')}>Estado {sort.key === 'status' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredPeople.map((person) => (
+                {displayedPeople.map((person) => (
                   <TableRow key={person.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">

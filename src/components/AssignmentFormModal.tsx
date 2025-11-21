@@ -19,6 +19,8 @@ import {
 import type { Assignment } from "@/data/mockDataExtended"
 import type { CreateAssignmentDto } from "@/api/assignments"
 import { Loader2 } from "lucide-react"
+import { useMemo } from 'react'
+import { sortPeopleByName, sortAssetsByName, sortBranchesByName } from '@/lib/sort'
 
 interface AssignmentFormModalProps {
   open: boolean
@@ -109,6 +111,10 @@ export default function AssignmentFormModal({
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
+  const sortedPeople = useMemo(() => sortPeopleByName(people || []), [people])
+  const sortedAssets = useMemo(() => sortAssetsByName(assets || []), [assets])
+  const sortedBranches = useMemo(() => sortBranchesByName(branches || []), [branches])
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -129,7 +135,7 @@ export default function AssignmentFormModal({
                 <SelectValue placeholder="Selecciona activo" />
               </SelectTrigger>
               <SelectContent>
-                {assets.map((asset) => (
+                {sortedAssets.map((asset) => (
                   <SelectItem key={asset.id} value={asset.id}>
                     {asset.code} - {asset.name}
                   </SelectItem>
@@ -147,7 +153,7 @@ export default function AssignmentFormModal({
                 <SelectValue placeholder="Selecciona persona" />
               </SelectTrigger>
               <SelectContent>
-                {people.map((person) => (
+                {sortedPeople.map((person) => (
                   <SelectItem key={person.id} value={person.id}>
                     {person.firstName} {person.lastName}
                   </SelectItem>
@@ -165,7 +171,7 @@ export default function AssignmentFormModal({
                 <SelectValue placeholder="Selecciona sucursal" />
               </SelectTrigger>
               <SelectContent>
-                {branches.map((branch) => (
+                {sortedBranches.map((branch) => (
                   <SelectItem key={branch.id} value={String(branch.id)}>
                     {branch.name}
                   </SelectItem>

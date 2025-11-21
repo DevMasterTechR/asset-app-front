@@ -25,7 +25,7 @@ export interface UpdateAssignmentDto extends Partial<CreateAssignmentDto> {
   returnNotes?: string
 }
 
-const mapBackendToFrontend = (b: any): Assignment => {
+const mapBackendToFrontend = (b: any): Assignment & { asset?: any; person?: any } => {
   return {
     id: String(b.id),
     assetId: String(b.assetId),
@@ -37,6 +37,21 @@ const mapBackendToFrontend = (b: any): Assignment => {
     returnCondition: b.returnCondition,
     deliveryNotes: b.deliveryNotes,
     returnNotes: b.returnNotes,
+    // Incluir info relacionada si el backend la devuelve
+    asset: b.asset ? {
+      id: String(b.asset.id),
+      assetCode: b.asset.assetCode,
+      brand: b.asset.brand,
+      model: b.asset.model,
+      status: b.asset.status,
+      assignedPersonId: b.asset.assignedPersonId,
+      branchId: b.asset.branchId,
+    } : undefined,
+    person: b.person ? {
+      id: String(b.person.id),
+      firstName: b.person.firstName,
+      lastName: b.person.lastName,
+    } : undefined,
   }
 }
 

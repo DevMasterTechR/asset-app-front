@@ -25,6 +25,8 @@ import { Search, Plus, Edit, Trash2 } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Branch, Department, Role } from '@/data/mockDataExtended';
 import * as catalogsApi from '@/api/catalogs';
+import { sortByString } from '@/lib/sort';
+import { useSort } from '@/lib/useSort';
 import BranchFormModal from '@/components/BranchFormModal';
 import DepartmentFormModal from '@/components/DepartmentFormModal';
 import RoleFormModal from '@/components/RoleFormModal';
@@ -77,9 +79,9 @@ export default function Catalogs() {
         catalogsApi.getDepartments(),
         catalogsApi.getRoles()
       ]);
-      setBranches(branchesData);
-      setDepartments(departmentsData);
-      setRoles(rolesData);
+      setBranches(sortByString(branchesData, b => b.name));
+      setDepartments(sortByString(departmentsData, d => d.name));
+      setRoles(sortByString(rolesData, r => r.name));
     } catch (error) {
       toast({
         title: 'Error',
@@ -196,6 +198,24 @@ export default function Catalogs() {
     role.description.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  const sort = useSort();
+
+  const displayedBranches = sort.apply(filteredBranches, {
+    name: (b: any) => b.name || '',
+    address: (b: any) => b.address || '',
+    region: (b: any) => b.region || '',
+  });
+
+  const displayedDepartments = sort.apply(filteredDepartments, {
+    name: (d: any) => d.name || '',
+    description: (d: any) => d.description || '',
+  });
+
+  const displayedRoles = sort.apply(filteredRoles, {
+    name: (r: any) => r.name || '',
+    description: (r: any) => r.description || '',
+  });
+
   return (
     <Layout>
       <div className="p-6 space-y-6">
@@ -241,14 +261,14 @@ export default function Catalogs() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Dirección</TableHead>
-                    <TableHead>Región</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Nombre {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('address')}>Dirección {sort.key === 'address' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('region')}>Región {sort.key === 'region' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredBranches.map((branch) => (
+                  {displayedBranches.map((branch) => (
                     <TableRow key={branch.id}>
                       <TableCell className="font-medium">{branch.name}</TableCell>
                       <TableCell>{branch.address}</TableCell>
@@ -292,16 +312,16 @@ export default function Catalogs() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead> {/* ← Nuevo */}
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Nombre {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('description')}>Descripción {sort.key === 'description' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredDepartments.map((dept) => (
+                  {displayedDepartments.map((dept) => (
                     <TableRow key={dept.id}>
                       <TableCell className="font-medium">{dept.name}</TableCell>
-                      <TableCell>{dept.description}</TableCell> {/* ← Nuevo */}
+                      <TableCell>{dept.description}</TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -349,13 +369,13 @@ export default function Catalogs() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nombre</TableHead>
-                    <TableHead>Descripción</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Nombre {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('description')}>Descripción {sort.key === 'description' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                     <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredRoles.map((role) => (
+                  {displayedRoles.map((role) => (
                     <TableRow key={role.id}>
                       <TableCell className="font-medium">{role.name}</TableCell>
                       <TableCell>{role.description}</TableCell>

@@ -56,13 +56,13 @@ const handleApiError = async (response: Response) => {
 
 export const devicesApi = {
   async getAll(): Promise<Device[]> {
-    const response = await apiFetch('/assets', { method: 'GET' });
+    const response = await apiFetch('/assets/public', { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },
 
   async getById(id: number): Promise<Device> {
-    const response = await apiFetch(`/assets/${id}`, { method: 'GET' });
+    const response = await apiFetch(`/assets/public/${id}`, { method: 'GET' });
     await handleApiError(response);
     return response.json();
   },

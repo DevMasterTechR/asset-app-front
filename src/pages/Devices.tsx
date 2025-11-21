@@ -30,6 +30,8 @@ import {
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
 import * as catalogsApi from '@/api/catalogs';
+import { sortByString, sortPeopleByName, sortBranchesByName } from '@/lib/sort';
+import { useSort } from '@/lib/useSort';
 import DeviceFormModal from '@/components/DeviceFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import { Person } from '@/data/mockDataExtended';
@@ -95,19 +97,47 @@ function DevicesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [devicesData, peopleData, branchesData] = await Promise.all([
+      // Hacemos las 3 llamadas en paralelo pero tolerantes a fallos: si una falla
+      // no bloqueamos las demás. Así por ejemplo si /people falla (role missing)
+      // seguimos mostrando dispositivos y sucursales.
+      const results = await Promise.allSettled([
         devicesApi.getAll(),
         peopleApi.getAll(),
         catalogsApi.getBranches(),
       ]);
 
-      console.log('✅ Dispositivos cargados:', devicesData);
-      console.log('✅ Personas cargadas:', peopleData);
-      console.log('✅ Sucursales cargadas:', branchesData);
+      const [devicesRes, peopleRes, branchesRes] = results;
 
-      setDevices(devicesData);
-      setPeople(peopleData);
-      setBranches(branchesData.map(b => ({ id: Number(b.id), name: b.name })));
+      if (devicesRes.status === 'fulfilled') {
+        // Ordenar por código del activo para facilitar búsqueda alfabética
+        setDevices(sortByString(devicesRes.value, (d: any) => (d.assetCode || '').toString()));
+      } else {
+        // Si no cargan dispositivos, lanzamos para que el catch muestre toast
+        throw devicesRes.reason ?? new Error('Error cargando dispositivos');
+      }
+
+      if (peopleRes.status === 'fulfilled') {
+        setPeople(sortPeopleByName(peopleRes.value));
+      } else {
+        // Si falla la carga de personas, mostramos un toast y continuamos.
+        toast({
+          title: 'Advertencia',
+          description: peopleRes.reason instanceof Error ? peopleRes.reason.message : 'No se pudieron cargar las personas',
+          variant: 'destructive',
+        });
+        setPeople([]);
+      }
+
+      if (branchesRes.status === 'fulfilled') {
+        setBranches(sortBranchesByName(branchesRes.value.map(b => ({ id: Number(b.id), name: b.name }))));
+      } else {
+        toast({
+          title: 'Advertencia',
+          description: branchesRes.reason instanceof Error ? branchesRes.reason.message : 'No se pudieron cargar las sucursales',
+          variant: 'destructive',
+        });
+        setBranches([]);
+      }
     } catch (error) {
       console.error('❌ Error cargando datos:', error);
       toast({
@@ -152,6 +182,22 @@ function DevicesPage() {
       device.serialNumber?.toLowerCase().includes(search) ||
       device.assetType.toLowerCase().includes(search)
     );
+  });
+
+  const sort = useSort();
+
+  const displayedDevices = sort.apply(filteredDevices, {
+    code: (d: any) => d.assetCode ?? '',
+    brand: (d: any) => `${d.brand || ''} ${d.model || ''}`.trim(),
+    purchaseDate: (d: any) => d.purchaseDate ?? '',
+    deliveryDate: (d: any) => d.deliveryDate ?? '',
+    receivedDate: (d: any) => d.receivedDate ?? '',
+    status: (d: any) => d.status ?? '',
+    branch: (d: any) => (branches.find(b => b.id === d.branchId)?.name) ?? '',
+    person: (d: any) => {
+      const p = people.find(p => Number(p.id) === d.assignedPersonId);
+      return p ? `${p.lastName || ''} ${p.firstName || ''}`.trim() : '';
+    },
   });
 
   const getTypeIcon = (type: string) => {
@@ -240,7 +286,7 @@ function DevicesPage() {
           </Button>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-3">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -253,9 +299,9 @@ function DevicesPage() {
               />
             </div>
           </div>
-          <div className="flex items-center justify-center bg-muted rounded-lg p-4">
+              <div className="flex items-center justify-center bg-muted rounded-lg p-4">
             <div className="text-center">
-              <p className="text-2xl font-bold">{filteredDevices.length}</p>
+                <p className="text-2xl font-bold">{displayedDevices.length}</p>
               <p className="text-sm text-muted-foreground">Dispositivos</p>
             </div>
           </div>
@@ -271,21 +317,21 @@ function DevicesPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Tipo</TableHead>
-                  <TableHead>Código</TableHead>
-                  <TableHead>Marca / Modelo</TableHead>
-                  <TableHead>Fecha Compra</TableHead>
-                  <TableHead>Fecha Entrega</TableHead>
-                  <TableHead>Fecha Recepción</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('code')}>Código {sort.key === 'code' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('brand')}>Marca / Modelo {sort.key === 'brand' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('purchaseDate')}>Fecha Compra {sort.key === 'purchaseDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('deliveryDate')}>Fecha Entrega {sort.key === 'deliveryDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('receivedDate')}>Fecha Recepción {sort.key === 'receivedDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead>Serial</TableHead>
-                  <TableHead>Estado</TableHead>
-                  <TableHead>Sucursal</TableHead>
-                  <TableHead>Asignado a</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('status')}>Estado {sort.key === 'status' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Asignado a {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredDevices.length > 0 ? (
-                  filteredDevices.map((device) => (
+                {displayedDevices.length > 0 ? (
+                  displayedDevices.map((device) => (
                     <TableRow key={device.id}>
                       <TableCell>
                         <div className="flex items-center gap-2">
