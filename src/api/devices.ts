@@ -14,7 +14,7 @@ export interface Device {
   branchId?: number;
   assignedPersonId?: number;
   purchaseDate?: string;
-  deliveryDate?: string;
+  deliveryDate?: string;x
   receivedDate?: string;
   notes?: string;
   attributesJson?: Record<string, string | number | boolean>;
