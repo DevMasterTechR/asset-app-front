@@ -29,7 +29,7 @@ import { assignmentsApi, type CreateAssignmentDto } from "@/api/assignments";
 import { peopleApi } from '@/api/people';
 import { devicesApi } from '@/api/devices';
 import { getBranches } from '@/api/catalogs';
-import { sortPeopleByName, sortAssetsByName, sortBranchesByName } from '@/lib/sort';
+import { sortAssetsByName, sortBranchesByName, sortByString } from '@/lib/sort';
 import { useSort } from '@/lib/useSort';
 import AssignmentFormModal from "@/components/AssignmentFormModal";
 import ReturnAssignmentModal from "@/components/ReturnAssignmentModal";
@@ -108,7 +108,7 @@ export default function Assignments() {
 
       setAssignments(data);
 
-      setPeople(sortPeopleByName(peopleList.map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName }))));
+      setPeople(sortByString(peopleList.map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName })), (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()));
       // Mostrar únicamente activos disponibles para asignación
       setAssets(sortAssetsByName(assetList
         .filter((a: any) => a.status === 'available')

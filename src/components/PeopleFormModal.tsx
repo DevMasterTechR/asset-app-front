@@ -19,6 +19,8 @@ import {
 } from '@/components/ui/dialog';
 import { Person } from '@/data/mockDataExtended';
 import { CreatePersonDto, UpdatePersonDto } from '@/api/people';
+import { sortByString, sortBranchesByName } from '@/lib/sort';
+import { useMemo } from 'react';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface PersonFormModalProps {
@@ -246,13 +248,13 @@ export default function PersonFormModal({
                 <SelectTrigger id="departmentId">
                   <SelectValue placeholder="Selecciona departamento" />
                 </SelectTrigger>
-                <SelectContent>
-                  {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id.toString()}>
-                      {dept.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
+                  <SelectContent>
+                    {useMemo(() => sortByString(departments, d => d.name).map((dept) => (
+                      <SelectItem key={dept.id} value={dept.id.toString()}>
+                        {dept.name}
+                      </SelectItem>
+                    )), [departments])}
+                  </SelectContent>
               </Select>
             </div>
             <div className="space-y-2">
@@ -267,11 +269,11 @@ export default function PersonFormModal({
                   <SelectValue placeholder="Selecciona rol" />
                 </SelectTrigger>
                 <SelectContent>
-                  {roles.map((role) => (
+                  {useMemo(() => sortByString(roles, r => r.name).map((role) => (
                     <SelectItem key={role.id} value={role.id.toString()}>
                       {role.name}
                     </SelectItem>
-                  ))}
+                  )), [roles])}
                 </SelectContent>
               </Select>
             </div>
@@ -291,11 +293,11 @@ export default function PersonFormModal({
                   <SelectValue placeholder="Selecciona sucursal" />
                 </SelectTrigger>
                 <SelectContent>
-                  {branches.map((branch) => (
+                  {useMemo(() => sortBranchesByName(branches).map((branch) => (
                     <SelectItem key={branch.id} value={branch.id.toString()}>
                       {branch.name}
                     </SelectItem>
-                  ))}
+                  )), [branches])}
                 </SelectContent>
               </Select>
             </div>

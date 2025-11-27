@@ -23,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { Device, CreateDeviceDto, DeviceStatus } from '@/api/devices';
 import { assignmentsApi } from '@/api/assignments';
+import { sortBranchesByName } from '@/lib/sort';
+import { useMemo } from 'react';
 import { Person } from '@/data/mockDataExtended';
 import { Loader2 } from 'lucide-react';
 
@@ -535,22 +537,22 @@ export default function DeviceFormModal({
             <div className="space-y-2">
               <Label>Sucursal</Label>
               <Select
-                value={formData.branchId?.toString() || ''}
-                onValueChange={(value) =>
-                  handleChange('branchId', value === '' ? undefined : Number(value))
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Sin sucursal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {branches.map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  value={formData.branchId?.toString() || ''}
+                  onValueChange={(value) =>
+                    handleChange('branchId', value === '' ? undefined : Number(value))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Sin sucursal" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {useMemo(() => sortBranchesByName(branches).map((branch) => (
+                      <SelectItem key={branch.id} value={branch.id.toString()}>
+                        {branch.name}
+                      </SelectItem>
+                    )), [branches])}
+                  </SelectContent>
+                </Select>
             </div>
 
             {/* Campo 'Asignado a' eliminado: se rellena automáticamente al crear una asignación */}

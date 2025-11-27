@@ -20,7 +20,7 @@ import type { Assignment } from "@/data/mockDataExtended"
 import type { CreateAssignmentDto } from "@/api/assignments"
 import { Loader2 } from "lucide-react"
 import { useMemo } from 'react'
-import { sortPeopleByName, sortAssetsByName, sortBranchesByName } from '@/lib/sort'
+import { sortAssetsByName, sortBranchesByName, sortByString } from '@/lib/sort'
 
 interface AssignmentFormModalProps {
   open: boolean
@@ -111,8 +111,8 @@ export default function AssignmentFormModal({
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const sortedPeople = useMemo(() => sortPeopleByName(people || []), [people])
-  const sortedAssets = useMemo(() => sortAssetsByName(assets || []), [assets])
+  const sortedPeople = useMemo(() => sortByString(people || [], (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()), [people])
+  const sortedAssets = useMemo(() => sortByString(assets || [], (a: any) => `${a.code ? a.code + ' - ' : ''}${a.name || ''}`.trim()), [assets])
   const sortedBranches = useMemo(() => sortBranchesByName(branches || []), [branches])
 
   return (

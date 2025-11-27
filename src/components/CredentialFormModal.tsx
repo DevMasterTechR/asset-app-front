@@ -19,6 +19,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { sortByString } from '@/lib/sort';
+import { useMemo } from 'react';
 import { Credential, CreateCredentialDto, SystemType } from '@/api/credentials';
 import { Person } from '@/data/mockDataExtended';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -131,11 +133,11 @@ export default function CredentialFormModal({
               </SelectTrigger>
               <SelectContent>
                 {people && people.length > 0 ? (
-                  people.map(person => (
+                  useMemo(() => sortByString(people, (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()).map(person => (
                     <SelectItem key={person.id} value={person.id.toString()}>
                       {person.firstName} {person.lastName} ({person.username})
                     </SelectItem>
-                  ))
+                  )), [people])
                 ) : (
                   <SelectItem value="0" disabled>
                     No hay personas disponibles
