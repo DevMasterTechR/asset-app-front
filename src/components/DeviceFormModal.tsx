@@ -11,17 +11,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import SearchableSelect from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
-import { Device, CreateDeviceDto, DeviceStatus } from '@/api/devices';
+import { Device, CreateDeviceDto, DeviceStatus, devicesApi } from '@/api/devices';
+import { extractArray } from '@/lib/extractData';
 import { assignmentsApi } from '@/api/assignments';
 import { sortBranchesByName } from '@/lib/sort';
 import { useMemo } from 'react';
@@ -93,6 +88,7 @@ export default function DeviceFormModal({
   const [pendingReceived, setPendingReceived] = useState(false);
   // Fecha de entrega calculada automáticamente a partir de la última asignación
   const [deliveryDateAuto, setDeliveryDateAuto] = useState<string>('');
+  const [serverError, setServerError] = useState<string | null>(null);
 
   useEffect(() => {
     if (device && mode === 'edit') {
@@ -158,6 +154,8 @@ export default function DeviceFormModal({
     }
   }, [device, mode, open]);
 
+  const hasActiveAssignment = Boolean(device && (device.assignedPersonId || deliveryDateAuto));
+
   // Sincronizar checkbox de recepción pendiente con el formData
   useEffect(() => {
     setPendingReceived(!formData.receivedDate);
@@ -166,8 +164,48 @@ export default function DeviceFormModal({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
+    setServerError(null);
 
     try {
+      // Validate phone number uniqueness for smartphones/tablets
+      const phoneRaw = String(getAttrValue('phoneNumber') || '').trim();
+      const phoneNormalized = phoneRaw.replace(/\s+/g, '').replace(/[^+0-9]/g, '');
+      if ((formData.assetType === 'smartphone' || formData.assetType === 'tablet') && phoneNormalized) {
+        // Prefer server-side fast check if available
+        try {
+          const check = await devicesApi.checkPhone(phoneNormalized);
+          if (check && check.exists) {
+            // if editing, allow if the existing device is the same
+            if (!(mode === 'edit' && String(check.deviceId) === String(device?.id))) {
+              setServerError('El número telefónico ya está registrado en otro dispositivo.');
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (err) {
+          // fallback: if checkPhone fails (endpoint missing or network), do the client-side scan
+          try {
+            const res = await devicesApi.getAll(undefined, 1, 1000);
+            const allDevices = extractArray<any>(res) || [];
+            const conflict = allDevices.find((d: any) => {
+              const pn = d.attributesJson?.phoneNumber || d.attributesJson?.phone || '';
+              const pnn = String(pn || '').trim().replace(/\s+/g, '').replace(/[^+0-9]/g, '');
+              if (!pnn) return false;
+              if (mode === 'edit' && String(d.id) === String(device?.id)) return false;
+              return pnn === phoneNormalized;
+            });
+            if (conflict) {
+              setServerError('El número telefónico ya está registrado en otro dispositivo.');
+              setLoading(false);
+              return;
+            }
+          } catch (err2) {
+            console.warn('No se pudo validar número telefónico (fallback):', err2);
+            // allow save if both checks fail — server should enforce uniqueness ideally
+          }
+        }
+      }
+
       // Limpiar campos vacíos para enviar al backend
       const cleanData: CreateDeviceDto = {
         assetCode: formData.assetCode,
@@ -191,6 +229,23 @@ export default function DeviceFormModal({
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
+      // Mostrar mensaje del servidor si existe
+      const rawMessage = (error as any)?.response?.data?.message || (error as any)?.message || 'Error desconocido al guardar';
+      // Normalizar mensajes antiguos a la nueva redacción solicitada
+      const normalized = (() => {
+        const m = String(rawMessage);
+        const variants = [
+          'No puedes editar el campo "status": el activo tiene una asignación activa',
+          'No puedes editar el campo \"status\": el activo tiene una asignación activa',
+          'No puedes editar la fecha de recepción: el activo tiene una asignación activa',
+          'No puedes editar el dispositivo hasta que no tenga una asignación activa',
+        ];
+        if (variants.includes(m)) {
+          return 'No puedes editar este dispositivo hasta que deje de tener una asignación activa';
+        }
+        return m;
+      })();
+      setServerError(normalized);
     } finally {
       setLoading(false);
     }
@@ -212,6 +267,8 @@ export default function DeviceFormModal({
     if (!attrs) return undefined;
     return attrs[key];
   };
+
+  const branchOptions = useMemo(() => sortBranchesByName(branches).map(b => ({ label: b.name, value: b.id.toString() })), [branches]);
 
   const renderDynamicAttributes = () => {
     switch (formData.assetType) {
@@ -398,21 +455,18 @@ export default function DeviceFormModal({
           <>
             <div className="space-y-2">
               <Label>Tipo de conexión</Label>
-              <Select
+              <SearchableSelect
                 value={String(getAttrValue('connectionType') || 'none')}
                 onValueChange={(value) => handleAttributeChange('connectionType', value === 'none' ? '' : value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Ninguno</SelectItem>
-                  <SelectItem value="USB">USB</SelectItem>
-                  <SelectItem value="Bluetooth">Bluetooth</SelectItem>
-                  <SelectItem value="Wireless">Inalámbrico (2.4GHz)</SelectItem>
-                  <SelectItem value="Wired">Cable</SelectItem>
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona tipo"
+                options={[
+                  { label: 'Ninguno', value: 'none' },
+                  { label: 'USB', value: 'USB' },
+                  { label: 'Bluetooth', value: 'Bluetooth' },
+                  { label: 'Inalámbrico (2.4GHz)', value: 'Wireless' },
+                  { label: 'Cable', value: 'Wired' },
+                ]}
+              />
             </div>
             <div className="space-y-2">
               <Label>Color</Label>
@@ -467,21 +521,12 @@ export default function DeviceFormModal({
 
             <div className="space-y-2">
               <Label>Tipo <span className="text-destructive">*</span></Label>
-              <Select
+              <SearchableSelect
                 value={formData.assetType}
                 onValueChange={(value) => handleChange('assetType', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {deviceTypes.map(type => (
-                    <SelectItem key={type.value} value={type.value}>
-                      {type.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Selecciona tipo"
+                options={deviceTypes.map(t => ({ label: t.label, value: t.value }))}
+              />
             </div>
 
             <div className="space-y-2">
@@ -515,44 +560,26 @@ export default function DeviceFormModal({
               <Label>
                 Estado <span className="text-destructive">*</span>
               </Label>
-              <Select
+              <SearchableSelect
                 value={formData.status || ''}
-                onValueChange={(value: DeviceStatus) => handleChange('status', value)}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecciona estado" />
-                </SelectTrigger>
-                  <SelectContent>
-                    {statusOptions
-                      .filter((s) => (mode === 'create' ? s.value !== 'assigned' : true))
-                      .map((status) => (
-                        <SelectItem key={status.value} value={status.value}>
-                          {status.label}
-                        </SelectItem>
-                      ))}
-                  </SelectContent>
-              </Select>
+                onValueChange={(value) => handleChange('status', value as DeviceStatus)}
+                placeholder="Selecciona estado"
+                options={statusOptions.filter((s) => (mode === 'create' ? s.value !== 'assigned' : true)).map(s => ({ label: s.label, value: s.value }))}
+                disabled={hasActiveAssignment}
+              />
+                {hasActiveAssignment && (
+                  <div className="text-sm text-rose-600 mt-1">No puedes editar este dispositivo hasta que no tenga una asignación activa</div>
+                )}
             </div>
 
             <div className="space-y-2">
               <Label>Sucursal</Label>
-              <Select
-                  value={formData.branchId?.toString() || ''}
-                  onValueChange={(value) =>
-                    handleChange('branchId', value === '' ? undefined : Number(value))
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Sin sucursal" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {useMemo(() => sortBranchesByName(branches).map((branch) => (
-                      <SelectItem key={branch.id} value={branch.id.toString()}>
-                        {branch.name}
-                      </SelectItem>
-                    )), [branches])}
-                  </SelectContent>
-                </Select>
+              <SearchableSelect
+                value={formData.branchId?.toString() || ''}
+                onValueChange={(value) => handleChange('branchId', value === '' ? undefined : Number(value))}
+                placeholder="Sin sucursal"
+                options={branchOptions}
+              />
             </div>
 
             {/* Campo 'Asignado a' eliminado: se rellena automáticamente al crear una asignación */}
@@ -600,6 +627,7 @@ export default function DeviceFormModal({
                       <DateTimePicker
                         value={formData.receivedDate}
                         onChange={(value) => handleChange('receivedDate', value)}
+                        disabled={hasActiveAssignment}
                       />
                     </div>
                     <div className="flex items-center space-x-2">
@@ -614,6 +642,7 @@ export default function DeviceFormModal({
                             handleChange('receivedDate', '');
                           }
                         }}
+                        disabled={hasActiveAssignment}
                       />
                       <Label htmlFor="pendingReceived" className="cursor-pointer">Recepción pendiente</Label>
                     </div>
@@ -635,6 +664,9 @@ export default function DeviceFormModal({
           </div>
 
           <DialogFooter>
+            {serverError && (
+              <div className="w-full text-center text-sm text-rose-700 mb-2">{serverError}</div>
+            )}
             <Button
               type="button"
               variant="outline"

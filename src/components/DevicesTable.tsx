@@ -6,6 +6,7 @@ export type DeviceStatus = "available" | "assigned" | "maintenance" | "retired";
 
 export interface Device {
   id: string;
+  assetCode?: string;
   type: string;
   brand: string;
   model: string;
@@ -19,6 +20,7 @@ export interface Device {
 
 interface DevicesTableProps {
   devices: Device[];
+  showCode?: boolean;
 }
 
 const getDeviceIcon = (type: string) => {
@@ -40,22 +42,46 @@ const getDeviceIcon = (type: string) => {
   }
 };
 
-const getStatusBadge = (status: DeviceStatus) => {
-  const variants: Record<DeviceStatus, { label: string; className: string }> = {
-    available: { label: "Disponible", className: "bg-success text-success-foreground" },
-    assigned: { label: "Asignado", className: "bg-primary text-primary-foreground" },
-    maintenance: { label: "Mantenimiento", className: "bg-warning text-warning-foreground" },
-    retired: { label: "Retirado", className: "bg-muted text-muted-foreground" },
-  };
+const getStatusBadge = (status?: string) => {
+  const raw = status || "";
+  const normalized = raw
+    .normalize?.("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase()
+    .replace(/[_-]/g, " ")
+    .trim();
+
+  // default
+  let label = "Desconocido";
+  let className = "bg-muted text-muted-foreground";
+
+  if (normalized.includes("available") || normalized.includes("disponibl")) {
+    label = "Disponible";
+    className = "bg-success text-success-foreground";
+  } else if (normalized.includes("assigned") || normalized.includes("asign")) {
+    label = "Asignado";
+    className = "bg-primary text-primary-foreground";
+  } else if (normalized.includes("maintenance") || normalized.includes("mantenim")) {
+    label = "Mantenimiento";
+    className = "bg-warning text-warning-foreground";
+  } else if (
+    normalized.includes("retired") ||
+    normalized.includes("retir") ||
+    normalized.includes("decommission") ||
+    normalized.includes("baja")
+  ) {
+    label = "Dado de baja";
+    className = "bg-destructive text-destructive-foreground";
+  }
 
   return (
-    <Badge className={variants[status].className}>
-      {variants[status].label}
+    <Badge className={className}>
+      {label}
     </Badge>
   );
 };
 
-export const DevicesTable = ({ devices }: DevicesTableProps) => {
+export const DevicesTable = ({ devices, showCode }: DevicesTableProps) => {
   const formatDate = (value?: string) => {
     if (!value) return '-';
     try {
@@ -72,6 +98,7 @@ export const DevicesTable = ({ devices }: DevicesTableProps) => {
         <TableHeader>
           <TableRow>
             <TableHead>Tipo</TableHead>
+            {showCode ? <TableHead>Código</TableHead> : null}
             <TableHead>Marca</TableHead>
             <TableHead>Modelo</TableHead>
             <TableHead>Fecha Compra</TableHead>
@@ -91,6 +118,9 @@ export const DevicesTable = ({ devices }: DevicesTableProps) => {
                   <span className="font-medium">{device.type}</span>
                 </div>
               </TableCell>
+              {/* render asset code cell if present on device */}
+              {showCode ? <TableCell className="font-mono text-sm">{device.assetCode || '-'}</TableCell> : null}
+
               <TableCell>{device.brand}</TableCell>
               <TableCell>{device.model}</TableCell>
               <TableCell className="text-sm">{formatDate(device.purchaseDate)}</TableCell>

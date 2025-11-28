@@ -22,10 +22,12 @@ import {
 } from '@/api/credentials';
 import { peopleApi } from '@/api/people';
 import { sortPeopleByName } from '@/lib/sort';
+import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import { Person } from '@/data/mockDataExtended';
 import CredentialFormModal from '@/components/CredentialFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import Pagination, { DEFAULT_PAGE_SIZE } from '@/components/Pagination';
 
 const systemColorMap = {
   erp: 'default' as const,
@@ -71,7 +73,8 @@ function CredentialsPage() {
       console.log('✅ Personas cargadas:', peopleData);
       
       setCredentials(credentialsData);
-      setPeople(sortPeopleByName(peopleData));
+      const peopleList = extractArray<Person>(peopleData);
+      setPeople(sortPeopleByName(peopleList));
     } catch (error) {
       console.error('❌ Error cargando datos:', error);
       toast({
@@ -106,6 +109,12 @@ function CredentialsPage() {
     system: (c: any) => c.system || '',
     username: (c: any) => c.username || '',
   });
+
+  // Pagination (client-side)
+  const [page, setPage] = useState(1);
+  const [limit, setLimit] = useState(DEFAULT_PAGE_SIZE);
+  const totalPages = Math.max(1, Math.ceil(displayedCredentials.length / limit));
+  const paginatedCredentials = displayedCredentials.slice((page - 1) * limit, page * limit);
 
   const togglePasswordVisibility = (id: number) => {
     setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
@@ -200,7 +209,7 @@ function CredentialsPage() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 md:pl-0 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Credenciales</h1>
@@ -223,7 +232,7 @@ function CredentialsPage() {
                 placeholder="Buscar por persona, usuario o sistema..."
                 className="pl-10"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               />
             </div>
           </div>
@@ -254,7 +263,7 @@ function CredentialsPage() {
               </TableHeader>
               <TableBody>
                 {displayedCredentials.length > 0 ? (
-                  displayedCredentials.map((credential) => (
+                  paginatedCredentials.map((credential) => (
                     <TableRow key={credential.id}>
                       <TableCell className="font-medium">
                         {getPersonName(credential.personId)}
@@ -345,6 +354,20 @@ function CredentialsPage() {
             </Table>
           </div>
         )}
+        {/* Pagination */}
+        <div className="flex items-center gap-4 w-full">
+          <div className="flex-1" />
+          <span className="text-sm text-muted-foreground text-center">Página {page} / {totalPages}</span>
+          <div className="flex-1 flex justify-end">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p)}
+              limit={limit}
+              onLimitChange={(l) => { setLimit(l); setPage(1); }}
+            />
+          </div>
+        </div>
       </div>
 
       <CredentialFormModal

@@ -55,10 +55,17 @@ const handleApiError = async (response: Response) => {
 };
 
 export const devicesApi = {
-  async getAll(): Promise<Device[]> {
-    const response = await apiFetch('/assets/public', { method: 'GET' });
+  async getAll(q?: string, page?: number, limit?: number): Promise<{ data: Device[]; total: number; page: number; limit: number; totalPages: number } | Device[]> {
+    const params = new URLSearchParams();
+    if (q !== undefined && q !== null && String(q).trim() !== '') params.append('q', String(q).trim());
+    if (page !== undefined) params.append('page', String(page));
+    if (limit !== undefined) params.append('limit', String(limit));
+    const url = `/assets/public${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await apiFetch(url, { method: 'GET' });
     await handleApiError(response);
-    return response.json();
+    const json = await response.json();
+    if (json && typeof json === 'object' && Array.isArray(json.data)) return json;
+    return json as Device[];
   },
 
   async getById(id: number): Promise<Device> {
@@ -92,5 +99,16 @@ export const devicesApi = {
   async delete(id: number): Promise<void> {
     const response = await apiFetch(`/assets/${id}`, { method: 'DELETE' });
     await handleApiError(response);
+  },
+
+  // Server-supported quick check for phone uniqueness (recommended)
+  // Backend should implement GET /assets/check-phone?phone=... returning { exists: boolean, deviceId?: number }
+  async checkPhone(phone: string): Promise<{ exists: boolean; deviceId?: number }> {
+    const params = new URLSearchParams({ phone });
+    const response = await apiFetch(`/assets/check-phone?${params.toString()}`, { method: 'GET' });
+    // If 404 or not implemented, let caller handle (we won't throw here)
+    if (response.status === 404) return { exists: false };
+    await handleApiError(response);
+    return response.json();
   },
 };

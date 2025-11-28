@@ -40,78 +40,12 @@ export function useSessionKeepAlive(isAuthenticated: boolean, onLogout: () => Pr
   }, []);
 
   const scheduleTimers = useCallback((initialRemainingSeconds?: number | null) => {
+    // Desactivado: durante el desarrollo del backend se desactiva el aviso
+    // de expiración de sesión en el frontend para evitar cierres automáticos
+    // y avisos molestos. Esto deja la función como un no-op que únicamente
+    // limpia timers existentes.
     clearAll();
-    // scheduleTimers called
-    const sessionMs = initialRemainingSeconds !== undefined && initialRemainingSeconds !== null
-      ? initialRemainingSeconds * 1000
-      : sessionMinutes * 60 * 1000;
-    const warningMs = warningSeconds * 1000;
-
-    // Schedule warning to show warningSeconds before session expiry
-    warningTimeoutRef.current = window.setTimeout(() => {
-      let remaining = warningSeconds;
-
-      // aviso mostrado (warning starts)
-
-      const action = (
-        <ToastAction onClick={async () => {
-          try {
-            await authApi.keepAlive();
-          } catch (e) {}
-          scheduleTimers();
-          try { toastRef.current?.dismiss(); } catch (e) {}
-          try { localStorage.setItem('session:keepalive', String(Date.now())); localStorage.removeItem('session:warning'); } catch (e) {}
-        }}>
-          Permanecer conectado
-        </ToastAction>
-      );
-
-      // Mostrar toast destructivo y persistente (duración larga) hasta que haya actividad
-      toastRef.current = toast({
-        title: 'Sesión por expirar',
-        description: `Se cerrará la sesión en ${remaining} segundos por inactividad.`,
-        action,
-        // Variant 'destructive' aplica estilo rojo en Toast UI
-        variant: 'destructive' as any,
-        // Duración larga (24h) para evitar que Radix lo cierre automáticamente
-        duration: 24 * 60 * 60 * 1000,
-      });
-
-      // Emitir evento público con cuenta regresiva para que la UI pueda mostrarla
-      try {
-        window.dispatchEvent(new CustomEvent('session-countdown', { detail: { remaining } }));
-      } catch (e) {}
-
-      // Notificar a otras pestañas que la advertencia ha comenzado (enviar expiry)
-      try {
-        const expiry = Date.now() + remaining * 1000;
-        localStorage.setItem('session:warning', String(expiry));
-      } catch (e) {}
-
-      countdownIntervalRef.current = window.setInterval(() => {
-        remaining -= 1;
-        if (!toastRef.current) return;
-        if (remaining <= 0) {
-          try { toastRef.current.update({ description: 'Cerrando sesión...' }); } catch (e) {}
-          // Emitir evento de expiración
-          try { window.dispatchEvent(new CustomEvent('session-countdown', { detail: { remaining: 0 } })); } catch (e) {}
-          // Notificar a otras pestañas que se cerró la sesión
-          try { localStorage.setItem('session:logout', String(Date.now())); } catch (e) {}
-          clearAll();
-          // Ejecutar logout
-          onLogout();
-          return;
-        }
-        try { toastRef.current.update({ description: `Se cerrará la sesión en ${remaining} segundos por inactividad.` }); } catch (e) {}
-        // Emitir actualización de cuenta regresiva
-        try { window.dispatchEvent(new CustomEvent('session-countdown', { detail: { remaining } })); } catch (e) {}
-      }, 1000);
-
-    }, Math.max(0, sessionMs - warningMs));
-
-    // NOTE: removed automatic periodic keepAlive to avoid token regeneration
-    // and unexpected 401s. keepAlive will only be called when the user
-    // explicitly clicks the 'Permanecer conectado' action in the warning.
+    return;
   }, [clearAll, onLogout, sessionMinutes, warningSeconds]);
 
   useEffect(() => {

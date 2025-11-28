@@ -7,7 +7,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import SearchableSelect from '@/components/ui/searchable-select'
+import { peopleApi } from '@/api/people'
+import { devicesApi } from '@/api/devices'
+// Select primitive replaced by SearchableSelect for consistency
 import {
   Dialog,
   DialogContent,
@@ -130,54 +133,59 @@ export default function AssignmentFormModal({
             <Label htmlFor="assetId">
               Activo <span className="text-destructive">*</span>
             </Label>
-            <Select value={formData.assetId} onValueChange={(value) => handleChange("assetId", value)} required>
-              <SelectTrigger id="assetId">
-                <SelectValue placeholder="Selecciona activo" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortedAssets.map((asset) => (
-                  <SelectItem key={asset.id} value={asset.id}>
-                    {asset.code} - {asset.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={formData.assetId}
+              onValueChange={(value) => handleChange('assetId', value)}
+              placeholder="Selecciona activo"
+              searchPlaceholder="Buscar activo (por código, marca o modelo)"
+              options={sortedAssets.map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }))}
+              onSearch={async (q) => {
+                try {
+                  const res = await devicesApi.getAll(q, 1, 20);
+                  const list = Array.isArray(res) ? res : res.data;
+                  return (list as any[])
+                    .filter(a => (a.status || '') === 'available')
+                    .map(a => ({ label: `${a.assetCode || a.assetCode} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
+                } catch (err) {
+                  return [];
+                }
+              }}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="personId">
               Persona <span className="text-destructive">*</span>
             </Label>
-            <Select value={formData.personId} onValueChange={(value) => handleChange("personId", value)} required>
-              <SelectTrigger id="personId">
-                <SelectValue placeholder="Selecciona persona" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortedPeople.map((person) => (
-                  <SelectItem key={person.id} value={person.id}>
-                    {person.firstName} {person.lastName}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={formData.personId}
+              onValueChange={(value) => handleChange('personId', value)}
+              placeholder="Selecciona persona"
+              searchPlaceholder="Buscar persona..."
+              options={sortedPeople.map(p => ({ label: `${p.firstName} ${p.lastName}`, value: p.id }))}
+              onSearch={async (q) => {
+                try {
+                  const res = await peopleApi.getAll(undefined, 10, q);
+                  const list = Array.isArray(res) ? res : res.data;
+                  return (list as any[]).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }));
+                } catch (err) {
+                  return [];
+                }
+              }}
+            />
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="branchId">
               Sucursal <span className="text-destructive">*</span>
             </Label>
-            <Select value={formData.branchId} onValueChange={(value) => handleChange("branchId", value)} required>
-              <SelectTrigger id="branchId">
-                <SelectValue placeholder="Selecciona sucursal" />
-              </SelectTrigger>
-              <SelectContent>
-                {sortedBranches.map((branch) => (
-                  <SelectItem key={branch.id} value={String(branch.id)}>
-                    {branch.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <SearchableSelect
+              value={formData.branchId}
+              onValueChange={(value) => handleChange('branchId', value)}
+              placeholder="Selecciona sucursal"
+              options={sortedBranches.map(b => ({ label: b.name, value: String(b.id) }))}
+              required
+            />
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -198,23 +206,18 @@ export default function AssignmentFormModal({
               <Label htmlFor="deliveryCondition">
                 Condición <span className="text-destructive">*</span>
               </Label>
-              <Select
+              <SearchableSelect
                 value={formData.deliveryCondition}
-                onValueChange={(value: "excellent" | "good" | "fair" | "poor") =>
-                  handleChange("deliveryCondition", value)
-                }
+                onValueChange={(value: "excellent" | "good" | "fair" | "poor") => handleChange('deliveryCondition', value)}
+                placeholder="Selecciona condición"
+                options={[
+                  { label: 'Excelente', value: 'excellent' },
+                  { label: 'Bueno', value: 'good' },
+                  { label: 'Regular', value: 'fair' },
+                  { label: 'Malo', value: 'poor' },
+                ]}
                 required
-              >
-                <SelectTrigger id="deliveryCondition">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="excellent">Excelente</SelectItem>
-                  <SelectItem value="good">Bueno</SelectItem>
-                  <SelectItem value="fair">Regular</SelectItem>
-                  <SelectItem value="poor">Malo</SelectItem>
-                </SelectContent>
-              </Select>
+              />
             </div>
           </div>
 

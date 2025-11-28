@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
+import Pagination from '@/components/Pagination';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -47,6 +48,10 @@ export default function People() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [people, setPeople] = useState<Person[]>([]);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(5);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [departments, setDepartments] = useState<Array<{ id: number; name: string }>>([]);
   const [roles, setRoles] = useState<Array<{ id: number; name: string }>>([]);
@@ -57,19 +62,31 @@ export default function People() {
   const [personToDelete, setPersonToDelete] = useState<string | null>(null);
 
   useEffect(() => {
-    loadData();
-  }, []);
+    loadData(page, limit);
+  }, [page, limit]);
 
-  const loadData = async () => {
+  const loadData = async (pageParam = 1, limitParam = 10) => {
     try {
-      const [peopleData, branchesData, departmentsData, rolesData] = await Promise.all([
-        peopleApi.getAll(),
+      const [peopleRes, branchesData, departmentsData, rolesData] = await Promise.all([
+        peopleApi.getAll(pageParam, limitParam),
         catalogsApi.getBranches(),
         catalogsApi.getDepartments(),
         catalogsApi.getRoles(),
       ]);
-      
-      setPeople(sortPeopleByName(peopleData));
+
+      // peopleRes can be either array or paginated object
+      if (Array.isArray(peopleRes)) {
+        setPeople(sortPeopleByName(peopleRes));
+        setTotalItems(peopleRes.length);
+        setTotalPages(1);
+      } else {
+        setPeople(sortPeopleByName(peopleRes.data));
+        setTotalItems(Number(peopleRes.total) || 0);
+        setTotalPages(Number(peopleRes.totalPages) || 1);
+        setPage(Number(peopleRes.page) || pageParam);
+        setLimit(Number(peopleRes.limit) || limitParam);
+      }
+
       setBranches(sortBranchesByName(branchesData.map(b => ({ id: Number(b.id), name: b.name }))));
       setDepartments(sortByString(departmentsData.map(d => ({ id: Number(d.id), name: d.name })), d => d.name));
       setRoles(sortByString(rolesData.map(r => ({ id: Number(r.id), name: r.name })), r => r.name));
@@ -207,6 +224,16 @@ export default function People() {
     status: (p: any) => p.status || '',
   });
 
+  // If backend returned paginated results totalPages>1, we use server pagination.
+  // Otherwise (backend returned full array), apply client-side slicing.
+  const effectiveTotalPages = totalPages > 1 ? totalPages : Math.max(1, Math.ceil(displayedPeople.length / limit));
+  const paginatedPeople = totalPages > 1 ? displayedPeople : displayedPeople.slice((page - 1) * limit, page * limit);
+
+  // Ensure current page is valid when filters or limits change
+  useEffect(() => {
+    if (page > effectiveTotalPages) setPage(1);
+  }, [effectiveTotalPages, page]);
+
   const getInitials = (firstName: string, lastName: string) => {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
   };
@@ -232,7 +259,7 @@ export default function People() {
   return (
     <>
       <Layout>
-        <div className="p-6 space-y-6">
+        <div className="p-6 md:pl-0 space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
               <h1 className="text-3xl font-bold">Personas</h1>
@@ -255,7 +282,7 @@ export default function People() {
                   placeholder="Buscar por nombre, cédula, usuario..."
                   className="pl-10"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
                 />
               </div>
             </div>
@@ -282,7 +309,7 @@ export default function People() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {displayedPeople.map((person) => (
+                {paginatedPeople.map((person) => (
                   <TableRow key={person.id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -332,6 +359,21 @@ export default function People() {
                 ))}
               </TableBody>
             </Table>
+          </div>
+
+          <div className="flex items-center gap-4 w-full">
+            <div className="flex-1" />
+            <span className="text-sm text-muted-foreground text-center">Página {page} / {effectiveTotalPages}</span>
+            <div className="flex-1 flex justify-end">
+              <Pagination
+                page={page}
+                totalPages={effectiveTotalPages}
+                onPageChange={(p) => setPage(p)}
+                limit={limit}
+                onLimitChange={(l) => { setLimit(l); setPage(1); }}
+                limits={[5,10,15,20]}
+              />
+            </div>
           </div>
 
           {filteredPeople.length === 0 && (

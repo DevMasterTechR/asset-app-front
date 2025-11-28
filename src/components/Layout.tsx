@@ -1,4 +1,5 @@
 import { ReactNode, useState, useEffect } from 'react';
+import LayoutContext from '@/context/LayoutContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -13,8 +14,11 @@ import {
   LogOut,
   Menu,
   Building2,
+  ArrowLeft,
+  ArrowRight,
   Key,
 } from 'lucide-react';
+
 import { useToast } from '@/hooks/use-toast';
 import { authApi } from '@/api/auth';
 
@@ -44,6 +48,35 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    try {
+      const v = localStorage.getItem('sidebar:collapsed');
+      return v === 'true';
+    } catch (e) {
+      return false;
+    }
+  });
+
+  // Persist sidebar collapsed state
+  useEffect(() => {
+    try {
+      localStorage.setItem('sidebar:collapsed', sidebarCollapsed ? 'true' : 'false');
+    } catch (e) {}
+  }, [sidebarCollapsed]);
+
+  const [isMobileView, setIsMobileView] = useState(() => {
+    try {
+      return window.innerWidth < 768;
+    } catch (e) {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    const onResize = () => setIsMobileView(window.innerWidth < 768);
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const [sessionCountdown, setSessionCountdown] = useState<number | null>(null);
 
   const handleLogout = async () => {
@@ -93,27 +126,64 @@ export default function Layout({ children }: LayoutProps) {
 
   const NavContent = () => (
     <div className="flex flex-col h-full">
-      {/* Logo */}
+      {/* Logo + collapse button */}
       <div className="p-6 border-b">
         <div className="flex items-center gap-3">
           <div className="p-2 rounded-lg bg-primary/10">
             <Building2 className="h-6 w-6 text-primary" />
           </div>
-          <div>
-            <h2 className="font-bold text-lg">Activos TI</h2>
-            <p className="text-xs text-muted-foreground">Sistema de Gestión</p>
-          </div>
+          {!sidebarCollapsed && (
+            <div>
+              <h2 className="font-bold text-lg">Activos TI</h2>
+              <p className="text-xs text-muted-foreground">Sistema de Gestión</p>
+            </div>
+          )}
+          {/* collapse button on the right when expanded */}
+          {!sidebarCollapsed && (
+            <div className="ml-auto">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => setSidebarCollapsed((s) => !s)}
+                aria-label={sidebarCollapsed ? 'Expand sidebar' : 'Collapse sidebar'}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </div>
+          )}
         </div>
+
+        {/* when collapsed, show the collapse button centered under the logo */}
+        {sidebarCollapsed && (
+          <div className="mt-3 flex justify-center">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setSidebarCollapsed(false)}
+              aria-label="Expand sidebar"
+            >
+              <ArrowRight className="h-5 w-5" />
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* User Info */}
       <div className="p-4 border-b bg-muted/30">
-        <p className="text-sm font-medium">
-          {user?.firstName && user?.lastName 
-            ? `${user.firstName} ${user.lastName}` 
-            : user?.username || 'Usuario'}
-        </p>
-        <p className="text-xs text-muted-foreground">@{user?.username}</p>
+        {!sidebarCollapsed ? (
+          <>
+            <p className="text-sm font-medium">
+              {user?.firstName && user?.lastName 
+                ? `${user.firstName} ${user.lastName}` 
+                : user?.username || 'Usuario'}
+            </p>
+            <p className="text-xs text-muted-foreground">@{user?.username}</p>
+          </>
+        ) : (
+          <div className="text-center">
+            <p className="text-sm font-medium">@{user?.username?.slice(0, 1) || 'U'}</p>
+          </div>
+        )}
       </div>
 
       {/* Navigation */}
@@ -134,14 +204,14 @@ export default function Layout({ children }: LayoutProps) {
               }`}
             >
               <Icon className="h-5 w-5" />
-              <span className="font-medium">{item.title}</span>
+              {!sidebarCollapsed && <span className="font-medium">{item.title}</span>}
             </Link>
           );
         })}
       </nav>
 
-      {/* Logout Button */}
-      <div className="p-4 border-t">
+      {/* Logout Button - mobile inside nav */}
+      <div className="p-4 border-t md:hidden">
         <Button
           variant="outline"
           className="w-full justify-start"
@@ -151,13 +221,32 @@ export default function Layout({ children }: LayoutProps) {
           Cerrar Sesión
         </Button>
       </div>
+
+      {/* Desktop: positioned logout inside sidebar (absolute at bottom) */}
+      <div className="hidden md:block">
+        <div className="absolute bottom-16 left-0">
+          <button
+            onClick={handleLogout}
+            className="group flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="h-5 w-5 text-destructive" />
+            <span className="ml-1 text-sm text-destructive opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Cerrar sesión</span>
+          </button>
+        </div>
+      </div>
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-background flex">
+    <LayoutContext.Provider value={{ sidebarCollapsed, setSidebarCollapsed }}>
+      <div className="min-h-screen bg-background flex">
       {/* Desktop Sidebar */}
-      <aside className="hidden md:flex md:w-64 md:flex-col border-r bg-card">
+      <aside
+        className={`hidden md:flex md:flex-col md:fixed md:inset-y-0 md:left-0 border-r bg-card transition-[width] duration-200 ease-linear ${
+          sidebarCollapsed ? 'md:w-20' : 'md:w-64'
+        }`}
+      >
         <NavContent />
       </aside>
 
@@ -177,7 +266,10 @@ export default function Layout({ children }: LayoutProps) {
       </Sheet>
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className={`flex-1 overflow-auto transition-all duration-200 ease-linear px-6 md:pl-0 ${
+        sidebarCollapsed ? 'md:ml-20' : 'md:ml-64'
+      }`}>
+          {/* desktop toggle moved into sidebar header */}
         <div className="md:hidden h-16" /> {/* Spacer for mobile header */}
         {/* Session countdown badge */}
         {sessionCountdown !== null && sessionCountdown > 0 && (
@@ -188,6 +280,8 @@ export default function Layout({ children }: LayoutProps) {
         )}
         {children}
       </main>
-    </div>
+      
+      </div>
+    </LayoutContext.Provider>
   );
 }

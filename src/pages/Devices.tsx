@@ -1,6 +1,7 @@
 // src/pages/Devices.tsx
 import { useState, useEffect } from 'react';
 import Layout from '@/components/Layout';
+import Pagination from '@/components/Pagination';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -31,6 +32,7 @@ import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
 import * as catalogsApi from '@/api/catalogs';
 import { sortByString, sortPeopleByName, sortBranchesByName } from '@/lib/sort';
+import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import DeviceFormModal from '@/components/DeviceFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
@@ -67,6 +69,10 @@ function DevicesPage() {
   const [people, setPeople] = useState<Person[]>([]);
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
+  const [page, setPage] = useState<number>(1);
+  const [limit, setLimit] = useState<number>(5);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [totalItems, setTotalItems] = useState<number>(0);
 
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -75,7 +81,8 @@ function DevicesPage() {
 
   useEffect(() => {
     loadData();
-  }, []);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [page, limit, searchTerm]);
 
   // Escuchar eventos de asset actualizado para actualizar el listado local sin recargar
   useEffect(() => {
@@ -101,7 +108,8 @@ function DevicesPage() {
       // no bloqueamos las demás. Así por ejemplo si /people falla (role missing)
       // seguimos mostrando dispositivos y sucursales.
       const results = await Promise.allSettled([
-        devicesApi.getAll(),
+        // request devices with pagination & optional search (server-side)
+        devicesApi.getAll(searchTerm || undefined, page, limit),
         peopleApi.getAll(),
         catalogsApi.getBranches(),
       ]);
@@ -109,15 +117,32 @@ function DevicesPage() {
       const [devicesRes, peopleRes, branchesRes] = results;
 
       if (devicesRes.status === 'fulfilled') {
-        // Ordenar por código del activo para facilitar búsqueda alfabética
-        setDevices(sortByString(devicesRes.value, (d: any) => (d.assetCode || '').toString()));
+        // devicesRes.value may be paginated ({ data, total, ... }) or an array
+        const payload: any = devicesRes.value;
+        const devicesList = extractArray<Device>(payload || []);
+
+        // If server returned paginated object, pick totals from it
+        if (payload && typeof payload === 'object' && Array.isArray(payload.data)) {
+          const total = Number(payload.total ?? devicesList.length);
+          setTotalItems(total);
+          setTotalPages(Math.max(1, Math.ceil(total / limit)));
+        } else {
+          // fallback: client-side totals
+          setTotalItems(devicesList.length);
+          setTotalPages(Math.max(1, Math.ceil(devicesList.length / limit)));
+        }
+
+        // devicesList may already be the current page (server-side) or full list
+        const sorted = sortByString(devicesList, (d: any) => (d.assetCode || '').toString());
+        setDevices(sorted);
       } else {
         // Si no cargan dispositivos, lanzamos para que el catch muestre toast
         throw devicesRes.reason ?? new Error('Error cargando dispositivos');
       }
 
       if (peopleRes.status === 'fulfilled') {
-        setPeople(sortPeopleByName(peopleRes.value));
+        const peopleList = extractArray<Person>(peopleRes.value);
+        setPeople(sortPeopleByName(peopleList));
       } else {
         // Si falla la carga de personas, mostramos un toast y continuamos.
         toast({
@@ -129,7 +154,8 @@ function DevicesPage() {
       }
 
       if (branchesRes.status === 'fulfilled') {
-        setBranches(sortBranchesByName(branchesRes.value.map(b => ({ id: Number(b.id), name: b.name }))));
+        const branchesList = extractArray<{ id: number; name: string }>(branchesRes.value);
+        setBranches(sortBranchesByName(branchesList.map(b => ({ id: Number(b.id), name: b.name }))));
       } else {
         toast({
           title: 'Advertencia',
@@ -186,7 +212,7 @@ function DevicesPage() {
 
   const sort = useSort();
 
-  const displayedDevices = sort.apply(filteredDevices, {
+  const displayedDevicesAll = sort.apply(filteredDevices, {
     code: (d: any) => d.assetCode ?? '',
     brand: (d: any) => `${d.brand || ''} ${d.model || ''}`.trim(),
     purchaseDate: (d: any) => d.purchaseDate ?? '',
@@ -199,6 +225,12 @@ function DevicesPage() {
       return p ? `${p.lastName || ''} ${p.firstName || ''}`.trim() : '';
     },
   });
+
+  // If server returns paginated results, `devices` are already the current page.
+  // If server returned the full list (no pagination), slice locally.
+  const displayedDevices = (Array.isArray(devices) && totalItems > devices.length)
+    ? devices
+    : displayedDevicesAll.slice((page - 1) * limit, page * limit);
 
   const getTypeIcon = (type: string) => {
     const Icon = typeIconMap[type] || Laptop;
@@ -241,11 +273,25 @@ function DevicesPage() {
       await loadData();
       setFormModalOpen(false);
     } catch (error) {
-      toast({
-        title: 'Error',
-        description: error instanceof Error ? error.message : 'No se pudo guardar el dispositivo',
-        variant: 'destructive',
-      });
+      const msg = error instanceof Error ? error.message : String(error);
+      // Si el error corresponde a la regla de asignación activa, no mostrar el toast
+      // porque ya mostramos el mensaje dentro del formulario modal.
+      const suppressedVariants = [
+        'No puedes editar el campo "status": el activo tiene una asignación activa',
+        'No puedes editar la fecha de recepción: el activo tiene una asignación activa',
+        'No puedes editar el dispositivo hasta que no tenga una asignación activa',
+        'No puedes editar este dispositivo hasta que deje de tener una asignación activa',
+      ];
+
+      const shouldSuppress = suppressedVariants.some(v => msg.includes(v) || v.includes(msg));
+
+      if (!shouldSuppress) {
+        toast({
+          title: 'Error',
+          description: msg || 'No se pudo guardar el dispositivo',
+          variant: 'destructive',
+        });
+      }
       throw error;
     }
   };
@@ -272,7 +318,7 @@ function DevicesPage() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 md:pl-0 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Dispositivos</h1>
@@ -295,16 +341,23 @@ function DevicesPage() {
                 placeholder="Buscar por código, marca, modelo, serial..."
                 className="pl-10"
                 value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               />
             </div>
           </div>
-              <div className="flex items-center justify-center bg-muted rounded-lg p-4">
-            <div className="text-center">
-                <p className="text-2xl font-bold">{displayedDevices.length}</p>
-              <p className="text-sm text-muted-foreground">Dispositivos</p>
-            </div>
-          </div>
+              <button
+                type="button"
+                onClick={() => {
+                  try { window.dispatchEvent(new CustomEvent('stats-card-click', { detail: { type: 'devices' } })); } catch (e) {}
+                }}
+                className="flex items-center justify-center bg-muted rounded-lg p-4 cursor-pointer hover:scale-105 transform transition-all duration-200 hover:animate-pulse focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
+                aria-label="Resumen dispositivos"
+              >
+                <div className="text-center">
+                  <p className="text-2xl font-bold">{displayedDevices.length}</p>
+                  <p className="text-sm text-muted-foreground">Dispositivos</p>
+                </div>
+              </button>
         </div>
 
         {loading ? (
@@ -398,6 +451,20 @@ function DevicesPage() {
             </Table>
           </div>
         )}
+        <div className="flex items-center gap-4 w-full">
+          <div className="flex-1" />
+          <span className="text-sm text-muted-foreground text-center">Página {page} / {totalPages}</span>
+          <div className="flex-1 flex justify-end">
+            <Pagination
+              page={page}
+              totalPages={totalPages}
+              onPageChange={(p) => setPage(p)}
+              limit={limit}
+              onLimitChange={(l) => { setLimit(l); setPage(1); }}
+              limits={[5,10,15,20]}
+            />
+          </div>
+        </div>
       </div>
 
       <DeviceFormModal

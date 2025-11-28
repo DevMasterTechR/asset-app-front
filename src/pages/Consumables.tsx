@@ -34,6 +34,7 @@ import UTPCableFormModal from '@/components/UTPCableFormModal';
 import RJ45ConnectorFormModal from '@/components/RJ45ConnectorFormModal';
 import PowerStripFormModal from '@/components/PowerStripFormModal';
 import { useToast } from '@/hooks/use-toast';
+import Pagination, { DEFAULT_PAGE_SIZE } from '@/components/Pagination';
 
 // Función para formatear fechas ISO a formato legible
 function formatDate(isoString?: string): string {
@@ -131,6 +132,27 @@ export default function Consumables() {
     strip.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
     strip.model.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination (per tab)
+  const [inksPage, setInksPage] = useState(1);
+  const [inksLimit, setInksLimit] = useState(DEFAULT_PAGE_SIZE);
+  const inksTotalPages = Math.max(1, Math.ceil(filteredInks.length / inksLimit));
+  const paginatedInks = filteredInks.slice((inksPage - 1) * inksLimit, inksPage * inksLimit);
+
+  const [cablesPage, setCablesPage] = useState(1);
+  const [cablesLimit, setCablesLimit] = useState(DEFAULT_PAGE_SIZE);
+  const cablesTotalPages = Math.max(1, Math.ceil(filteredCables.length / cablesLimit));
+  const paginatedCables = filteredCables.slice((cablesPage - 1) * cablesLimit, cablesPage * cablesLimit);
+
+  const [connectorsPage, setConnectorsPage] = useState(1);
+  const [connectorsLimit, setConnectorsLimit] = useState(DEFAULT_PAGE_SIZE);
+  const connectorsTotalPages = Math.max(1, Math.ceil(filteredConnectors.length / connectorsLimit));
+  const paginatedConnectors = filteredConnectors.slice((connectorsPage - 1) * connectorsLimit, connectorsPage * connectorsLimit);
+
+  const [stripsPage, setStripsPage] = useState(1);
+  const [stripsLimit, setStripsLimit] = useState(DEFAULT_PAGE_SIZE);
+  const stripsTotalPages = Math.max(1, Math.ceil(filteredPowerStrips.length / stripsLimit));
+  const paginatedStrips = filteredPowerStrips.slice((stripsPage - 1) * stripsLimit, stripsPage * stripsLimit);
 
   // INK HANDLERS
   const handleCreateInk = async (data: consumablesApi.CreateInkDto) => {
@@ -251,7 +273,7 @@ export default function Consumables() {
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 md:pl-0 space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Consumibles</h1>
@@ -268,7 +290,14 @@ export default function Consumables() {
             placeholder="Buscar..."
             className="pl-10"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              // reset pages for all tabs when searching
+              setInksPage(1);
+              setCablesPage(1);
+              setConnectorsPage(1);
+              setStripsPage(1);
+            }}
           />
         </div>
 
@@ -309,7 +338,7 @@ export default function Consumables() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredInks.map((ink) => (
+                  {paginatedInks.map((ink) => (
                     <TableRow key={ink.id}>
                       <TableCell>
                         <div>
@@ -352,7 +381,15 @@ export default function Consumables() {
                 </TableBody>
               </Table>
             </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {inksPage} / {inksTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={inksPage} totalPages={inksTotalPages} onPageChange={setInksPage} limit={inksLimit} onLimitChange={(l) => { setInksLimit(l); setInksPage(1); }} />
+              </div>
+            </div>
           </TabsContent>
+          
 
           {/* Cables UTP */}
           <TabsContent value="cables" className="space-y-4">
@@ -383,7 +420,7 @@ export default function Consumables() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredCables.map((cable) => (
+                  {paginatedCables.map((cable) => (
                     <TableRow key={cable.id}>
                       <TableCell className="font-medium">{cable.brand}</TableCell>
                       <TableCell>{cable.type}</TableCell>
@@ -422,6 +459,13 @@ export default function Consumables() {
                 </TableBody>
               </Table>
             </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {cablesPage} / {cablesTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={cablesPage} totalPages={cablesTotalPages} onPageChange={setCablesPage} limit={cablesLimit} onLimitChange={(l) => { setCablesLimit(l); setCablesPage(1); }} />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Conectores RJ45 */}
@@ -452,7 +496,7 @@ export default function Consumables() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredConnectors.map((connector) => (
+                  {paginatedConnectors.map((connector) => (
                     <TableRow key={connector.id}>
                       <TableCell className="font-medium">{connector.model}</TableCell>
                       <TableCell>{connector.type}</TableCell>
@@ -490,6 +534,13 @@ export default function Consumables() {
                 </TableBody>
               </Table>
             </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {connectorsPage} / {connectorsTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={connectorsPage} totalPages={connectorsTotalPages} onPageChange={setConnectorsPage} limit={connectorsLimit} onLimitChange={(l) => { setConnectorsLimit(l); setConnectorsPage(1); }} />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Regletas */}
@@ -521,7 +572,7 @@ export default function Consumables() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredPowerStrips.map((strip) => (
+                  {paginatedStrips.map((strip) => (
                     <TableRow key={strip.id}>
                       <TableCell>
                         <div>
@@ -564,6 +615,13 @@ export default function Consumables() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {stripsPage} / {stripsTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={stripsPage} totalPages={stripsTotalPages} onPageChange={setStripsPage} limit={stripsLimit} onLimitChange={(l) => { setStripsLimit(l); setStripsPage(1); }} />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

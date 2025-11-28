@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import SearchableSelect from "@/components/ui/searchable-select"
 import {
   Dialog,
   DialogContent,
@@ -63,21 +63,18 @@ export default function ReturnAssignmentModal({
             <Label htmlFor="returnCondition">
               Condición de Devolución <span className="text-destructive">*</span>
             </Label>
-            <Select
+            <SearchableSelect
               value={returnCondition}
               onValueChange={(value: "excellent" | "good" | "fair" | "poor") => setReturnCondition(value)}
+              placeholder="Selecciona condición"
+              options={[
+                { label: 'Excelente', value: 'excellent' },
+                { label: 'Bueno', value: 'good' },
+                { label: 'Regular', value: 'fair' },
+                { label: 'Malo', value: 'poor' },
+              ]}
               required
-            >
-              <SelectTrigger id="returnCondition">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="excellent">Excelente</SelectItem>
-                <SelectItem value="good">Bueno</SelectItem>
-                <SelectItem value="fair">Regular</SelectItem>
-                <SelectItem value="poor">Malo</SelectItem>
-              </SelectContent>
-            </Select>
+            />
           </div>
 
           <div className="space-y-2">

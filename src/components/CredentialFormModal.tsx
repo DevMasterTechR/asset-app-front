@@ -1,5 +1,5 @@
 // src/components/CredentialFormModal.tsx
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -11,16 +11,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import SearchableSelect from '@/components/ui/searchable-select';
+import { peopleApi } from '@/api/people';
 import { Textarea } from '@/components/ui/textarea';
 import { sortByString } from '@/lib/sort';
-import { useMemo } from 'react';
 import { Credential, CreateCredentialDto, SystemType } from '@/api/credentials';
 import { Person } from '@/data/mockDataExtended';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
@@ -104,6 +98,31 @@ export default function CredentialFormModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  // Memoize people options so hooks order stays stable and rendering is efficient
+  // initial option when editing (show selected person label even before search)
+  const [initialPersonOption, setInitialPersonOption] = useState<{ label: string; value: string } | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    const pid = credential?.personId ?? formData.personId;
+    if (pid && pid !== 0) {
+      (async () => {
+        try {
+          const person = await peopleApi.getOne(String(pid));
+          if (!mounted) return;
+          setInitialPersonOption({ label: `${person.firstName} ${person.lastName} (${person.username || ''})`, value: String(person.id) });
+        } catch (err) {
+          // ignore
+        }
+      })();
+    } else {
+      setInitialPersonOption(null);
+    }
+    return () => {
+      mounted = false;
+    };
+  }, [credential, formData.personId]);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
@@ -124,27 +143,24 @@ export default function CredentialFormModal({
             <Label htmlFor="personId">
               Persona <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={formData.personId ? formData.personId.toString() : ''}
-              onValueChange={(value) => handleChange('personId', Number(value))}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Selecciona una persona" />
-              </SelectTrigger>
-              <SelectContent>
-                {people && people.length > 0 ? (
-                  useMemo(() => sortByString(people, (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()).map(person => (
-                    <SelectItem key={person.id} value={person.id.toString()}>
-                      {person.firstName} {person.lastName} ({person.username})
-                    </SelectItem>
-                  )), [people])
-                ) : (
-                  <SelectItem value="0" disabled>
-                    No hay personas disponibles
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
+              <SearchableSelect
+                value={formData.personId ? formData.personId.toString() : ''}
+                onValueChange={(value) => handleChange('personId', Number(value))}
+                placeholder="Selecciona una persona"
+                searchPlaceholder="Buscar persona..."
+                // initial option to show when editing
+                options={initialPersonOption ? [initialPersonOption] : []}
+                onSearch={async (q) => {
+                  // call people API with search query, return mapped options
+                  try {
+                    const res = await peopleApi.getAll(undefined, 10, q);
+                    const list = Array.isArray(res) ? res : res.data;
+                    return (list as any[]).map((p) => ({ label: `${p.firstName} ${p.lastName} (${p.username || ''})`, value: String(p.id) }));
+                  } catch (err) {
+                    return [];
+                  }
+                }}
+              />
           </div>
 
           {/* Sistema */}
@@ -152,21 +168,12 @@ export default function CredentialFormModal({
             <Label htmlFor="system">
               Sistema <span className="text-destructive">*</span>
             </Label>
-            <Select
+            <SearchableSelect
               value={formData.system}
               onValueChange={(value) => handleChange('system', value as SystemType)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {systemOptions.map(system => (
-                  <SelectItem key={system.value} value={system.value}>
-                    {system.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              placeholder="Selecciona sistema"
+              options={systemOptions.map(s => ({ label: s.label, value: s.value }))}
+            />
           </div>
 
           {/* Usuario */}

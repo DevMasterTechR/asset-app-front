@@ -30,10 +30,12 @@ import { peopleApi } from '@/api/people';
 import { devicesApi } from '@/api/devices';
 import { getBranches } from '@/api/catalogs';
 import { sortAssetsByName, sortBranchesByName, sortByString } from '@/lib/sort';
+import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import AssignmentFormModal from "@/components/AssignmentFormModal";
 import ReturnAssignmentModal from "@/components/ReturnAssignmentModal";
 import { useToast } from "@/hooks/use-toast";
+import Pagination, { DEFAULT_PAGE_SIZE } from '@/components/Pagination';
 
 const conditionVariantMap = {
   excellent: 'success' as const,
@@ -105,16 +107,21 @@ export default function Assignments() {
         devicesApi.getAll(),
         getBranches(),
       ]);
+      // Normalizar respuestas: pueden venir como array o como { data, total, ... }
+      const assignmentsList = extractArray<any>(data);
+      const peopleArray = extractArray<any>(peopleList);
+      const assetsArray = extractArray<any>(assetList);
+      const branchesArray = extractArray<any>(branchList);
 
-      setAssignments(data);
+      setAssignments(assignmentsList as Assignment[]);
 
-      setPeople(sortByString(peopleList.map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName })), (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()));
+      setPeople(sortByString((peopleArray || []).map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName })), (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()));
       // Mostrar únicamente activos disponibles para asignación
-      setAssets(sortAssetsByName(assetList
-        .filter((a: any) => a.status === 'available')
+      setAssets(sortAssetsByName((assetsArray || [])
+        .filter((a: any) => (a.status || '').toString() === 'available')
         .map((a: any) => ({ id: String(a.id), code: a.assetCode || a.assetCode, name: `${a.brand || ''} ${a.model || ''}`.trim() })),
       ));
-      setBranches(sortBranchesByName(branchList.map((b: any) => ({ id: b.id, name: b.name }))));
+      setBranches(sortBranchesByName((branchesArray || []).map((b: any) => ({ id: Number(b.id), name: b.name }))));
     } catch (error) {
       toast({
         title: "Error",
@@ -309,10 +316,21 @@ export default function Assignments() {
     assignmentDate: (a: any) => a.assignmentDate || '',
   });
 
+  // Pagination for active and history tables (client-side)
+  const [activePage, setActivePage] = useState(1);
+  const [activeLimit, setActiveLimit] = useState(DEFAULT_PAGE_SIZE);
+  const activeTotalPages = Math.max(1, Math.ceil(displayedActive.length / activeLimit));
+  const paginatedActive = displayedActive.slice((activePage - 1) * activeLimit, activePage * activeLimit);
+
+  const [historyPage, setHistoryPage] = useState(1);
+  const [historyLimit, setHistoryLimit] = useState(DEFAULT_PAGE_SIZE);
+  const historyTotalPages = Math.max(1, Math.ceil(displayedHistory.length / historyLimit));
+  const paginatedHistory = displayedHistory.slice((historyPage - 1) * historyLimit, historyPage * historyLimit);
+
   return (
     <>
       <Layout>
-        <div className="p-6 space-y-6">
+        <div className="p-6 md:pl-0 space-y-6">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
@@ -337,7 +355,7 @@ export default function Assignments() {
                   placeholder="Buscar por persona o código de activo..."
                   className="pl-10"
                   value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onChange={(e) => { setSearchTerm(e.target.value); setActivePage(1); setHistoryPage(1); }}
                 />
               </div>
             </div>
@@ -393,7 +411,7 @@ export default function Assignments() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedActive.map((assignment) => {
+                  paginatedActive.map((assignment) => {
                   const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
                   const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
                   const branch = branches.find(b => b.id === Number(assignment.branchId));
@@ -430,6 +448,16 @@ export default function Assignments() {
             </Table>
             </div>
           )}
+          {/* Pagination for active */}
+          {viewMode === 'active' && (
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {activePage} / {activeTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={activePage} totalPages={activeTotalPages} onPageChange={setActivePage} limit={activeLimit} onLimitChange={(l) => { setActiveLimit(l); setActivePage(1); }} />
+              </div>
+            </div>
+          )}
 
           {/* Historial (devueltas) */}
           {viewMode === 'history' && (
@@ -457,7 +485,7 @@ export default function Assignments() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  displayedHistory.map((assignment) => {
+                  paginatedHistory.map((assignment) => {
                   const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
                   const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
                   const branch = branches.find(b => b.id === Number(assignment.branchId));
@@ -480,6 +508,16 @@ export default function Assignments() {
                 )}
               </TableBody>
             </Table>
+            </div>
+          )}
+          {/* Pagination for history */}
+          {viewMode === 'history' && (
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {historyPage} / {historyTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={historyPage} totalPages={historyTotalPages} onPageChange={setHistoryPage} limit={historyLimit} onLimitChange={(l) => { setHistoryLimit(l); setHistoryPage(1); }} />
+              </div>
             </div>
           )}
 

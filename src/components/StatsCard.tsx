@@ -7,18 +7,33 @@ interface StatsCardProps {
   icon: LucideIcon;
   description?: string;
   variant?: "default" | "success" | "warning" | "destructive";
+  onClick?: () => void;
 }
 
-export const StatsCard = ({ title, value, icon: Icon, description, variant = "default" }: StatsCardProps) => {
+export const StatsCard = ({ title, value, icon: Icon, description, variant = "default", onClick }: StatsCardProps) => {
   const variantClasses = {
     default: "text-primary",
     success: "text-success",
     warning: "text-warning",
     destructive: "text-destructive",
   };
+  const clickable = typeof onClick === 'function';
+  const baseClass = 'p-6 transition-shadow duration-200';
+  const clickableClass = 'cursor-pointer hover:shadow-[var(--shadow-hover)] hover:scale-105 transform-gpu transition-all duration-200 hover:animate-pulse focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary';
+
+  const handleKeyDown = (e: any) => {
+    if (!clickable) return;
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      onClick?.();
+    }
+  };
 
   return (
-    <Card className="p-6 hover:shadow-[var(--shadow-hover)] transition-shadow duration-200">
+    <Card
+      className={`${baseClass} ${clickable ? clickableClass : 'hover:shadow-[var(--shadow-hover)]'}`}
+      {...(clickable ? { role: 'button', tabIndex: 0, onClick, onKeyDown: handleKeyDown } : {})}
+    >
       <div className="flex items-start justify-between">
         <div className="space-y-2">
           <p className="text-sm font-medium text-muted-foreground">{title}</p>

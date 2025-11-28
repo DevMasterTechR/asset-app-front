@@ -30,6 +30,7 @@ import { useSort } from '@/lib/useSort';
 import BranchFormModal from '@/components/BranchFormModal';
 import DepartmentFormModal from '@/components/DepartmentFormModal';
 import RoleFormModal from '@/components/RoleFormModal';
+import Pagination, { DEFAULT_PAGE_SIZE } from '@/components/Pagination';
 
 export default function Catalogs() {
   const { toast } = useToast();
@@ -216,9 +217,25 @@ export default function Catalogs() {
     description: (r: any) => r.description || '',
   });
 
+  // Pagination (client-side) for each table
+  const [branchesPage, setBranchesPage] = useState(1);
+  const [branchesLimit, setBranchesLimit] = useState(DEFAULT_PAGE_SIZE);
+  const branchesTotalPages = Math.max(1, Math.ceil(displayedBranches.length / branchesLimit));
+  const paginatedBranches = displayedBranches.slice((branchesPage - 1) * branchesLimit, branchesPage * branchesLimit);
+
+  const [departmentsPage, setDepartmentsPage] = useState(1);
+  const [departmentsLimit, setDepartmentsLimit] = useState(DEFAULT_PAGE_SIZE);
+  const departmentsTotalPages = Math.max(1, Math.ceil(displayedDepartments.length / departmentsLimit));
+  const paginatedDepartments = displayedDepartments.slice((departmentsPage - 1) * departmentsLimit, departmentsPage * departmentsLimit);
+
+  const [rolesPage, setRolesPage] = useState(1);
+  const [rolesLimit, setRolesLimit] = useState(DEFAULT_PAGE_SIZE);
+  const rolesTotalPages = Math.max(1, Math.ceil(displayedRoles.length / rolesLimit));
+  const paginatedRoles = displayedRoles.slice((rolesPage - 1) * rolesLimit, rolesPage * rolesLimit);
+
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-6 md:pl-0 space-y-6">
         {/* Header */}
         <div>
           <h1 className="text-3xl font-bold">Catálogos</h1>
@@ -235,7 +252,13 @@ export default function Catalogs() {
             placeholder="Buscar..."
             className="pl-10"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              // Reset pagination for all catalog tables
+              setBranchesPage(1);
+              setDepartmentsPage(1);
+              setRolesPage(1);
+            }}
           />
         </div>
 
@@ -268,7 +291,7 @@ export default function Catalogs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedBranches.map((branch) => (
+                  {paginatedBranches.map((branch) => (
                     <TableRow key={branch.id}>
                       <TableCell className="font-medium">{branch.name}</TableCell>
                       <TableCell>{branch.address}</TableCell>
@@ -294,8 +317,15 @@ export default function Catalogs() {
                     </TableRow>
                   ))}
                 </TableBody>
-              </Table>
+                </Table>
             </div>
+                <div className="flex items-center gap-4 w-full">
+                  <div className="flex-1" />
+                  <span className="text-sm text-muted-foreground text-center">Página {branchesPage} / {branchesTotalPages}</span>
+                  <div className="flex-1 flex justify-end">
+                    <Pagination page={branchesPage} totalPages={branchesTotalPages} onPageChange={setBranchesPage} limit={branchesLimit} onLimitChange={(l) => { setBranchesLimit(l); setBranchesPage(1); }} />
+                  </div>
+                </div>
           </TabsContent>
 
           {/* Departamentos */}
@@ -318,7 +348,7 @@ export default function Catalogs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedDepartments.map((dept) => (
+                  {paginatedDepartments.map((dept) => (
                     <TableRow key={dept.id}>
                       <TableCell className="font-medium">{dept.name}</TableCell>
                       <TableCell>{dept.description}</TableCell>
@@ -353,6 +383,13 @@ export default function Catalogs() {
               </Table>
 
             </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {departmentsPage} / {departmentsTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={departmentsPage} totalPages={departmentsTotalPages} onPageChange={setDepartmentsPage} limit={departmentsLimit} onLimitChange={(l) => { setDepartmentsLimit(l); setDepartmentsPage(1); }} />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Roles */}
@@ -375,7 +412,7 @@ export default function Catalogs() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedRoles.map((role) => (
+                  {paginatedRoles.map((role) => (
                     <TableRow key={role.id}>
                       <TableCell className="font-medium">{role.name}</TableCell>
                       <TableCell>{role.description}</TableCell>
@@ -401,6 +438,13 @@ export default function Catalogs() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {rolesPage} / {rolesTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={rolesPage} totalPages={rolesTotalPages} onPageChange={setRolesPage} limit={rolesLimit} onLimitChange={(l) => { setRolesLimit(l); setRolesPage(1); }} />
+              </div>
             </div>
           </TabsContent>
         </Tabs>

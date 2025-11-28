@@ -2,13 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+import SearchableSelect from '@/components/ui/searchable-select';
 import {
   Dialog,
   DialogContent,
@@ -143,6 +137,15 @@ export default function PersonFormModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
+  const departmentOptions = useMemo(() => sortByString(departments, d => d.name).map((dept) => ({ label: dept.name, value: dept.id.toString() })), [departments]);
+  const roleOptions = useMemo(() => sortByString(roles, r => r.name).map((role) => ({ label: role.name, value: role.id.toString() })), [roles]);
+  const branchOptions = useMemo(() => sortBranchesByName(branches).map((branch) => ({ label: branch.name, value: branch.id.toString() })), [branches]);
+  const statusOptions = [
+    { label: 'Activo', value: 'active' },
+    { label: 'Inactivo', value: 'inactive' },
+    { label: 'Suspendido', value: 'suspended' },
+  ];
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -239,43 +242,21 @@ export default function PersonFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="departmentId">Departamento</Label>
-              <Select
-                value={formData.departmentId?.toString() || ''}
-                onValueChange={(value) => {
-                  handleChange('departmentId', value ? Number(value) : undefined);
-                }}
-              >
-                <SelectTrigger id="departmentId">
-                  <SelectValue placeholder="Selecciona departamento" />
-                </SelectTrigger>
-                  <SelectContent>
-                    {useMemo(() => sortByString(departments, d => d.name).map((dept) => (
-                      <SelectItem key={dept.id} value={dept.id.toString()}>
-                        {dept.name}
-                      </SelectItem>
-                    )), [departments])}
-                  </SelectContent>
-              </Select>
+                <SearchableSelect
+                  value={formData.departmentId?.toString() || ''}
+                  onValueChange={(value) => handleChange('departmentId', value ? Number(value) : undefined)}
+                  placeholder="Selecciona departamento"
+                  options={departmentOptions}
+                />
             </div>
             <div className="space-y-2">
               <Label htmlFor="roleId">Rol</Label>
-              <Select
+              <SearchableSelect
                 value={formData.roleId?.toString() || ''}
-                onValueChange={(value) => {
-                  handleChange('roleId', value ? Number(value) : undefined);
-                }}
-              >
-                <SelectTrigger id="roleId">
-                  <SelectValue placeholder="Selecciona rol" />
-                </SelectTrigger>
-                <SelectContent>
-                  {useMemo(() => sortByString(roles, r => r.name).map((role) => (
-                    <SelectItem key={role.id} value={role.id.toString()}>
-                      {role.name}
-                    </SelectItem>
-                  )), [roles])}
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => handleChange('roleId', value ? Number(value) : undefined)}
+                placeholder="Selecciona rol"
+                options={roleOptions}
+              />
             </div>
           </div>
 
@@ -283,42 +264,21 @@ export default function PersonFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="branchId">Sucursal</Label>
-              <Select
+              <SearchableSelect
                 value={formData.branchId?.toString() || ''}
-                onValueChange={(value) => {
-                  handleChange('branchId', value ? Number(value) : undefined);
-                }}
-              >
-                <SelectTrigger id="branchId">
-                  <SelectValue placeholder="Selecciona sucursal" />
-                </SelectTrigger>
-                <SelectContent>
-                  {useMemo(() => sortBranchesByName(branches).map((branch) => (
-                    <SelectItem key={branch.id} value={branch.id.toString()}>
-                      {branch.name}
-                    </SelectItem>
-                  )), [branches])}
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => handleChange('branchId', value ? Number(value) : undefined)}
+                placeholder="Selecciona sucursal"
+                options={branchOptions}
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="status">Estado <span className="text-destructive">*</span></Label>
-              <Select
+              <SearchableSelect
                 value={formData.status}
-                onValueChange={(value: 'active' | 'inactive' | 'suspended') =>
-                  handleChange('status', value)
-                }
-                required
-              >
-                <SelectTrigger id="status">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="active">Activo</SelectItem>
-                  <SelectItem value="inactive">Inactivo</SelectItem>
-                  <SelectItem value="suspended">Suspendido</SelectItem>
-                </SelectContent>
-              </Select>
+                onValueChange={(value) => handleChange('status', value as any)}
+                placeholder="Selecciona estado"
+                options={statusOptions}
+              />
             </div>
           </div>
 

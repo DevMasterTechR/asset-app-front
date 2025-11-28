@@ -45,10 +45,20 @@ export interface UpdatePersonDto {
 // ============= PEOPLE API =============
 
 export const peopleApi = {
-  async getAll(): Promise<Person[]> {
-    const response = await apiFetch(`${API_URL}/people`, { method: 'GET' });
+  async getAll(page?: number, limit?: number, q?: string): Promise<{ data: Person[]; total: number; page: number; limit: number; totalPages: number } | Person[]> {
+    const params = new URLSearchParams();
+    if (page !== undefined) params.append('page', String(page));
+    if (limit !== undefined) params.append('limit', String(limit));
+    if (q !== undefined && q !== null && String(q).trim() !== '') params.append('q', String(q).trim());
+    const url = `${API_URL}/people${params.toString() ? `?${params.toString()}` : ''}`;
+    const response = await apiFetch(url, { method: 'GET' });
     await handleApiError(response);
-    return response.json();
+    const json = await response.json();
+    // If backend returns paginated shape, pass it through. Otherwise return array.
+    if (json && typeof json === 'object' && Array.isArray(json.data)) {
+      return json;
+    }
+    return json as Person[];
   },
 
   async getOne(id: string): Promise<Person> {

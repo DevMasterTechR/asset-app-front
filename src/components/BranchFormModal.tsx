@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import SearchableSelect from '@/components/ui/searchable-select';
 import { Branch } from '@/data/mockDataExtended';
 import { CreateBranchDto } from '@/api/catalogs';
 import { Loader2 } from 'lucide-react';
@@ -121,22 +122,19 @@ export default function BranchFormModal({
             />
           </div>
 
-          <div className="space-y-2">
-  <label htmlFor="region-select">Elige una Región:</label>
-  <select
-    id="region-select"
-    name="region"
-    value={formData.region}
-    onChange={(e) => handleChange('region', e.target.value)}
-    required
-    className="block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-  >
-    <option value="">Selecciona región</option>
-    <option value="Costa">Costa</option>
-    <option value="Sierra">Sierra</option>
-    <option value="Oriente">Oriente</option>
-  </select>
-</div>   
+                  <div className="space-y-2">
+                    <Label htmlFor="region">Región <span className="text-destructive">*</span></Label>
+                    <SearchableSelect
+                      value={formData.region}
+                      onValueChange={(value) => handleChange('region', value)}
+                      placeholder="Selecciona región"
+                      options={[
+                        { label: 'Costa', value: 'Costa' },
+                        { label: 'Sierra', value: 'Sierra' },
+                        { label: 'Oriente', value: 'Oriente' },
+                      ]}
+                    />
+                  </div>
           <DialogFooter>
             <Button
               type="button"

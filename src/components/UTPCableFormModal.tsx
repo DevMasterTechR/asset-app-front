@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import SearchableSelect from '@/components/ui/searchable-select';
 import {
   Dialog,
   DialogContent,
@@ -200,21 +201,20 @@ export default function UTPCableFormModal({
             <Label htmlFor="type">
               Categoría <span className="text-destructive">*</span>
             </Label>
-            <select
-              id="type"
+            <SearchableSelect
               value={formData.type}
-              onChange={(e) => handleChange('type', e.target.value)}
+              onValueChange={(value) => handleChange('type', value)}
+              placeholder="Selecciona una categoría"
+              options={[
+                { label: 'Cat5', value: 'Cat5' },
+                { label: 'Cat5e', value: 'Cat5e' },
+                { label: 'Cat6', value: 'Cat6' },
+                { label: 'Cat6a', value: 'Cat6a' },
+                { label: 'Cat7', value: 'Cat7' },
+                { label: 'Cat8', value: 'Cat8' },
+              ]}
               required
-              className="w-full border border-input rounded-md px-3 py-2 text-sm bg-background"
-            >
-              <option value="">Selecciona una categoría</option>
-              <option value="Cat5">Cat5</option>
-              <option value="Cat5e">Cat5e</option>
-              <option value="Cat6">Cat6</option>
-              <option value="Cat6a">Cat6a</option>
-              <option value="Cat7">Cat7</option>
-              <option value="Cat8">Cat8</option>
-            </select>
+            />
           </div>
 
           <div className="space-y-2">
