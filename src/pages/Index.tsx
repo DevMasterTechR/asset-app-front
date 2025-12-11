@@ -11,7 +11,9 @@ import { peopleApi } from "@/api/people";
 import { extractArray } from "@/lib/extractData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, Users, Package, AlertCircle } from "lucide-react";
+import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -20,10 +22,17 @@ const Index = () => {
   const [userAssignments, setUserAssignments] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(5);
+  const [pageByPerson, setPageByPerson] = useState<number>(1);
+  const [limitByPerson, setLimitByPerson] = useState<number>(5);
   const [loading, setLoading] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryCodes, setSummaryCodes] = useState<any[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
+  const [tab, setTab] = useState<'general' | 'byPerson'>('general');
+  const [people, setPeople] = useState<any[]>([]);
+  const [ownerModalOpen, setOwnerModalOpen] = useState(false);
+  const [ownerSelection, setOwnerSelection] = useState<{ userId: string; userName: string; branch: string; devices: any[] } | null>(null);
+  const [newOwnerId, setNewOwnerId] = useState<string>("");
 
   const loadData = async () => {
     setLoading(true);
@@ -96,6 +105,7 @@ const Index = () => {
         console.warn('No se pudieron cargar consumibles para el dashboard', err);
       }
       const peopleList = extractArray<any>(peopleRes) || [];
+      setPeople(peopleList || []);
 
       const peopleMap = new Map<string, string>();
       peopleList.forEach((p: any) => {
@@ -155,6 +165,17 @@ const Index = () => {
         const dev = {
           type: a.asset?.assetType || "Laptop",
           model: a.asset?.model || "",
+          code: a.asset?.assetCode || a.asset?.code || a.asset?.id || '',
+          branch:
+            a.branch?.name ||
+            a.branchName ||
+            a.asset?.branchName ||
+            a.asset?.branch?.name ||
+            a.asset?.branch ||
+            person?.branchName ||
+            person?.branch?.name ||
+            person?.branch ||
+            '-',
         };
 
         if (!byUser.has(userId)) {
@@ -163,6 +184,7 @@ const Index = () => {
             userName: name,
             email: person?.username || "",
             department: person?.departmentName || "-",
+            branch: dev.branch,
             devices: [dev],
           });
         } else {
@@ -242,10 +264,63 @@ const Index = () => {
   const displayedDevices = filteredDevices.slice((page - 1) * limit, page * limit);
 
   const filteredUsers = userAssignments.filter((u) =>
-    `${u.userName} ${u.email} ${u.department}`
+    `${u.userName} ${u.email} ${u.department} ${u.branch}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase())
   );
+
+  const totalPagesByPerson = Math.max(1, Math.ceil(filteredUsers.length / limitByPerson));
+  const displayedUsers = filteredUsers.slice((pageByPerson - 1) * limitByPerson, pageByPerson * limitByPerson);
+
+  const openOwnerEditor = (u: any) => {
+    setOwnerSelection({ userId: u.userId, userName: u.userName, branch: u.branch, devices: u.devices || [] });
+    setNewOwnerId(u.userId);
+    setOwnerModalOpen(true);
+  };
+
+  const applyOwnerChange = () => {
+    if (!ownerSelection || !newOwnerId) {
+      setOwnerModalOpen(false);
+      return;
+    }
+
+    setUserAssignments((prev) => {
+      const updated = [...prev];
+      const sourceIdx = updated.findIndex((x) => String(x.userId) === String(ownerSelection.userId));
+      const movedDevices = sourceIdx >= 0 ? updated[sourceIdx].devices || [] : [];
+      if (sourceIdx >= 0) {
+        updated.splice(sourceIdx, 1);
+      }
+
+      const targetIdx = updated.findIndex((x) => String(x.userId) === String(newOwnerId));
+      const targetPerson = people.find((p) => String(p.id) === String(newOwnerId));
+      const branch = targetPerson?.branchName || targetPerson?.branch?.name || targetPerson?.branch || ownerSelection.branch || '-';
+      const userName = targetPerson ? `${targetPerson.firstName} ${targetPerson.lastName}` : ownerSelection.userName;
+
+      if (targetIdx >= 0) {
+        const currentDevices = updated[targetIdx].devices || [];
+        updated[targetIdx] = {
+          ...updated[targetIdx],
+          branch,
+          userName,
+          devices: [...currentDevices, ...movedDevices],
+        };
+      } else {
+        updated.push({
+          userId: newOwnerId,
+          userName,
+          email: targetPerson?.username || '',
+          department: targetPerson?.departmentName || '-',
+          branch,
+          devices: movedDevices,
+        });
+      }
+
+      return updated;
+    });
+
+    setOwnerModalOpen(false);
+  };
 
   return (
     <Layout>
@@ -269,7 +344,7 @@ const Index = () => {
           <Input
             placeholder="Buscar dispositivos por codigo, marca, modelo, número de serie..."
             value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
+            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); setPageByPerson(1); }}
           />
           <Button onClick={loadData} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
@@ -277,13 +352,17 @@ const Index = () => {
           </Button>
         </div>
 
-        {/* Devices table with pagination */}
-        <div className="space-y-1">
-          <DevicesTable devices={displayedDevices} showCode />
-          <div className="flex items-center gap-4 w-full">
-            <div className="flex-1" />
-            <span className="text-sm text-muted-foreground text-center">Página {page} / {totalPages}</span>
-            <div className="flex-1 flex justify-end">
+        {/* Tabs: General y Equipo por persona */}
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'general' | 'byPerson')} className="mt-6">
+          <TabsList>
+            <TabsTrigger value="general">General</TabsTrigger>
+            <TabsTrigger value="byPerson">Equipo por persona</TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="general" className="mt-4">
+            <DevicesTable devices={displayedDevices} showCode />
+            <div className="mt-4 flex items-center justify-end gap-4">
+              <span className="text-sm text-muted-foreground">Página {page} / {totalPages}</span>
               <Pagination
                 page={page}
                 totalPages={totalPages}
@@ -293,8 +372,131 @@ const Index = () => {
                 limits={[5,10,15,20]}
               />
             </div>
+          </TabsContent>
+
+          <TabsContent value="byPerson" className="mt-4">
+            <div className="border rounded-lg bg-card">
+              <div className="p-4 flex items-center justify-between border-b">
+                <div>
+                  <h3 className="text-lg font-semibold">Equipos por persona</h3>
+                  <p className="text-sm text-muted-foreground">Persona, sucursal y códigos de equipos asignados</p>
+                </div>
+                <Badge variant="secondary">{filteredUsers.length} personas</Badge>
+              </div>
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="text-left">
+                    <tr className="border-b">
+                      <th className="px-4 py-3">Persona</th>
+                      <th className="px-4 py-3">Sucursal</th>
+                      <th className="px-4 py-3">Equipos</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {displayedUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No hay asignaciones activas para mostrar.</td>
+                      </tr>
+                    ) : (
+                      displayedUsers.map((u) => (
+                        <tr key={u.userId} className="border-b last:border-b-0">
+                          <td className="px-4 py-3 font-medium flex items-center gap-2">
+                            {u.userName || 'Desconocido'}
+                            <button
+                              type="button"
+                              onClick={() => openOwnerEditor(u)}
+                              className="p-1 rounded-full hover:bg-red-50 text-red-600"
+                              title="Editar dueño"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                          </td>
+                          <td className="px-4 py-3 text-muted-foreground">{u.branch || '-'}</td>
+                          <td className="px-4 py-3">
+                            <div className="flex flex-wrap gap-2">
+                              {u.devices && u.devices.length > 0 ? (
+                                u.devices.map((d: any, idx: number) => (
+                                  <span
+                                    key={`${u.userId}-${idx}`}
+                                    className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm"
+                                  >
+                                    {d.code || 'SIN-CODIGO'}
+                                  </span>
+                                ))
+                              ) : (
+                                <span className="text-muted-foreground">Sin equipos</span>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+              <div className="mt-4 flex items-center justify-end gap-4">
+                <span className="text-sm text-muted-foreground">Página {pageByPerson} / {totalPagesByPerson}</span>
+                <Pagination
+                  page={pageByPerson}
+                  totalPages={totalPagesByPerson}
+                  onPageChange={(p) => setPageByPerson(p)}
+                  limit={limitByPerson}
+                  onLimitChange={(l) => { setLimitByPerson(l); setPageByPerson(1); }}
+                  limits={[5,10,15,20]}
+                />
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
+
+        {ownerModalOpen && ownerSelection && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+              <div className="bg-red-50 text-red-700 px-4 py-3 rounded-t-lg border-b border-red-100 font-semibold">
+                CUIDADO: UNA VEZ CAMBIADO EL DUEÑO NO SE PODRÁ MODIFICAR POR 24 H
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Dueño actual</p>
+                  <p className="text-base font-semibold">{ownerSelection.userName}</p>
+                  <p className="text-sm text-muted-foreground">Sucursal: {ownerSelection.branch || '-'}</p>
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium">Nuevo dueño</label>
+                  <select
+                    className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                    value={newOwnerId}
+                    onChange={(e) => setNewOwnerId(e.target.value)}
+                  >
+                    {people.map((p: any) => (
+                      <option key={p.id} value={p.id}>{`${p.firstName} ${p.lastName}`}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Equipos asignados</p>
+                  <div className="flex flex-wrap gap-2">
+                    {(ownerSelection.devices || []).map((d, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm"
+                      >
+                        {d.code || 'SIN-CODIGO'}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setOwnerModalOpen(false)}>Cancelar</Button>
+                  <Button variant="destructive" onClick={applyOwnerChange}>Confirmar cambio</Button>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </Layout>
   );
