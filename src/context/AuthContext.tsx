@@ -43,8 +43,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } catch (error) {
       console.error('Error en logout:', error);
     } finally {
-      try { localStorage.setItem('session:logout', String(Date.now())); } catch (e) {}
+      // Limpiar usuario de contexto
       setUser(null);
+      try { 
+        localStorage.setItem('session:logout', String(Date.now())); 
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('session:keepalive');
+      } catch (e) {}
     }
   };
 
@@ -76,15 +81,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password });
     
-    // Si el login es exitoso y el backend devuelve el usuario
-    if (response.user) {
+    // Después del login, siempre obtener datos completos del usuario desde /auth/me
+    // (esto asegura que tengamos firstName, lastName, etc.)
+    const currentUser = await authApi.verifyAuth();
+    if (currentUser) {
+      setUser(currentUser);
+    } else if (response.user) {
+      // Fallback si /auth/me falla
       setUser(response.user);
-    } else {
-      // Si el backend solo devuelve { message }, necesitamos obtener el usuario
-      const currentUser = await authApi.verifyAuth();
-      if (currentUser) {
-        setUser(currentUser);
-      }
     }
   };
 

@@ -19,9 +19,19 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import type { Assignment } from "@/data/mockDataExtended"
 import type { CreateAssignmentDto } from "@/api/assignments"
-import { Loader2 } from "lucide-react"
+import { Loader2, AlertTriangle } from "lucide-react"
 import { useMemo } from 'react'
 import { sortAssetsByName, sortBranchesByName, sortByString } from '@/lib/sort'
 
@@ -56,6 +66,9 @@ export default function AssignmentFormModal({
   branches,
 }: AssignmentFormModalProps) {
   const [loading, setLoading] = useState(false)
+  const [showAgeWarning, setShowAgeWarning] = useState(false)
+  const [pendingFormData, setPendingFormData] = useState<CreateAssignmentDto | null>(null)
+  const [selectedAssetData, setSelectedAssetData] = useState<{ code: string; purchaseDate?: string } | null>(null)
   const [formData, setFormData] = useState<CreateAssignmentDto>({
     assetId: "",
     personId: "",
@@ -98,16 +111,63 @@ export default function AssignmentFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Verificar si el equipo tiene ≥5 años de antigüedad
+    if (formData.assetId) {
+      const selectedAsset = assets.find(a => a.id === formData.assetId);
+      
+      if (selectedAsset) {
+        // Buscar datos completos del asset para obtener purchaseDate
+        try {
+          const allAssets = await devicesApi.getAll(undefined, 1, 1000);
+          const assetList = Array.isArray(allAssets) ? allAssets : (allAssets as any).data || [];
+          const fullAsset = assetList.find((a: any) => String(a.id) === String(formData.assetId));
+          
+          if (fullAsset?.purchaseDate && isOlderThanFiveYears(fullAsset.purchaseDate)) {
+            // Mostrar alerta personalizada
+            setSelectedAssetData({ code: selectedAsset.code, purchaseDate: fullAsset.purchaseDate });
+            setPendingFormData(formData);
+            setShowAgeWarning(true);
+            return; // No continuar hasta que el usuario confirme
+          }
+        } catch (err) {
+          console.warn('No se pudo verificar antigüedad del equipo:', err);
+          // Continuar de todas formas si hay error
+        }
+      }
+    }
+    
+    // Si no hay advertencia de edad, proceder normalmente
+    await performSave(formData);
+  }
+
+  const performSave = async (dataToSave: CreateAssignmentDto) => {
     setLoading(true)
 
     try {
-      await onSave(formData)
+      await onSave(dataToSave)
       onOpenChange(false)
     } catch (error) {
       console.error("Error al guardar:", error)
     } finally {
       setLoading(false)
     }
+  }
+
+  const handleConfirmAgeWarning = async () => {
+    setShowAgeWarning(false);
+    if (pendingFormData) {
+      await performSave(pendingFormData);
+    }
+  }
+
+  const isOlderThanFiveYears = (purchaseDate?: string) => {
+    if (!purchaseDate) return false;
+    const date = new Date(purchaseDate);
+    if (Number.isNaN(date.getTime())) return false;
+    const threshold = new Date();
+    threshold.setFullYear(threshold.getFullYear() - 5);
+    return date <= threshold;
   }
 
   const handleChange = (field: keyof CreateAssignmentDto, value: string) => {
@@ -119,16 +179,17 @@ export default function AssignmentFormModal({
   const sortedBranches = useMemo(() => sortBranchesByName(branches || []), [branches])
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle>{mode === "create" ? "Nueva Asignación" : "Editar Asignación"}</DialogTitle>
-          <DialogDescription>
-            {mode === "create" ? "Completa los datos de la nueva asignación" : "Modifica los datos de la asignación"}
-          </DialogDescription>
-        </DialogHeader>
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{mode === "create" ? "Nueva Asignación" : "Editar Asignación"}</DialogTitle>
+            <DialogDescription>
+              {mode === "create" ? "Completa los datos de la nueva asignación" : "Modifica los datos de la asignación"}
+            </DialogDescription>
+          </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <Label htmlFor="assetId">
               Activo <span className="text-destructive">*</span>
@@ -252,5 +313,40 @@ export default function AssignmentFormModal({
         </form>
       </DialogContent>
     </Dialog>
+
+    <AlertDialog open={showAgeWarning} onOpenChange={setShowAgeWarning}>
+      <AlertDialogContent className="border-amber-200 bg-amber-50 max-w-md">
+        <AlertDialogHeader>
+          <div className="flex items-center gap-3">
+            <AlertTriangle className="h-6 w-6 text-amber-600" />
+            <AlertDialogTitle className="text-amber-900">Equipo con Antigüedad</AlertDialogTitle>
+          </div>
+          <AlertDialogDescription className="text-amber-800 mt-2">
+            {selectedAssetData && (
+              <div className="space-y-2">
+                <p className="font-semibold">
+                  El equipo <span className="text-amber-900 font-bold">{selectedAssetData.code}</span> tiene una antigüedad de 5 años o superior desde su fecha de compra.
+                </p>
+                <p>
+                  ¿Está seguro de que desea continuar con la asignación de este equipo?
+                </p>
+              </div>
+            )}
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel className="bg-white border-amber-200 text-amber-900 hover:bg-amber-100">
+            Cancelar
+          </AlertDialogCancel>
+          <AlertDialogAction 
+            onClick={handleConfirmAgeWarning}
+            className="bg-amber-600 text-white hover:bg-amber-700"
+          >
+            Confirmar Asignación
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+    </>
   )
 }

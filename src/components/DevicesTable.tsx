@@ -92,6 +92,15 @@ export const DevicesTable = ({ devices, showCode }: DevicesTableProps) => {
       return '-';
     }
   };
+
+  const isOlderThanFiveYears = (value?: string) => {
+    if (!value) return false;
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return false;
+    const now = new Date();
+    const fiveYearsMs = 1000 * 60 * 60 * 24 * 365 * 5;
+    return now.getTime() - d.getTime() >= fiveYearsMs;
+  };
   return (
     <div className="rounded-lg border bg-card">
       <Table>
@@ -110,14 +119,17 @@ export const DevicesTable = ({ devices, showCode }: DevicesTableProps) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {devices.map((device) => (
-            <TableRow key={device.id}>
-              <TableCell>
-                <div className="flex items-center gap-2">
-                  {getDeviceIcon(device.type)}
-                  <span className="font-medium">{device.type}</span>
-                </div>
-              </TableCell>
+          {devices.map((device) => {
+            const isOld = isOlderThanFiveYears(device.purchaseDate);
+            const typeClass = isOld ? 'text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]' : '';
+            return (
+              <TableRow key={device.id}>
+                <TableCell>
+                  <div className={`flex items-center gap-2 ${typeClass}`}>
+                    {getDeviceIcon(device.type)}
+                    <span className="font-medium">{device.type}</span>
+                  </div>
+                </TableCell>
               {/* render asset code cell if present on device */}
               {showCode ? <TableCell className="font-mono text-sm">{device.assetCode || '-'}</TableCell> : null}
 
@@ -135,8 +147,9 @@ export const DevicesTable = ({ devices, showCode }: DevicesTableProps) => {
                   <span className="text-muted-foreground">-</span>
                 )}
               </TableCell>
-            </TableRow>
-          ))}
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>

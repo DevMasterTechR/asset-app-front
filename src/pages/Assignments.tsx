@@ -50,6 +50,17 @@ const conditionLabelMap = {
   poor: 'Malo',
 };
 
+const isOlderThanFiveYears = (purchaseDate?: string) => {
+  if (!purchaseDate) return false;
+  const date = new Date(purchaseDate);
+  if (Number.isNaN(date.getTime())) return false;
+  const threshold = new Date();
+  threshold.setFullYear(threshold.getFullYear() - 5);
+  return date <= threshold;
+};
+
+const oldAssetClass = "text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]";
+
 /**
  * Convierte una cadena local "YYYY-MM-DDTHH:mm" o "YYYY-MM-DD" en un string ISO UTC correctamente,
  * para que al guardarla no se descuadre respecto a tu zona local.
@@ -83,7 +94,7 @@ export default function Assignments() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
-  const [assets, setAssets] = useState<Array<{ id: string; code: string; name: string }>>([]);
+  const [assets, setAssets] = useState<Array<{ id: string; code: string; name: string; brand?: string; model?: string; purchaseDate?: string; assetCode?: string }>>([]);
   const [people, setPeople] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [modalOpen, setModalOpen] = useState(false);
@@ -119,7 +130,7 @@ export default function Assignments() {
       // Mostrar únicamente activos disponibles para asignación
       setAssets(sortAssetsByName((assetsArray || [])
         .filter((a: any) => (a.status || '').toString() === 'available')
-        .map((a: any) => ({ id: String(a.id), code: a.assetCode || a.assetCode, name: `${a.brand || ''} ${a.model || ''}`.trim() })),
+        .map((a: any) => ({ id: String(a.id), code: a.assetCode || a.assetCode, name: `${a.brand || ''} ${a.model || ''}`.trim(), brand: a.brand, model: a.model, purchaseDate: a.purchaseDate, assetCode: a.assetCode })),
       ));
       setBranches(sortBranchesByName((branchesArray || []).map((b: any) => ({ id: Number(b.id), name: b.name }))));
     } catch (error) {
@@ -175,6 +186,18 @@ export default function Assignments() {
         assignmentDate: convertLocalToUTCISOString(data.assignmentDate)
       };
       await assignmentsApi.update(selectedAssignment.id, converted);
+      
+      // Liberar el equipo anterior a disponible
+      const previousAssetId = selectedAssignment.assetId;
+      if (previousAssetId) {
+        try {
+          await devicesApi.update(String(previousAssetId), { status: 'available' });
+          window.dispatchEvent(new CustomEvent('asset-updated', { detail: { id: previousAssetId, status: 'available' } }));
+        } catch (e) {
+          console.warn('No se pudo liberar el equipo anterior:', e);
+        }
+      }
+      
       await loadAssignments();
       toast({
         title: "Éxito",
@@ -205,7 +228,7 @@ export default function Assignments() {
           // Si el asset ahora está disponible y no está en la lista, añadirlo
           const exists = prev.some((x) => String(x.id) === String(result.asset.id));
           if (assetStatus === 'available' && !exists) {
-            return sortAssetsByName([{ id: String(result.asset.id), code: result.asset.assetCode || result.asset.assetCode, name: `${result.asset.brand || ''} ${result.asset.model || ''}`.trim() }, ...prev]);
+            return sortAssetsByName([{ id: String(result.asset.id), code: result.asset.assetCode || result.asset.assetCode, name: `${result.asset.brand || ''} ${result.asset.model || ''}`.trim(), brand: result.asset.brand, model: result.asset.model, purchaseDate: result.asset.purchaseDate, assetCode: result.asset.assetCode }, ...prev]);
           }
           // Si ya existe, devolver prev sin cambios (la UI de assets puede refrescarse donde aplique)
           return prev;
@@ -235,7 +258,21 @@ export default function Assignments() {
   const handleDelete = async () => {
     if (!assignmentToDelete) return;
     try {
+      // Obtener la asignación a eliminar para acceder al assetId
+      const assignmentToRemove = assignments.find(a => a.id === assignmentToDelete);
+      
       await assignmentsApi.delete(assignmentToDelete);
+      
+      // Liberar el equipo a disponible
+      if (assignmentToRemove?.assetId) {
+        try {
+          await devicesApi.update(String(assignmentToRemove.assetId), { status: 'available' });
+          window.dispatchEvent(new CustomEvent('asset-updated', { detail: { id: assignmentToRemove.assetId, status: 'available' } }));
+        } catch (e) {
+          console.warn('No se pudo liberar el equipo:', e);
+        }
+      }
+      
       await loadAssignments();
       toast({
         title: "Éxito",
@@ -415,12 +452,13 @@ export default function Assignments() {
                   const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
                   const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
                   const branch = branches.find(b => b.id === Number(assignment.branchId));
+                  const isOld = isOlderThanFiveYears((asset as any)?.purchaseDate || (asset as any)?.purchase_date);
                   return (
                     <TableRow key={assignment.id}>
                       <TableCell>
-                        <div>
+                        <div className={isOld ? oldAssetClass : ''}>
                           <p className="font-medium">{asset?.assetCode ?? asset?.code}</p>
-                          <p className="text-sm text-muted-foreground">{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
+                          <p className={`text-sm ${isOld ? 'text-red-600' : 'text-muted-foreground'}`}>{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
                         </div>
                       </TableCell>
                       <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>

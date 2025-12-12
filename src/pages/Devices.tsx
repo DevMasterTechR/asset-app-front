@@ -62,6 +62,32 @@ const typeIconMap: Record<string, React.ComponentType<{ className?: string }>> =
   server: Server,
 };
 
+const parseDateSafe = (value?: string) => {
+  if (!value) return null;
+  const direct = new Date(value);
+  if (!Number.isNaN(direct.getTime())) return direct;
+  const parts = value.split(/[\/\-]/).map(Number);
+  if (parts.length === 3) {
+    const [a, b, c] = parts;
+    const year = c;
+    const month = a > 12 ? b : a;
+    const day = a > 12 ? a : b;
+    const alt = new Date(year, month - 1, day);
+    if (!Number.isNaN(alt.getTime())) return alt;
+  }
+  return null;
+};
+
+const isOlderThanFiveYears = (purchaseDate?: string) => {
+  const date = parseDateSafe(purchaseDate);
+  if (!date) return false;
+  const threshold = new Date();
+  threshold.setFullYear(threshold.getFullYear() - 5);
+  return date <= threshold;
+};
+
+const oldAssetClass = "text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]";
+
 function DevicesPage() {
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
@@ -70,7 +96,7 @@ function DevicesPage() {
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(5);
+  const [limit, setLimit] = useState<number>(10);
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
 
@@ -212,7 +238,13 @@ function DevicesPage() {
 
   const sort = useSort();
 
-  const displayedDevicesAll = sort.apply(filteredDevices, {
+  const prioritizedFiltered = [...filteredDevices].sort(
+    (a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate))
+  );
+
+  const hasOldInFiltered = prioritizedFiltered.some((d) => isOlderThanFiveYears(d.purchaseDate));
+
+  const sortedByUi = sort.apply(prioritizedFiltered, {
     code: (d: any) => d.assetCode ?? '',
     brand: (d: any) => `${d.brand || ''} ${d.model || ''}`.trim(),
     purchaseDate: (d: any) => d.purchaseDate ?? '',
@@ -226,11 +258,16 @@ function DevicesPage() {
     },
   });
 
-  // If server returns paginated results, `devices` are already the current page.
-  // If server returned the full list (no pagination), slice locally.
-  const displayedDevices = (Array.isArray(devices) && totalItems > devices.length)
-    ? devices
-    : displayedDevicesAll.slice((page - 1) * limit, page * limit);
+  const displayedDevicesAll = [...sortedByUi].sort(
+    (a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate))
+  );
+
+  // Priorizar siempre 5+ años incluso cuando el backend devuelve página ya paginada
+  const prioritizedPage = [...prioritizedFiltered];
+  // Si el servidor devuelve página paginada, aplicamos prioridad dentro de esa página
+  // Si no, priorizamos y luego paginamos localmente
+  // Usar siempre la lista ordenada local y luego paginar (consistente con dashboard)
+  const displayedDevices = displayedDevicesAll.slice((page - 1) * limit, page * limit);
 
   const getTypeIcon = (type: string) => {
     const Icon = typeIconMap[type] || Laptop;
@@ -360,6 +397,14 @@ function DevicesPage() {
               </button>
         </div>
 
+        {hasOldInFiltered && (
+          <div className="flex items-center gap-2 text-sm">
+            <span className={`inline-flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 ${oldAssetClass}`}>
+              Alerta: dispositivos con ≥5 años de compra titilan en rojo y se muestran primero en la tabla.
+            </span>
+          </div>
+        )}
+
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -384,10 +429,12 @@ function DevicesPage() {
               </TableHeader>
               <TableBody>
                 {displayedDevices.length > 0 ? (
-                  displayedDevices.map((device) => (
+                  displayedDevices.map((device) => {
+                    const isOld = isOlderThanFiveYears(device.purchaseDate);
+                    return (
                     <TableRow key={device.id}>
                       <TableCell>
-                        <div className="flex items-center gap-2">
+                        <div className={`flex items-center gap-2 ${isOld ? oldAssetClass : ''}`}>
                           {getTypeIcon(device.assetType)}
                           <span className="capitalize text-sm">{device.assetType}</span>
                         </div>
@@ -431,7 +478,8 @@ function DevicesPage() {
                         </div>
                       </TableCell>
                     </TableRow>
-                  ))
+                    );
+                  })
                 ) : (
                   <TableRow>
                     <TableCell colSpan={8} className="text-center py-12">

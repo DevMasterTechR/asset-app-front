@@ -129,9 +129,11 @@ export default function Layout({ children }: LayoutProps) {
       {/* Logo + collapse button */}
       <div className="p-6 border-b">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-primary/10">
-            <Building2 className="h-6 w-6 text-primary" />
-          </div>
+          <img 
+            src="/images/techlogo.png" 
+            alt="Activos TI" 
+            className="h-8 w-8 object-contain flex-shrink-0"
+          />
           {!sidebarCollapsed && (
             <div>
               <h2 className="font-bold text-lg">Activos TI</h2>
@@ -140,7 +142,7 @@ export default function Layout({ children }: LayoutProps) {
           )}
           {/* collapse button on the right when expanded */}
           {!sidebarCollapsed && (
-            <div className="ml-auto">
+            <div className="ml-auto hidden md:block">
               <Button
                 variant="ghost"
                 size="icon"
@@ -155,7 +157,7 @@ export default function Layout({ children }: LayoutProps) {
 
         {/* when collapsed, show the collapse button centered under the logo */}
         {sidebarCollapsed && (
-          <div className="mt-3 flex justify-center">
+          <div className="mt-3 flex justify-center hidden md:flex">
             <Button
               variant="ghost"
               size="icon"
@@ -175,13 +177,14 @@ export default function Layout({ children }: LayoutProps) {
             <p className="text-sm font-medium">
               {user?.firstName && user?.lastName 
                 ? `${user.firstName} ${user.lastName}` 
-                : user?.username || 'Usuario'}
+                : user?.firstName || user?.lastName || user?.username || 'Usuario'}
             </p>
-            <p className="text-xs text-muted-foreground">@{user?.username}</p>
           </>
         ) : (
           <div className="text-center">
-            <p className="text-sm font-medium">@{user?.username?.slice(0, 1) || 'U'}</p>
+            <p className="text-sm font-medium">
+              {user?.firstName?.slice(0, 1).toUpperCase() || user?.lastName?.slice(0, 1).toUpperCase() || user?.username?.slice(0, 1).toUpperCase() || 'U'}
+            </p>
           </div>
         )}
       </div>
@@ -253,12 +256,13 @@ export default function Layout({ children }: LayoutProps) {
       {/* Mobile Menu */}
       <Sheet open={isOpen} onOpenChange={setIsOpen}>
         <div className="md:hidden fixed top-0 left-0 right-0 z-50 flex items-center justify-between p-4 border-b bg-card">
-          <h1 className="font-bold text-lg">Activos TI</h1>
           <SheetTrigger asChild>
             <Button variant="ghost" size="icon">
               <Menu className="h-6 w-6" />
             </Button>
           </SheetTrigger>
+          <h1 className="font-bold text-lg flex-1 text-center">Activos TI</h1>
+          <div className="w-10" />
         </div>
         <SheetContent side="left" className="p-0 w-64">
           <NavContent />

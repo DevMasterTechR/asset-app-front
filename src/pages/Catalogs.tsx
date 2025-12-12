@@ -108,8 +108,9 @@ export default function Catalogs() {
   const handleUpdateBranch = async (data: catalogsApi.CreateBranchDto) => {
     if (!branchModal.data?.id) return;
     try {
-      await catalogsApi.updateBranch(branchModal.data.id, data);
+      await catalogsApi.updateBranch(String(branchModal.data.id), data);
       await loadData();
+      setBranchModal({ open: false, mode: 'create', data: null });
       toast({ title: 'Sucursal actualizada exitosamente' });
     } catch (error) {
       toast({ title: 'Error al actualizar sucursal', variant: 'destructive' });
@@ -130,8 +131,9 @@ export default function Catalogs() {
   const handleUpdateDepartment = async (data: catalogsApi.CreateDepartmentDto) => {
     if (!departmentModal.data?.id) return;
     try {
-      await catalogsApi.updateDepartment(departmentModal.data.id, data);
+      await catalogsApi.updateDepartment(String(departmentModal.data.id), data);
       await loadData();
+      setDepartmentModal({ open: false, mode: 'create', data: null });
       toast({ title: 'Departamento actualizado exitosamente' });
     } catch (error) {
       toast({ title: 'Error al actualizar departamento', variant: 'destructive' });
@@ -152,8 +154,9 @@ export default function Catalogs() {
   const handleUpdateRole = async (data: catalogsApi.CreateRoleDto) => {
     if (!roleModal.data?.id) return;
     try {
-      await catalogsApi.updateRole(roleModal.data.id, data);
+      await catalogsApi.updateRole(String(roleModal.data.id), data);
       await loadData();
+      setRoleModal({ open: false, mode: 'create', data: null });
       toast({ title: 'Rol actualizado exitosamente' });
     } catch (error) {
       toast({ title: 'Error al actualizar rol', variant: 'destructive' });
@@ -317,15 +320,15 @@ export default function Catalogs() {
                     </TableRow>
                   ))}
                 </TableBody>
-                </Table>
+              </Table>
             </div>
-                <div className="flex items-center gap-4 w-full">
-                  <div className="flex-1" />
-                  <span className="text-sm text-muted-foreground text-center">Página {branchesPage} / {branchesTotalPages}</span>
-                  <div className="flex-1 flex justify-end">
-                    <Pagination page={branchesPage} totalPages={branchesTotalPages} onPageChange={setBranchesPage} limit={branchesLimit} onLimitChange={(l) => { setBranchesLimit(l); setBranchesPage(1); }} />
-                  </div>
-                </div>
+            <div className="flex items-center gap-4 w-full">
+              <div className="flex-1" />
+              <span className="text-sm text-muted-foreground text-center">Página {branchesPage} / {branchesTotalPages}</span>
+              <div className="flex-1 flex justify-end">
+                <Pagination page={branchesPage} totalPages={branchesTotalPages} onPageChange={setBranchesPage} limit={branchesLimit} onLimitChange={(l) => { setBranchesLimit(l); setBranchesPage(1); }} />
+              </div>
+            </div>
           </TabsContent>
 
           {/* Departamentos */}
@@ -381,7 +384,6 @@ export default function Catalogs() {
                   ))}
                 </TableBody>
               </Table>
-
             </div>
             <div className="flex items-center gap-4 w-full">
               <div className="flex-1" />

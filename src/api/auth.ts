@@ -20,7 +20,7 @@ export interface AuthUser {
  * El backend devuelve una cookie httpOnly con el JWT
  */
 export const authApi = {
-  login: async (credentials: LoginCredentials): Promise<{ message: string; user?: AuthUser }> => {
+  login: async (credentials: LoginCredentials): Promise<{ message: string; user?: AuthUser; access_token?: string }> => {
     const response = await fetch(`${API_URL}/auth/login`, {
       method: 'POST',
       headers: {
@@ -45,7 +45,17 @@ export const authApi = {
       // noop
     }
 
-    // No guardamos el token en localStorage: usamos la cookie HttpOnly enviada por el backend.
+    // Guardar token en sessionStorage para backup/redundancia
+    // (la cookie httpOnly es la principal, pero sessionStorage permite fallback)
+    if (data.access_token) {
+      try {
+        sessionStorage.setItem('auth_token', data.access_token);
+        // Marcar timestamp de último keep-alive para control de sesión
+        sessionStorage.setItem('session:keepalive', Date.now().toString());
+      } catch (e) {
+        // ignorar errores de sessionStorage
+      }
+    }
 
     return data;
   },
@@ -54,41 +64,50 @@ export const authApi = {
    * Logout - limpia la cookie del JWT
    */
   logout: async (): Promise<void> => {
-    const response = await fetch(`${API_URL}/auth/logout`, {
-      method: 'POST',
-      credentials: 'include', // Envía la cookie con el JWT
-    });
+    try {
+      const response = await fetch(`${API_URL}/auth/logout`, {
+        method: 'POST',
+        credentials: 'include', // Envía la cookie con el JWT
+      });
 
-    if (!response.ok) {
-      throw new Error('Error al cerrar sesión');
+      if (!response.ok) {
+        throw new Error('Error al cerrar sesión');
+      }
+    } finally {
+      // Limpiar token de sessionStorage sin importar si logout tuvo éxito
+      try {
+        sessionStorage.removeItem('auth_token');
+        sessionStorage.removeItem('session:keepalive');
+      } catch (e) {
+        // ignorar
+      }
     }
-
-    // No hay token en localStorage que limpiar.
   },
 
   /**
    * Verificar si el usuario está autenticado
    */
   verifyAuth: async (): Promise<AuthUser | null> => {
-  try {
-    const response = await fetch(`${API_URL}/auth/me`, {
-      method: 'GET',
-      credentials: 'include',
-      headers: { Accept: 'application/json' },
-    });
+    try {
+      const response = await apiFetch('/auth/me', {
+        method: 'GET',
+        headers: { Accept: 'application/json' },
+      });
 
-    if (!response.ok) {
-      // 401 o 403 → usuario no autenticado
+      if (!response.ok) {
+        // 401 o 403 → usuario no autenticado
+        console.error('[verifyAuth] Fallo la autenticación:', response.status);
+        return null;
+      }
+
+      const data = await response.json();
+      console.log('[verifyAuth] Usuario obtenido:', data);
+      return data;
+    } catch (error) {
+      console.error('Error verifying auth:', error);
       return null;
     }
-
-    const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error verifying auth:', error);
-    return null;
-  }
-},
+  },
 
   /** Keepalive: refresca última actividad en servidor (SessionGuard) */
   keepAlive: async (): Promise<boolean> => {
@@ -102,9 +121,8 @@ export const authApi = {
 
   sessionStatus: async (): Promise<{ remainingSeconds: number | null; lastActivityAt?: string | null; timeoutMinutes: number } | null> => {
     try {
-      const response = await fetch(`${API_URL}/auth/session`, {
+      const response = await apiFetch('/auth/session', {
         method: 'GET',
-        credentials: 'include',
         headers: { Accept: 'application/json' },
       });
 

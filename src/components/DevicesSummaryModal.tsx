@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 interface SummaryCode {
   code: string;
   status?: string;
+  purchaseDate?: string;
 }
 
 interface SummaryGroup {
@@ -23,6 +24,17 @@ interface Props {
 const DevicesSummaryModal: React.FC<Props> = ({ open, onOpenChange, codes, loading }) => {
   const navigate = useNavigate();
   const [filter, setFilter] = React.useState('');
+
+  const isOlderThanFiveYears = (purchaseDate?: string) => {
+    if (!purchaseDate) return false;
+    const date = new Date(purchaseDate);
+    if (Number.isNaN(date.getTime())) return false;
+    const threshold = new Date();
+    threshold.setFullYear(threshold.getFullYear() - 5);
+    return date <= threshold;
+  };
+
+  const oldAssetClass = "text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]";
 
   const handleViewFull = () => {
     onOpenChange(false);
@@ -61,6 +73,7 @@ const DevicesSummaryModal: React.FC<Props> = ({ open, onOpenChange, codes, loadi
                   </div>
                   <ul className="grid grid-cols-2 gap-2 text-sm">
                     {visible.map((c) => {
+                      const isOld = isOlderThanFiveYears(c.purchaseDate);
                       const raw = c.status || "";
                       const normalized = raw
                         .normalize?.("NFD")
@@ -70,7 +83,9 @@ const DevicesSummaryModal: React.FC<Props> = ({ open, onOpenChange, codes, loadi
                         .trim();
 
                       let className = "px-2 py-1 rounded bg-muted text-foreground";
-                      if (normalized.includes("available") || normalized.includes("disponibl")) {
+                      if (isOld) {
+                        className = `px-2 py-1 rounded border border-red-200 bg-red-50 ${oldAssetClass}`;
+                      } else if (normalized.includes("available") || normalized.includes("disponibl")) {
                         className = "px-2 py-1 rounded bg-success text-success-foreground";
                       } else if (normalized.includes("maintenance") || normalized.includes("mantenim")) {
                         className = "px-2 py-1 rounded bg-warning text-warning-foreground";

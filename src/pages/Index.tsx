@@ -33,6 +33,35 @@ const Index = () => {
   const [ownerModalOpen, setOwnerModalOpen] = useState(false);
   const [ownerSelection, setOwnerSelection] = useState<{ userId: string; userName: string; branch: string; devices: any[] } | null>(null);
   const [newOwnerId, setNewOwnerId] = useState<string>("");
+  const [ownerSaving, setOwnerSaving] = useState(false);
+  const [ownerError, setOwnerError] = useState<string>("");
+
+  const parseDateSafe = (value?: string) => {
+    if (!value) return null;
+    const direct = new Date(value);
+    if (!Number.isNaN(direct.getTime())) return direct;
+    const parts = value.split(/[\/\-]/).map(Number);
+    if (parts.length === 3) {
+      const [a, b, c] = parts;
+      // Interpret as dd/mm/yyyy when day > 12
+      const year = c;
+      const month = a > 12 ? b : a;
+      const day = a > 12 ? a : b;
+      const alt = new Date(year, month - 1, day);
+      if (!Number.isNaN(alt.getTime())) return alt;
+    }
+    return null;
+  };
+
+  const isOlderThanFiveYears = (purchaseDate?: string) => {
+    const date = parseDateSafe(purchaseDate);
+    if (!date) return false;
+    const threshold = new Date();
+    threshold.setFullYear(threshold.getFullYear() - 5);
+    return date <= threshold;
+  };
+
+  const oldAssetClass = "text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]";
 
   const loadData = async () => {
     setLoading(true);
@@ -122,6 +151,8 @@ const Index = () => {
         model: d.model || "",
         serialNumber: d.serialNumber || "",
         purchaseDate: d.purchaseDate || undefined,
+        deliveryDate: d.deliveryDate || undefined,
+        receivedDate: d.receivedDate || undefined,
         status: d.status || "",
         assignedTo: d.assignedPersonId ? peopleMap.get(String(d.assignedPersonId)) : undefined,
       }));
@@ -162,10 +193,17 @@ const Index = () => {
         const person = a.person;
         const name = person ? `${person.firstName} ${person.lastName}` : "Desconocido";
 
+        // Hacer lookup del asset completo desde devicesList si es necesario
+        const fullAsset = devicesList.find((d: any) => String(d.id) === String(a.assetId)) || a.asset;
+
         const dev = {
-          type: a.asset?.assetType || "Laptop",
-          model: a.asset?.model || "",
-          code: a.asset?.assetCode || a.asset?.code || a.asset?.id || '',
+          type: a.asset?.assetType || fullAsset?.assetType || "Laptop",
+          model: a.asset?.model || fullAsset?.model || "",
+          code: a.asset?.assetCode || a.asset?.code || fullAsset?.assetCode || fullAsset?.code || a.asset?.id || '',
+          assignmentId: a.id,
+          assetId: a.assetId,
+          purchaseDate: fullAsset?.purchaseDate || fullAsset?.purchase_date || a.asset?.purchaseDate || a.asset?.purchase_date,
+          branchId: a.branchId || a.branch?.id || a.asset?.branchId,
           branch:
             a.branch?.name ||
             a.branchName ||
@@ -218,28 +256,28 @@ const Index = () => {
           consumablesApi.getPowerStrips(),
         ]);
 
-        const inksMapped = (inks || []).map((i: any) => ({ code: i.assetCode || i.id || i.model || '', status: i.status || i.state || 'available', type: 'Tintas' }));
-        const cablesMapped = (cables || []).map((c: any) => ({ code: c.assetCode || c.id || `${c.brand || ''}-${c.type || ''}`, status: c.status || c.state || 'available', type: 'Cables UTP' }));
-        const connectorsMapped = (connectors || []).map((r: any) => ({ code: r.assetCode || r.id || r.model || '', status: r.status || r.state || 'available', type: 'Conectores RJ45' }));
-        const stripsMapped = (strips || []).map((s: any) => ({ code: s.assetCode || s.id || `${s.brand || ''}-${s.model || ''}`, status: s.status || s.state || 'available', type: 'Regletas' }));
+        const inksMapped = (inks || []).map((i: any) => ({ code: i.assetCode || i.id || i.model || '', status: i.status || i.state || 'available', type: 'Tintas', purchaseDate: i.purchaseDate }));
+        const cablesMapped = (cables || []).map((c: any) => ({ code: c.assetCode || c.id || `${c.brand || ''}-${c.type || ''}`, status: c.status || c.state || 'available', type: 'Cables UTP', purchaseDate: c.purchaseDate }));
+        const connectorsMapped = (connectors || []).map((r: any) => ({ code: r.assetCode || r.id || r.model || '', status: r.status || r.state || 'available', type: 'Conectores RJ45', purchaseDate: r.purchaseDate }));
+        const stripsMapped = (strips || []).map((s: any) => ({ code: s.assetCode || s.id || `${s.brand || ''}-${s.model || ''}`, status: s.status || s.state || 'available', type: 'Regletas', purchaseDate: s.purchaseDate }));
 
         consumablesAll = [...inksMapped, ...cablesMapped, ...connectorsMapped, ...stripsMapped];
       } catch (err) {
         console.warn('Error cargando consumibles para resumen', err);
       }
 
-      const deviceCodes = (allDevices || []).map((d: any) => ({ code: d.assetCode || d.code || d.asset_code || '', status: d.status || d.state || '', type: d.assetType || d.type || 'Dispositivos' }));
+      const deviceCodes = (allDevices || []).map((d: any) => ({ code: d.assetCode || d.code || d.asset_code || '', status: d.status || d.state || '', type: d.assetType || d.type || 'Dispositivos', purchaseDate: d.purchaseDate || d.purchase_date }));
 
       const combined = [...deviceCodes, ...consumablesAll].filter((c) => c.code);
 
       // group by type
-      const groupsMap = new Map<string, Array<{ code: string; status?: string }>>();
+      const groupsMap = new Map<string, Array<{ code: string; status?: string; purchaseDate?: string }>>();
       combined.forEach((c: any) => {
         const t = c.type || 'Otros';
         if (!groupsMap.has(t)) groupsMap.set(t, []);
         const arr = groupsMap.get(t)!;
         // avoid duplicates
-        if (!arr.some((x) => x.code === c.code)) arr.push({ code: c.code, status: c.status });
+        if (!arr.some((x) => x.code === c.code)) arr.push({ code: c.code, status: c.status, purchaseDate: c.purchaseDate });
       });
 
       const groups = Array.from(groupsMap.entries()).map(([type, items]) => ({ type, items }));
@@ -261,7 +299,9 @@ const Index = () => {
   );
 
   const totalPages = Math.max(1, Math.ceil(filteredDevices.length / limit));
-  const displayedDevices = filteredDevices.slice((page - 1) * limit, page * limit);
+  const orderedDevices = [...filteredDevices].sort((a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate)));
+  const displayedDevices = orderedDevices.slice((page - 1) * limit, page * limit);
+  const hasOldInFiltered = filteredDevices.some((d) => isOlderThanFiveYears(d.purchaseDate));
 
   const filteredUsers = userAssignments.filter((u) =>
     `${u.userName} ${u.email} ${u.department} ${u.branch}`
@@ -278,56 +318,71 @@ const Index = () => {
     setOwnerModalOpen(true);
   };
 
-  const applyOwnerChange = () => {
+  const applyOwnerChange = async () => {
     if (!ownerSelection || !newOwnerId) {
       setOwnerModalOpen(false);
       return;
     }
 
-    setUserAssignments((prev) => {
-      const updated = [...prev];
-      const sourceIdx = updated.findIndex((x) => String(x.userId) === String(ownerSelection.userId));
-      const movedDevices = sourceIdx >= 0 ? updated[sourceIdx].devices || [] : [];
-      if (sourceIdx >= 0) {
-        updated.splice(sourceIdx, 1);
-      }
+    const targetPerson = people.find((p) => String(p.id) === String(newOwnerId));
+    if (!targetPerson) {
+      setOwnerError('Selecciona un dueño válido');
+      setTimeout(() => setOwnerError(""), 2000);
+      return;
+    }
 
-      const targetIdx = updated.findIndex((x) => String(x.userId) === String(newOwnerId));
-      const targetPerson = people.find((p) => String(p.id) === String(newOwnerId));
-      const branch = targetPerson?.branchName || targetPerson?.branch?.name || targetPerson?.branch || ownerSelection.branch || '-';
-      const userName = targetPerson ? `${targetPerson.firstName} ${targetPerson.lastName}` : ownerSelection.userName;
+    // Validar que el nuevo dueño no tenga asignaciones activas actuales
+    const targetActive = userAssignments.find(
+      (u) => String(u.userId) === String(newOwnerId) && u.devices && u.devices.length > 0
+    );
+    const isSameUser = String(newOwnerId) === String(ownerSelection.userId);
+    if (targetActive && !isSameUser) {
+      setOwnerError('No se puede reasignar: la persona seleccionada ya tiene asignaciones activas.');
+      setTimeout(() => setOwnerError(""), 2000);
+      return;
+    }
 
-      if (targetIdx >= 0) {
-        const currentDevices = updated[targetIdx].devices || [];
-        updated[targetIdx] = {
-          ...updated[targetIdx],
-          branch,
-          userName,
-          devices: [...currentDevices, ...movedDevices],
-        };
-      } else {
-        updated.push({
-          userId: newOwnerId,
-          userName,
-          email: targetPerson?.username || '',
-          department: targetPerson?.departmentName || '-',
-          branch,
-          devices: movedDevices,
+    const branchId = targetPerson.branchId ?? targetPerson.branch?.id;
+    const devicesToMove = ownerSelection.devices || [];
+
+    try {
+      setOwnerSaving(true);
+
+      const now = new Date().toISOString();
+      for (const d of devicesToMove) {
+        // 1) Cerrar asignación actual
+        await assignmentsApi.update(String(d.assignmentId), {
+          returnDate: now,
+          returnCondition: 'good',
+        });
+
+        // 2) Crear nueva asignación al nuevo dueño
+        await assignmentsApi.create({
+          assetId: d.assetId,
+          personId: Number(newOwnerId),
+          branchId: branchId !== undefined ? Number(branchId) : undefined,
+          assignmentDate: now,
+          deliveryCondition: 'good',
+          deliveryNotes: 'Transferencia de dueño',
         });
       }
 
-      return updated;
-    });
-
-    setOwnerModalOpen(false);
+      await loadData();
+      setOwnerModalOpen(false);
+    } catch (err) {
+      console.error('Error cambiando dueño', err);
+      alert(err instanceof Error ? err.message : 'No se pudo cambiar el dueño');
+    } finally {
+      setOwnerSaving(false);
+    }
   };
 
   return (
     <Layout>
-      <div className="p-6 space-y-6">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 
         {/* Stats */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <StatsCard title="Total Dispositivos y consumibles" value={stats.total} icon={Package} onClick={openDevicesSummary} />
           </div>
@@ -360,6 +415,13 @@ const Index = () => {
           </TabsList>
 
           <TabsContent value="general" className="mt-4">
+            {hasOldInFiltered && (
+              <div className="mb-2 text-sm">
+                <span className={`inline-flex items-center gap-2 rounded-md border border-red-200 bg-red-50 px-3 py-2 ${oldAssetClass}`}>
+                  Alerta: equipos con ≥5 años titilan en rojo y se muestran primero en la lista.
+                </span>
+              </div>
+            )}
             <DevicesTable devices={displayedDevices} showCode />
             <div className="mt-4 flex items-center justify-end gap-4">
               <span className="text-sm text-muted-foreground">Página {page} / {totalPages}</span>
@@ -418,7 +480,11 @@ const Index = () => {
                                 u.devices.map((d: any, idx: number) => (
                                   <span
                                     key={`${u.userId}-${idx}`}
-                                    className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm"
+                                    className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
+                                      isOlderThanFiveYears(d.purchaseDate)
+                                        ? `${oldAssetClass} border border-red-200 bg-red-50`
+                                        : 'border border-blue-200 bg-blue-50 text-blue-700'
+                                    }`}
                                   >
                                     {d.code || 'SIN-CODIGO'}
                                   </span>
@@ -473,6 +539,11 @@ const Index = () => {
                       <option key={p.id} value={p.id}>{`${p.firstName} ${p.lastName}`}</option>
                     ))}
                   </select>
+                  {ownerError && (
+                    <div className="mt-2 text-xs rounded border border-red-200 bg-red-50 text-red-700 px-3 py-2">
+                      {ownerError}
+                    </div>
+                  )}
                 </div>
 
                 <div>
@@ -490,8 +561,10 @@ const Index = () => {
                 </div>
 
                 <div className="flex justify-end gap-2 pt-2">
-                  <Button variant="outline" onClick={() => setOwnerModalOpen(false)}>Cancelar</Button>
-                  <Button variant="destructive" onClick={applyOwnerChange}>Confirmar cambio</Button>
+                  <Button variant="outline" onClick={() => setOwnerModalOpen(false)} disabled={ownerSaving}>Cancelar</Button>
+                  <Button variant="destructive" onClick={applyOwnerChange} disabled={ownerSaving}>
+                    {ownerSaving ? 'Guardando...' : 'Confirmar cambio'}
+                  </Button>
                 </div>
               </div>
             </div>

@@ -603,7 +603,8 @@ export default function DeviceFormModal({
             <h3 className="text-sm font-semibold mb-3">Fechas</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2 md:pr-4 md:border-r md:border-muted">
-                <Label>Fecha de compra</Label>
+                <Label>Fecha de compra/procesador</Label>
+                
                 <DateTimePicker
                   value={formData.purchaseDate}
                   onChange={(value) => handleChange('purchaseDate', value)}
@@ -627,7 +628,6 @@ export default function DeviceFormModal({
                       <DateTimePicker
                         value={formData.receivedDate}
                         onChange={(value) => handleChange('receivedDate', value)}
-                        disabled={hasActiveAssignment}
                       />
                     </div>
                     <div className="flex items-center space-x-2">

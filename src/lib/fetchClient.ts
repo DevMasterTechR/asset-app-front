@@ -38,15 +38,18 @@ export async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<
   }
 
   try {
-    // Ahora confiamos en la cookie HttpOnly que pone el backend.
-    // No leemos ni añadimos tokens desde localStorage por razones de seguridad.
+    // Intentar obtener token de sessionStorage (fallback/redundancia)
+    const token = sessionStorage.getItem('auth_token');
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
   } catch (e) {
-    // Ignorar errores de localStorage
+    // Ignorar errores de sessionStorage
   }
 
   merged.headers = headers;
 
-  // Asegurar envio de cookies por defecto
+  // Asegurar envio de cookies por defecto (cookie HttpOnly es el método principal)
   (merged as any).credentials = (merged as any).credentials ?? 'include';
 
   return fetch(url, merged);
