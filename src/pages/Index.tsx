@@ -9,15 +9,16 @@ import * as consumablesApi from '@/api/consumables';
 import { assignmentsApi } from "@/api/assignments";
 import { peopleApi } from "@/api/people";
 import { extractArray } from "@/lib/extractData";
+import { generateDeviceReportPDF } from "@/lib/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil } from "lucide-react";
+import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
-  const [stats, setStats] = useState({ total: 0, assigned: 0, available: 0, maintenance: 0 });
+  const [stats, setStats] = useState({ total: 0, assigned: 0, available: 0, maintenance: 0, decommissioned: 0 });
   const [devices, setDevices] = useState<any[]>([]);
   const [userAssignments, setUserAssignments] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
@@ -35,6 +36,7 @@ const Index = () => {
   const [newOwnerId, setNewOwnerId] = useState<string>("");
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [ownerError, setOwnerError] = useState<string>("");
+  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -177,8 +179,9 @@ const Index = () => {
       const assigned = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('assign')).length;
       const available = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('available') || (d.status || '') === '').length;
       const maintenance = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('mainten')).length;
+      const decommissioned = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('decomm')).length;
 
-      setStats({ total, assigned, available, maintenance });
+      setStats({ total, assigned, available, maintenance, decommissioned });
 
       setDevices(combined);
 
@@ -235,6 +238,36 @@ const Index = () => {
       console.error("Error cargando dashboard:", err);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const downloadReport = () => {
+    setReportPreviewOpen(true);
+  };
+
+  const generateAndDownloadReport = async () => {
+    try {
+      // Transformar dispositivos para el reporte (solo los no-consumibles)
+      const devicesForReport = devices
+        .filter((d) => !d.id?.toString().includes('-')) // Excluir consumibles (tienen ids como 'ink-1', 'cable-2', etc)
+        .map((device) => ({
+          id: device.id,
+          assetCode: device.assetCode,
+          assetType: device.assetType,
+          brand: device.brand,
+          model: device.model,
+          serialNumber: device.serialNumber,
+          status: device.status,
+          assignedTo: device.assignedTo || undefined,
+          purchaseDate: device.purchaseDate,
+          deliveryDate: device.deliveryDate,
+          receptionDate: device.receptionDate,
+        }));
+
+      await generateDeviceReportPDF(devicesForReport, stats, 'Departamento de Sistemas');
+      setReportPreviewOpen(false);
+    } catch (error) {
+      console.error('Error generando reporte:', error);
     }
   };
 
@@ -382,7 +415,7 @@ const Index = () => {
       <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
 
         {/* Stats */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <div className="relative">
             <StatsCard title="Total Dispositivos y consumibles" value={stats.total} icon={Package} onClick={openDevicesSummary} />
           </div>
@@ -404,6 +437,13 @@ const Index = () => {
           <Button onClick={loadData} disabled={loading}>
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
             Actualizar
+          </Button>
+          <Button 
+            onClick={downloadReport} 
+            className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
+          >
+            <Download className="mr-2 h-4 w-4" />
+            Generar Reporte PDF
           </Button>
         </div>
 
@@ -566,6 +606,132 @@ const Index = () => {
                     {ownerSaving ? 'Guardando...' : 'Confirmar cambio'}
                   </Button>
                 </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Modal de Previsualización de Reporte */}
+        {reportPreviewOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-4 rounded-t-lg sticky top-0">
+                <h2 className="text-xl font-bold">Previsualización del Reporte</h2>
+                <p className="text-red-100 text-sm mt-1">Revisa el contenido antes de generar el PDF</p>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 space-y-6">
+                {/* Header del Reporte */}
+                <div className="text-center space-y-2 border-b pb-4">
+                  <h1 className="text-2xl font-bold">Departamento de Sistemas</h1>
+                  <p className="text-sm text-gray-600">
+                    Fecha: {new Date().toLocaleDateString('es-ES')}
+                  </p>
+                </div>
+
+                {/* Título del Reporte */}
+                <div className="text-center">
+                  <h2 className="text-xl font-bold text-gray-800">Reporte de Dispositivos</h2>
+                </div>
+
+                {/* Resumen de Estadísticas */}
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Total Dispositivos</p>
+                    <p className="text-3xl font-bold text-gray-800">{stats.total}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Asignados</p>
+                    <p className="text-3xl font-bold text-green-600">{stats.assigned}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Disponibles</p>
+                    <p className="text-3xl font-bold text-blue-600">{stats.available}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Mantenimiento</p>
+                    <p className="text-3xl font-bold text-orange-600">{stats.maintenance}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-sm text-gray-600">Baja</p>
+                    <p className="text-3xl font-bold text-red-600">{stats.decommissioned}</p>
+                  </div>
+                </div>
+
+                {/* Tabla Preview */}
+                <div className="border rounded-lg overflow-hidden">
+                  <table className="w-full text-sm">
+                    <thead className="bg-blue-600 text-white">
+                      <tr>
+                        <th className="px-3 py-2 text-left">Código</th>
+                        <th className="px-3 py-2 text-left">Tipo</th>
+                        <th className="px-3 py-2 text-left">Marca</th>
+                        <th className="px-3 py-2 text-left">Estado</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y">
+                      {devices
+                        .filter((d) => !d.id?.toString().includes('-'))
+                        .slice(0, 5)
+                        .map((device) => (
+                          <tr key={device.id} className="hover:bg-gray-50">
+                            <td className="px-3 py-2">{device.assetCode || '-'}</td>
+                            <td className="px-3 py-2">{device.assetType || '-'}</td>
+                            <td className="px-3 py-2">{device.brand || '-'}</td>
+                            <td className="px-3 py-2">
+                              <span
+                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
+                                  device.status === 'assigned'
+                                    ? 'bg-green-100 text-green-700'
+                                    : device.status === 'available'
+                                    ? 'bg-blue-100 text-blue-700'
+                                    : device.status === 'maintenance'
+                                    ? 'bg-yellow-100 text-yellow-700'
+                                    : (device.status || '').toLowerCase().includes('decomm')
+                                    ? 'bg-red-100 text-red-700'
+                                    : 'bg-gray-100 text-gray-700'
+                                }`}
+                              >
+                                {device.status === 'assigned'
+                                  ? 'Asignado'
+                                  : device.status === 'available'
+                                  ? 'Disponible'
+                                  : device.status === 'maintenance'
+                                  ? 'Mantenimiento'
+                                  : (device.status || '').toLowerCase().includes('decomm')
+                                  ? 'Baja'
+                                  : device.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                  {devices.filter((d) => !d.id?.toString().includes('-')).length > 5 && (
+                    <div className="bg-gray-50 px-3 py-2 text-sm text-gray-600 text-center border-t">
+                      ... y {devices.filter((d) => !d.id?.toString().includes('-')).length - 5} dispositivos más
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer con Botones */}
+              <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end gap-3 border-t sticky bottom-0">
+                <Button
+                  variant="outline"
+                  onClick={() => setReportPreviewOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={generateAndDownloadReport}
+                  className="bg-red-600 hover:bg-red-700 text-white font-semibold"
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Descargar PDF
+                </Button>
               </div>
             </div>
           </div>
