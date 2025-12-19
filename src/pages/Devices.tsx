@@ -27,6 +27,9 @@ import {
   Monitor,
   Server,
   Tablet,
+  Download,
+  Printer,
+  Shield,
 } from 'lucide-react';
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
@@ -36,6 +39,7 @@ import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import DeviceFormModal from '@/components/DeviceFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
+import PreviewDevicesReportModal from '@/components/PreviewDevicesReportModal';
 import { Person } from '@/data/mockDataExtended';
 
 const statusVariantMap = {
@@ -60,6 +64,8 @@ const typeIconMap: Record<string, React.ComponentType<{ className?: string }>> =
   keyboard: Keyboard,
   monitor: Monitor,
   server: Server,
+  printer: Printer,
+  security: Shield,
 };
 
 const parseDateSafe = (value?: string) => {
@@ -104,6 +110,7 @@ function DevicesPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [previewOpen, setPreviewOpen] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -363,10 +370,16 @@ function DevicesPage() {
               Gestión de dispositivos tecnológicos
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Agregar Dispositivo
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
+              <Download className="h-4 w-4" />
+              Generar Reporte PDF
+            </Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Agregar Dispositivo
+            </Button>
+          </div>
         </div>
 
               <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -533,7 +546,14 @@ function DevicesPage() {
         description="Esta acción no se puede deshacer. El dispositivo será eliminado permanentemente."
         itemName={selectedDevice ? `${selectedDevice.brand} ${selectedDevice.model} (${selectedDevice.assetCode})` : undefined}
       />
-    </Layout>
+      {previewOpen && (
+        <PreviewDevicesReportModal
+          devices={devices}
+          branches={branches}
+          onClose={() => setPreviewOpen(false)}
+          toast={toast}
+        />
+      )}    </Layout>
   );
 }
 

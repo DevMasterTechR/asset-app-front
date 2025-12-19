@@ -31,6 +31,7 @@ interface DeviceFormModalProps {
   mode: 'create' | 'edit';
   branches: Array<{ id: number; name: string }>;
   people?: Person[];
+  fixedType?: string; // Tipo fijo (ej: 'security') - oculta el selector
 }
 
 const deviceTypes = [
@@ -41,6 +42,7 @@ const deviceTypes = [
   { value: 'mouse', label: 'Mouse' },
   { value: 'keyboard', label: 'Teclado' },
   { value: 'server', label: 'Servidor' },
+  { value: 'printer', label: 'Impresora' },
 ];
 
 const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
@@ -68,11 +70,12 @@ export default function DeviceFormModal({
   mode,
   branches,
   people = [],
+  fixedType,
 }: DeviceFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [formData, setFormData] = useState<CreateDeviceDto>({
     assetCode: '',
-    assetType: 'laptop',
+    assetType: fixedType || 'laptop',
     brand: '',
     model: '',
     serialNumber: '',
@@ -138,7 +141,7 @@ export default function DeviceFormModal({
       // En modo crear permitimos que las fechas queden vacías por defecto
       setFormData({
         assetCode: '',
-        assetType: 'laptop',
+        assetType: fixedType || 'laptop',
         brand: '',
         model: '',
         serialNumber: '',
@@ -152,7 +155,7 @@ export default function DeviceFormModal({
         attributesJson: {},
       });
     }
-  }, [device, mode, open]);
+  }, [device, mode, open, fixedType]);
 
   const hasActiveAssignment = Boolean(device && (device.assignedPersonId || deliveryDateAuto));
 
@@ -487,6 +490,122 @@ export default function DeviceFormModal({
           </>
         );
 
+      case 'printer':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tipo de impresora</Label>
+              <SearchableSelect
+                value={String(getAttrValue('printerType') || 'none')}
+                onValueChange={(value) => handleAttributeChange('printerType', value === 'none' ? '' : value)}
+                placeholder="Selecciona tipo"
+                options={[
+                  { label: 'Ninguno', value: 'none' },
+                  { label: 'Láser', value: 'laser' },
+                  { label: 'Inyección de tinta', value: 'inkjet' },
+                  { label: 'Térmica', value: 'thermal' },
+                  { label: 'Matricial', value: 'dot-matrix' },
+                  { label: 'Multifuncional', value: 'multifunction' },
+                ]}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de conexión</Label>
+              <SearchableSelect
+                value={String(getAttrValue('connectionType') || 'none')}
+                onValueChange={(value) => handleAttributeChange('connectionType', value === 'none' ? '' : value)}
+                placeholder="Selecciona tipo"
+                options={[
+                  { label: 'Ninguno', value: 'none' },
+                  { label: 'USB', value: 'USB' },
+                  { label: 'Ethernet (Red)', value: 'Ethernet' },
+                  { label: 'WiFi', value: 'WiFi' },
+                  { label: 'Bluetooth', value: 'Bluetooth' },
+                ]}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Dirección IP (si aplica)</Label>
+              <Input
+                value={String(getAttrValue('ipAddress') || '')}
+                onChange={(e) => handleAttributeChange('ipAddress', e.target.value)}
+                placeholder="192.168.1.100"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasScanner"
+                checked={Boolean(getAttrValue('hasScanner'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasScanner', checked === true)}
+              />
+              <Label htmlFor="hasScanner" className="cursor-pointer">¿Tiene escáner?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="colorPrinting"
+                checked={Boolean(getAttrValue('colorPrinting'))}
+                onCheckedChange={(checked) => handleAttributeChange('colorPrinting', checked === true)}
+              />
+              <Label htmlFor="colorPrinting" className="cursor-pointer">¿Imprime a color?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasPowerCable"
+                checked={Boolean(getAttrValue('hasPowerCable'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasPowerCable', checked === true)}
+              />
+              <Label htmlFor="hasPowerCable" className="cursor-pointer">¿Tiene cable de poder?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasUSBCable"
+                checked={Boolean(getAttrValue('hasUSBCable'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasUSBCable', checked === true)}
+              />
+              <Label htmlFor="hasUSBCable" className="cursor-pointer">¿Tiene cable USB?</Label>
+            </div>
+          </>
+        );
+
+      case 'security':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Categoría</Label>
+              <Input
+                value={String(getAttrValue('category') || '')}
+                onChange={(e) => handleAttributeChange('category', e.target.value)}
+                placeholder="Cámara, Alarma, Sensor, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Cantidad</Label>
+              <Input
+                type="number"
+                value={Number(getAttrValue('quantity')) || ''}
+                onChange={(e) => handleAttributeChange('quantity', e.target.value ? Number(e.target.value) : 0)}
+                placeholder="1"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Ubicación</Label>
+              <Input
+                value={String(getAttrValue('location') || '')}
+                onChange={(e) => handleAttributeChange('location', e.target.value)}
+                placeholder="Entrada principal, Piso 2, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>URL de imagen</Label>
+              <Input
+                value={String(getAttrValue('imageUrl') || '')}
+                onChange={(e) => handleAttributeChange('imageUrl', e.target.value)}
+                placeholder="https://ejemplo.com/imagen.jpg"
+              />
+            </div>
+          </>
+        );
+
       default:
         return null;
     }
@@ -519,15 +638,26 @@ export default function DeviceFormModal({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Tipo <span className="text-destructive">*</span></Label>
-              <SearchableSelect
-                value={formData.assetType}
-                onValueChange={(value) => handleChange('assetType', value)}
-                placeholder="Selecciona tipo"
-                options={deviceTypes.map(t => ({ label: t.label, value: t.value }))}
-              />
-            </div>
+            {fixedType ? (
+              <div className="space-y-2">
+                <Label>Tipo</Label>
+                <Input
+                  value="Seguridad"
+                  disabled
+                  className="bg-muted"
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label>Tipo <span className="text-destructive">*</span></Label>
+                <SearchableSelect
+                  value={formData.assetType}
+                  onValueChange={(value) => handleChange('assetType', value)}
+                  placeholder="Selecciona tipo"
+                  options={deviceTypes.map(t => ({ label: t.label, value: t.value }))}
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Marca</Label>

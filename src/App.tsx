@@ -14,6 +14,7 @@ import Catalogs from "./pages/Catalogs";
 import Consumables from "./pages/Consumables";
 import NotFound from "./pages/NotFound";
 import Credentials from "./pages/Credentials";
+import Security from "./pages/Security";
 import { PrivateRoute } from "@/components/PrivateRout";
 
 
@@ -64,6 +65,11 @@ const App = () => (
             <Route path="/credentials" element={
               <PrivateRoute>
                 <Credentials />
+              </PrivateRoute>
+            } />
+            <Route path="/security" element={
+              <PrivateRoute>
+                <Security />
               </PrivateRoute>
             } />
 

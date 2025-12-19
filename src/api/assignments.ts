@@ -41,6 +41,7 @@ const mapBackendToFrontend = (b: any): Assignment & { asset?: any; person?: any;
     asset: b.asset ? {
       id: String(b.asset.id),
       assetCode: b.asset.assetCode,
+      assetType: b.asset.assetType || b.asset.type,
       brand: b.asset.brand,
       model: b.asset.model,
       status: b.asset.status,

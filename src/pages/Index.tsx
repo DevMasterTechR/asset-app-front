@@ -8,13 +8,15 @@ import { devicesApi } from "@/api/devices";
 import * as consumablesApi from '@/api/consumables';
 import { assignmentsApi } from "@/api/assignments";
 import { peopleApi } from "@/api/people";
+import { credentialsApi, type Credential } from "@/api/credentials";
 import { extractArray } from "@/lib/extractData";
-import { generateDeviceReportPDF } from "@/lib/pdfGenerator";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const Index = () => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -36,7 +38,13 @@ const Index = () => {
   const [newOwnerId, setNewOwnerId] = useState<string>("");
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [ownerError, setOwnerError] = useState<string>("");
-  const [reportPreviewOpen, setReportPreviewOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [credentials, setCredentials] = useState<Credential[]>([]);
+  const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
+  const [devicesRaw, setDevicesRaw] = useState<any[]>([]);
+  const [consumablesReport, setConsumablesReport] = useState<any[]>([]);
+  const [assignmentsAll, setAssignmentsAll] = useState<any[]>([]);
+  const [assignmentsMode, setAssignmentsMode] = useState<'active' | 'history'>('active');
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -68,10 +76,11 @@ const Index = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [devicesRes, assignmentsRes, peopleRes] = await Promise.all([
+      const [devicesRes, assignmentsRes, peopleRes, credentialsRes] = await Promise.all([
         devicesApi.getAll(),
         assignmentsApi.getAll(),
         peopleApi.getAll(),
+        credentialsApi.getAll(),
       ]);
 
       const devicesList = extractArray<any>(devicesRes) || [];
@@ -137,6 +146,7 @@ const Index = () => {
       }
       const peopleList = extractArray<any>(peopleRes) || [];
       setPeople(peopleList || []);
+      setCredentials(credentialsRes || []);
 
       const peopleMap = new Map<string, string>();
       peopleList.forEach((p: any) => {
@@ -234,6 +244,10 @@ const Index = () => {
       });
 
       setUserAssignments(Array.from(byUser.values()));
+      setActiveAssignments(activeAssignments || []);
+      setAssignmentsAll(assignmentsList || []);
+      setDevicesRaw(devicesList || []);
+      setConsumablesReport(consumablesAll || []);
     } catch (err) {
       console.error("Error cargando dashboard:", err);
     } finally {
@@ -241,34 +255,162 @@ const Index = () => {
     }
   };
 
-  const downloadReport = () => {
-    setReportPreviewOpen(true);
+  const formatDateShort = (value?: string) => {
+    const d = parseDateSafe(value);
+    if (!d) return '-';
+    const day = `${d.getDate()}`.padStart(2, '0');
+    const month = `${d.getMonth() + 1}`.padStart(2, '0');
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
   };
 
-  const generateAndDownloadReport = async () => {
-    try {
-      // Transformar dispositivos para el reporte (solo los no-consumibles)
-      const devicesForReport = devices
-        .filter((d) => !d.id?.toString().includes('-')) // Excluir consumibles (tienen ids como 'ink-1', 'cable-2', etc)
-        .map((device) => ({
-          id: device.id,
-          assetCode: device.assetCode,
-          assetType: device.assetType,
-          brand: device.brand,
-          model: device.model,
-          serialNumber: device.serialNumber,
-          status: device.status,
-          assignedTo: device.assignedTo || undefined,
-          purchaseDate: device.purchaseDate,
-          deliveryDate: device.deliveryDate,
-          receptionDate: device.receptionDate,
-        }));
+  const getPersonNameById = (id?: number | string) => {
+    if (id === undefined || id === null) return '-';
+    const match = people.find((p) => String(p.id) === String(id));
+    if (!match) return '-';
+    const name = `${match.firstName || ''} ${match.lastName || ''}`.trim();
+    return name || '-';
+  };
 
-      await generateDeviceReportPDF(devicesForReport, stats, 'Departamento de Sistemas');
-      setReportPreviewOpen(false);
-    } catch (error) {
-      console.error('Error generando reporte:', error);
+  const getReportData = () => {
+    return {
+      people,
+      credentials,
+      devices: devicesRaw,
+      consumables: consumablesReport,
+      assignments: assignmentsMode === 'active' ? activeAssignments : assignmentsAll,
+    };
+  };
+
+  const downloadReport = () => {
+    const doc = new jsPDF();
+    const data = getReportData();
+    let y = 18;
+
+    const assignmentsTitle = assignmentsMode === 'active' ? 'Asignaciones activas' : 'Historial de asignaciones';
+    const assignmentsHead = assignmentsMode === 'active'
+      ? ['Persona', 'Equipo', 'Sucursal', 'F. Asignación']
+      : ['Persona', 'Equipo', 'Sucursal', 'F. Asignación', 'F. Devolución'];
+
+    doc.setFontSize(18);
+    doc.text('Reporte General del Sistema', 14, y);
+    y += 8;
+
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 14, y);
+    y += 12;
+
+    const addSectionTitle = (title: string) => {
+      doc.setFontSize(14);
+      doc.text(title, 14, y);
+      y += 6;
+    };
+
+    // Personas
+    if (data.people.length > 0) {
+      addSectionTitle('Personas');
+      autoTable(doc, {
+        startY: y,
+        head: [['Nombre', 'Sucursal', 'Departamento']],
+        body: data.people.map((p: any) => [
+          `${p.firstName || ''} ${p.lastName || ''}`.trim() || '-',
+          p.branch?.name || p.branchName || '-',
+          p.department?.name || p.departmentName || '-',
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
     }
+
+    // Credenciales (sin contraseñas)
+    if (data.credentials.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      addSectionTitle('Credenciales (sin contraseñas)');
+      autoTable(doc, {
+        startY: y,
+        head: [['Persona', 'Sistema', 'Usuario', 'Notas']],
+        body: data.credentials.map((c: Credential) => [
+          getPersonNameById(c.personId),
+          c.system?.toUpperCase?.() || c.system || '-',
+          c.username || '-',
+          c.notes || '-',
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Dispositivos
+    if (data.devices.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      addSectionTitle('Dispositivos');
+      autoTable(doc, {
+        startY: y,
+        head: [['Código', 'Tipo', 'Marca', 'Modelo', 'Estado']],
+        body: data.devices.map((d: any) => [
+          d.assetCode || d.code || '-',
+          d.assetType || d.type || '-',
+          d.brand || '-',
+          d.model || '-',
+          d.status || '-',
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Consumibles
+    if (data.consumables.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      addSectionTitle('Consumibles');
+      autoTable(doc, {
+        startY: y,
+        head: [['Tipo', 'Marca', 'Modelo', 'Cantidad', 'F. Compra']],
+        body: data.consumables.map((c: any) => [
+          c.assetType || 'Consumible',
+          c.brand || '-',
+          c.model || '-',
+          c.quantity ?? '-',
+          formatDateShort(c.purchaseDate),
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+      y = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Asignaciones (activas o historial)
+    if (data.assignments.length > 0) {
+      if (y > 250) { doc.addPage(); y = 20; }
+      addSectionTitle(assignmentsTitle);
+      autoTable(doc, {
+        startY: y,
+        head: [assignmentsHead],
+        body: data.assignments.map((a: any) => {
+          const base = [
+            `${a.person?.firstName || ''} ${a.person?.lastName || ''}`.trim() || '-',
+            a.asset?.assetCode || a.asset?.code || a.assetId || '-',
+            a.branch?.name || a.branchName || '-',
+            formatDateShort(a.assignmentDate),
+          ];
+          return assignmentsMode === 'history'
+            ? [...base, formatDateShort(a.returnDate)]
+            : base;
+        }),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+    }
+
+    doc.save(`Reporte_General_${new Date().toISOString().split('T')[0]}.pdf`);
   };
 
   const openDevicesSummary = async () => {
@@ -327,6 +469,27 @@ const Index = () => {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const revealSignature = () => {
+      const encoded = 'SGVjaG8gcG9yIEJyeWFuIFF1aXNwZSAoQnJ5YW40MDYp';
+      const signature = typeof atob === 'function' ? atob(encoded) : 'Hecho por Bryan Quispe (Bryan406)';
+      console.info(signature);
+    };
+
+    const checkHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash.includes('bryan406')) {
+        revealSignature();
+      }
+    };
+
+    checkHash();
+    window.addEventListener('hashchange', checkHash);
+    return () => window.removeEventListener('hashchange', checkHash);
+  }, []);
+
   const filteredDevices = devices.filter((d) =>
     Object.values(d).join(" ").toLowerCase().includes(searchTerm.toLowerCase())
   );
@@ -344,6 +507,8 @@ const Index = () => {
 
   const totalPagesByPerson = Math.max(1, Math.ceil(filteredUsers.length / limitByPerson));
   const displayedUsers = filteredUsers.slice((pageByPerson - 1) * limitByPerson, pageByPerson * limitByPerson);
+  const assignmentsForDisplay = assignmentsMode === 'active' ? activeAssignments : assignmentsAll;
+  const assignmentsLabel = assignmentsMode === 'active' ? 'Asignaciones (activas)' : 'Asignaciones (historial)';
 
   const openOwnerEditor = (u: any) => {
     setOwnerSelection({ userId: u.userId, userName: u.userName, branch: u.branch, devices: u.devices || [] });
@@ -426,25 +591,28 @@ const Index = () => {
 
         <DevicesSummaryModal open={summaryOpen} onOpenChange={setSummaryOpen} codes={summaryCodes} loading={summaryLoading} />
 
-        {/* Search */}
-        <div className="flex items-center gap-3 mt-4">
-          <Search className="h-5 w-5 text-gray-400" />
-          <Input
-            placeholder="Buscar dispositivos por codigo, marca, modelo, número de serie..."
-            value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setPage(1); setPageByPerson(1); }}
-          />
-          <Button onClick={loadData} disabled={loading}>
-            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
-            Actualizar
-          </Button>
-          <Button 
-            onClick={downloadReport} 
-            className="bg-red-600 hover:bg-red-700 text-white font-semibold shadow-lg hover:shadow-xl transition-all"
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Generar Reporte PDF
-          </Button>
+        {/* Acciones y buscador */}
+        <div className="mt-4 space-y-3">
+          <div className="flex justify-end gap-2">
+             <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
+              <Download className="h-4 w-4" />
+             Generar Reporte General PDF
+            </Button>
+            <Button onClick={loadData} disabled={loading}>
+              {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Actualizar
+            </Button>
+           
+          </div>
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar dispositivos por codigo, marca, modelo, número de serie..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => { setSearchTerm(e.target.value); setPage(1); setPageByPerson(1); }}
+            />
+          </div>
         </div>
 
         {/* Tabs: General y Equipo por persona */}
@@ -611,125 +779,237 @@ const Index = () => {
           </div>
         )}
 
-        {/* Modal de Previsualización de Reporte */}
-        {reportPreviewOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-            <div className="w-full max-w-2xl rounded-lg bg-white shadow-xl max-h-[90vh] overflow-y-auto">
-              {/* Header */}
-              <div className="bg-gradient-to-r from-red-600 to-red-700 text-white px-6 py-4 rounded-t-lg sticky top-0">
-                <h2 className="text-xl font-bold">Previsualización del Reporte</h2>
-                <p className="text-red-100 text-sm mt-1">Revisa el contenido antes de generar el PDF</p>
+        {/* Report Preview Modal */}
+        {previewOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+            <div className="w-full max-w-6xl rounded-lg bg-white shadow-xl my-8">
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">Previsualización del reporte general</h2>
+                  <p className="text-sm text-blue-100 mt-1">Personas, credenciales, dispositivos, consumibles y asignaciones</p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setPreviewOpen(false)}
+                  className="text-white hover:bg-blue-800"
+                >
+                  ✕
+                </Button>
               </div>
 
-              {/* Content */}
-              <div className="p-6 space-y-6">
-                {/* Header del Reporte */}
-                <div className="text-center space-y-2 border-b pb-4">
-                  <h1 className="text-2xl font-bold">Departamento de Sistemas</h1>
-                  <p className="text-sm text-gray-600">
-                    Fecha: {new Date().toLocaleDateString('es-ES')}
-                  </p>
-                </div>
-
-                {/* Título del Reporte */}
-                <div className="text-center">
-                  <h2 className="text-xl font-bold text-gray-800">Reporte de Dispositivos</h2>
-                </div>
-
-                {/* Resumen de Estadísticas */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-gray-50 p-4 rounded-lg">
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">Total Dispositivos</p>
-                    <p className="text-3xl font-bold text-gray-800">{stats.total}</p>
+              <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-blue-700">{people.length}</div>
+                    <div className="text-sm text-blue-600 font-medium mt-1">Personas</div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">Asignados</p>
-                    <p className="text-3xl font-bold text-green-600">{stats.assigned}</p>
+                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-indigo-700">{credentials.length}</div>
+                    <div className="text-sm text-indigo-600 font-medium mt-1">Credenciales</div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">Disponibles</p>
-                    <p className="text-3xl font-bold text-blue-600">{stats.available}</p>
+                  <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-emerald-700">{devicesRaw.length}</div>
+                    <div className="text-sm text-emerald-600 font-medium mt-1">Dispositivos</div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">Mantenimiento</p>
-                    <p className="text-3xl font-bold text-orange-600">{stats.maintenance}</p>
+                  <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-amber-700">{consumablesReport.length}</div>
+                    <div className="text-sm text-amber-600 font-medium mt-1">Consumibles</div>
                   </div>
-                  <div className="text-center">
-                    <p className="text-sm text-gray-600">Baja</p>
-                    <p className="text-3xl font-bold text-red-600">{stats.decommissioned}</p>
+                  <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 text-center">
+                    <div className="text-3xl font-bold text-purple-700">{assignmentsForDisplay.length}</div>
+                    <div className="text-sm text-purple-600 font-medium mt-1">{assignmentsLabel}</div>
                   </div>
                 </div>
 
-                {/* Tabla Preview */}
-                <div className="border rounded-lg overflow-hidden">
-                  <table className="w-full text-sm">
-                    <thead className="bg-blue-600 text-white">
-                      <tr>
-                        <th className="px-3 py-2 text-left">Código</th>
-                        <th className="px-3 py-2 text-left">Tipo</th>
-                        <th className="px-3 py-2 text-left">Marca</th>
-                        <th className="px-3 py-2 text-left">Estado</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y">
-                      {devices
-                        .filter((d) => !d.id?.toString().includes('-'))
-                        .slice(0, 5)
-                        .map((device) => (
-                          <tr key={device.id} className="hover:bg-gray-50">
-                            <td className="px-3 py-2">{device.assetCode || '-'}</td>
-                            <td className="px-3 py-2">{device.assetType || '-'}</td>
-                            <td className="px-3 py-2">{device.brand || '-'}</td>
-                            <td className="px-3 py-2">
-                              <span
-                                className={`px-2 py-1 rounded-full text-xs font-semibold ${
-                                  device.status === 'assigned'
-                                    ? 'bg-green-100 text-green-700'
-                                    : device.status === 'available'
-                                    ? 'bg-blue-100 text-blue-700'
-                                    : device.status === 'maintenance'
-                                    ? 'bg-yellow-100 text-yellow-700'
-                                    : (device.status || '').toLowerCase().includes('decomm')
-                                    ? 'bg-red-100 text-red-700'
-                                    : 'bg-gray-100 text-gray-700'
-                                }`}
-                              >
-                                {device.status === 'assigned'
-                                  ? 'Asignado'
-                                  : device.status === 'available'
-                                  ? 'Disponible'
-                                  : device.status === 'maintenance'
-                                  ? 'Mantenimiento'
-                                  : (device.status || '').toLowerCase().includes('decomm')
-                                  ? 'Baja'
-                                  : device.status}
-                              </span>
-                            </td>
+                {/* Personas */}
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">Personas ({people.length})</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Nombre</th>
+                          <th className="px-3 py-2 text-left">Sucursal</th>
+                          <th className="px-3 py-2 text-left">Departamento</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {people.slice(0, 6).map((p, idx) => (
+                          <tr key={p.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="px-3 py-2 border-t font-medium">{`${p.firstName || ''} ${p.lastName || ''}`.trim() || '-'}</td>
+                            <td className="px-3 py-2 border-t">{p.branch?.name || p.branchName || '-'}</td>
+                            <td className="px-3 py-2 border-t">{p.department?.name || p.departmentName || '-'}</td>
                           </tr>
                         ))}
-                    </tbody>
-                  </table>
-                  {devices.filter((d) => !d.id?.toString().includes('-')).length > 5 && (
-                    <div className="bg-gray-50 px-3 py-2 text-sm text-gray-600 text-center border-t">
-                      ... y {devices.filter((d) => !d.id?.toString().includes('-')).length - 5} dispositivos más
+                      </tbody>
+                    </table>
+                  </div>
+                  {people.length > 6 && (
+                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {people.length - 6} personas más</div>
+                  )}
+                </div>
+
+                {/* Credenciales */}
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">Credenciales ({credentials.length})</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Persona</th>
+                          <th className="px-3 py-2 text-left">Sistema</th>
+                          <th className="px-3 py-2 text-left">Usuario</th>
+                          <th className="px-3 py-2 text-left">Notas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {credentials.slice(0, 6).map((c, idx) => (
+                          <tr key={c.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="px-3 py-2 border-t font-medium">{getPersonNameById(c.personId)}</td>
+                            <td className="px-3 py-2 border-t">{c.system?.toUpperCase?.() || c.system || '-'}</td>
+                            <td className="px-3 py-2 border-t">{c.username || '-'}</td>
+                            <td className="px-3 py-2 border-t">{c.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {credentials.length > 6 && (
+                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {credentials.length - 6} credenciales más</div>
+                  )}
+                </div>
+
+                {/* Dispositivos */}
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">Dispositivos ({devicesRaw.length})</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Código</th>
+                          <th className="px-3 py-2 text-left">Tipo</th>
+                          <th className="px-3 py-2 text-left">Marca</th>
+                          <th className="px-3 py-2 text-left">Modelo</th>
+                          <th className="px-3 py-2 text-left">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {devicesRaw.slice(0, 6).map((d, idx) => (
+                          <tr key={d.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="px-3 py-2 border-t font-medium">{d.assetCode || d.code || '-'}</td>
+                            <td className="px-3 py-2 border-t">{d.assetType || d.type || '-'}</td>
+                            <td className="px-3 py-2 border-t">{d.brand || '-'}</td>
+                            <td className="px-3 py-2 border-t">{d.model || '-'}</td>
+                            <td className="px-3 py-2 border-t">{d.status || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {devicesRaw.length > 6 && (
+                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {devicesRaw.length - 6} dispositivos más</div>
+                  )}
+                </div>
+
+                {/* Consumibles */}
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">Consumibles ({consumablesReport.length})</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Tipo</th>
+                          <th className="px-3 py-2 text-left">Marca</th>
+                          <th className="px-3 py-2 text-left">Modelo</th>
+                          <th className="px-3 py-2 text-left">Cantidad</th>
+                          <th className="px-3 py-2 text-left">F. Compra</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {consumablesReport.slice(0, 6).map((c, idx) => (
+                          <tr key={c.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="px-3 py-2 border-t font-medium">{c.assetType || 'Consumible'}</td>
+                            <td className="px-3 py-2 border-t">{c.brand || '-'}</td>
+                            <td className="px-3 py-2 border-t">{c.model || '-'}</td>
+                            <td className="px-3 py-2 border-t">{c.quantity ?? '-'}</td>
+                            <td className="px-3 py-2 border-t">{formatDateShort(c.purchaseDate)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {consumablesReport.length > 6 && (
+                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {consumablesReport.length - 6} consumibles más</div>
+                  )}
+                </div>
+
+                {/* Asignaciones */}
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
+                    <h3 className="text-sm font-semibold text-gray-700">{assignmentsLabel} ({assignmentsForDisplay.length})</h3>
+                    <div className="flex items-center gap-2 text-xs text-gray-600">
+                      <span>Ver:</span>
+                      <select
+                        className="rounded-md border px-2 py-1 text-xs bg-white"
+                        value={assignmentsMode}
+                        onChange={(e) => setAssignmentsMode(e.target.value as 'active' | 'history')}
+                      >
+                        <option value="active">Asignaciones activas</option>
+                        <option value="history">Historial de asignaciones</option>
+                      </select>
                     </div>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Persona</th>
+                          <th className="px-3 py-2 text-left">Equipo</th>
+                          <th className="px-3 py-2 text-left">Sucursal</th>
+                          <th className="px-3 py-2 text-left">F. Asignación</th>
+                          {assignmentsMode === 'history' && <th className="px-3 py-2 text-left">F. Devolución</th>}
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {assignmentsForDisplay.length === 0 ? (
+                          <tr>
+                            <td colSpan={assignmentsMode === 'history' ? 5 : 4} className="px-3 py-4 text-center text-muted-foreground">No hay asignaciones para mostrar.</td>
+                          </tr>
+                        ) : (
+                          assignmentsForDisplay.slice(0, 6).map((a, idx) => (
+                            <tr key={a.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="px-3 py-2 border-t font-medium">{`${a.person?.firstName || ''} ${a.person?.lastName || ''}`.trim() || '-'}</td>
+                              <td className="px-3 py-2 border-t">{a.asset?.assetCode || a.asset?.code || a.assetId || '-'}</td>
+                              <td className="px-3 py-2 border-t">{a.branch?.name || a.branchName || '-'}</td>
+                              <td className="px-3 py-2 border-t">{formatDateShort(a.assignmentDate)}</td>
+                              {assignmentsMode === 'history' && (
+                                <td className="px-3 py-2 border-t">{formatDateShort(a.returnDate)}</td>
+                              )}
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  {assignmentsForDisplay.length > 6 && (
+                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {assignmentsForDisplay.length - 6} asignaciones más</div>
                   )}
                 </div>
               </div>
 
-              {/* Footer con Botones */}
-              <div className="bg-gray-50 px-6 py-4 rounded-b-lg flex justify-end gap-3 border-t sticky bottom-0">
-                <Button
-                  variant="outline"
-                  onClick={() => setReportPreviewOpen(false)}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={generateAndDownloadReport}
-                  className="bg-red-600 hover:bg-red-700 text-white font-semibold"
-                >
-                  <Download className="mr-2 h-4 w-4" />
+              <div className="border-t px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+                <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancelar</Button>
+                <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { downloadReport(); setPreviewOpen(false); }}>
+                  <Download className="h-4 w-4" />
                   Descargar PDF
                 </Button>
               </div>

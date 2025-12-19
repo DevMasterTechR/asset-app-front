@@ -11,9 +11,16 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { Search, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Key, Copy, Check } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Key, Copy, Check, Download } from 'lucide-react';
 import { 
   credentialsApi, 
   CreateCredentialDto, 
@@ -25,6 +32,8 @@ import { sortPeopleByName } from '@/lib/sort';
 import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import { Person } from '@/data/mockDataExtended';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import CredentialFormModal from '@/components/CredentialFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import Pagination, { DEFAULT_PAGE_SIZE } from '@/components/Pagination';
@@ -56,6 +65,10 @@ function CredentialsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [filterPersonId, setFilterPersonId] = useState<'all' | string>('all');
+  const [filterSystem, setFilterSystem] = useState<'all' | keyof typeof systemLabelMap>('all');
+  const [personFilterSearch, setPersonFilterSearch] = useState('');
 
   useEffect(() => {
     loadData();
@@ -118,6 +131,56 @@ function CredentialsPage() {
 
   const togglePasswordVisibility = (id: number) => {
     setShowPasswords(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const getReportData = () => {
+    return credentials.filter((cred) => {
+      const matchPerson = filterPersonId === 'all' || String(cred.personId) === filterPersonId;
+      const matchSystem = filterSystem === 'all' || cred.system === filterSystem;
+      return matchPerson && matchSystem;
+    });
+  };
+
+  const downloadReport = () => {
+    const doc = new jsPDF();
+    const data = getReportData();
+    let y = 20;
+
+    doc.setFontSize(18);
+    doc.text('Reporte de Credenciales', 14, y);
+    y += 10;
+
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 14, y);
+    y += 5;
+    const personLabel = filterPersonId === 'all' ? 'Todas las personas' : getPersonName(Number(filterPersonId));
+    const systemLabel = filterSystem === 'all' ? 'Todos los sistemas' : systemLabelMap[filterSystem];
+    doc.text(`Persona: ${personLabel}`, 14, y);
+    y += 5;
+    doc.text(`Sistema: ${systemLabel}`, 14, y);
+    y += 10;
+
+    if (data.length === 0) {
+      doc.text('No hay datos para los filtros seleccionados.', 14, y);
+    } else {
+      autoTable(doc, {
+        startY: y,
+        head: [['Persona', 'Sistema', 'Usuario', 'Contraseña', 'Notas']],
+        body: data.map((cred) => [
+          getPersonName(cred.personId),
+          systemLabelMap[cred.system],
+          cred.username,
+          cred.password,
+          cred.notes || '-'
+        ]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+    }
+
+    doc.save(`Reporte_Credenciales_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({ title: 'Reporte descargado exitosamente' });
   };
 
   const copyPasswordToClipboard = async (password: string, id: number) => {
@@ -207,6 +270,8 @@ function CredentialsPage() {
     }
   };
 
+  const reportData = getReportData();
+
   return (
     <Layout>
       <div className="p-6 md:pl-0 space-y-6">
@@ -217,10 +282,16 @@ function CredentialsPage() {
               Gestión de credenciales de acceso a sistemas
             </p>
           </div>
-          <Button onClick={handleCreate}>
-            <Plus className="mr-2 h-4 w-4" />
-            Agregar Credencial
-          </Button>
+          <div className="flex flex-col sm:flex-row gap-2">
+            <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
+              <Download className="h-4 w-4" />
+              Generar Reporte PDF
+            </Button>
+            <Button onClick={handleCreate}>
+              <Plus className="mr-2 h-4 w-4" />
+              Agregar Credencial
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
@@ -369,6 +440,142 @@ function CredentialsPage() {
           </div>
         </div>
       </div>
+
+      {/* Report Preview Modal */}
+      {previewOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+          <div className="w-full max-w-5xl rounded-lg bg-white shadow-xl my-8">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+              <div>
+                <h2 className="text-xl font-bold">Previsualización del Reporte de Credenciales</h2>
+                <p className="text-sm text-blue-100 mt-1">Filtra por persona o sistema y valida los datos antes de exportar</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setPreviewOpen(false)}
+                className="text-white hover:bg-blue-800"
+              >
+                ✕
+              </Button>
+            </div>
+
+            <div className="p-6 max-h-[70vh] overflow-y-auto">
+              <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-sm">
+                <h3 className="text-sm font-bold text-blue-900 mb-3">Filtros del reporte</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="text-xs font-semibold text-blue-900 mb-2 block">Persona</label>
+                    <Select value={filterPersonId} onValueChange={(v) => setFilterPersonId(v)}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Todas las personas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <div className="px-3 py-2">
+                          <Input
+                            placeholder="Buscar persona..."
+                            value={personFilterSearch}
+                            onChange={(e) => setPersonFilterSearch(e.target.value)}
+                            autoFocus
+                          />
+                        </div>
+                        <SelectItem value="all">Todas las personas</SelectItem>
+                        {people
+                          .filter((p) => `${p.firstName} ${p.lastName}`.toLowerCase().includes(personFilterSearch.toLowerCase()))
+                          .map((p) => (
+                          <SelectItem key={p.id} value={String(p.id)}>
+                            {p.firstName} {p.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-semibold text-blue-900 mb-2 block">Sistema</label>
+                    <Select value={filterSystem} onValueChange={(v) => setFilterSystem(v as 'all' | keyof typeof systemLabelMap)}>
+                      <SelectTrigger className="bg-white">
+                        <SelectValue placeholder="Todos los sistemas" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos los sistemas</SelectItem>
+                        {Object.entries(systemLabelMap).map(([key, label]) => (
+                          <SelectItem key={key} value={key}>
+                            {label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-blue-700">{reportData.length}</div>
+                  <div className="text-sm text-blue-600 font-medium mt-1">Credenciales filtradas</div>
+                </div>
+                <div className="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-indigo-700">{new Set(reportData.map((c) => c.personId)).size}</div>
+                  <div className="text-sm text-indigo-600 font-medium mt-1">Personas</div>
+                </div>
+                <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 text-center">
+                  <div className="text-3xl font-bold text-amber-700">{new Set(reportData.map((c) => c.system)).size}</div>
+                  <div className="text-sm text-amber-600 font-medium mt-1">Sistemas</div>
+                </div>
+              </div>
+
+              {reportData.length > 0 ? (
+                <div className="border rounded-lg overflow-hidden shadow-sm">
+                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                    <h3 className="text-sm font-semibold text-gray-700">Credenciales ({reportData.length} registros)</h3>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-xs">
+                      <thead className="bg-blue-600 text-white">
+                        <tr>
+                          <th className="px-3 py-2 text-left">Persona</th>
+                          <th className="px-3 py-2 text-left">Sistema</th>
+                          <th className="px-3 py-2 text-left">Usuario</th>
+                          <th className="px-3 py-2 text-left">Contraseña</th>
+                          <th className="px-3 py-2 text-left">Notas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {reportData.slice(0, 8).map((cred, idx) => (
+                          <tr key={cred.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                            <td className="px-3 py-2 border-t font-medium">{getPersonName(cred.personId)}</td>
+                            <td className="px-3 py-2 border-t">{systemLabelMap[cred.system]}</td>
+                            <td className="px-3 py-2 border-t">{cred.username}</td>
+                            <td className="px-3 py-2 border-t">{cred.password}</td>
+                            <td className="px-3 py-2 border-t">{cred.notes || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  {reportData.length > 8 && (
+                    <div className="bg-gray-50 px-4 py-3 border-t text-center">
+                      <p className="text-xs text-gray-600">... y {reportData.length - 8} registros más en el reporte completo</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="border border-dashed border-blue-200 rounded-lg p-6 text-center text-sm text-muted-foreground">
+                  No hay datos para los filtros seleccionados.
+                </div>
+              )}
+            </div>
+
+            <div className="border-t px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+              <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancelar</Button>
+              <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { downloadReport(); setPreviewOpen(false); }}>
+                <Download className="h-4 w-4" />
+                Descargar PDF
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <CredentialFormModal
         open={formModalOpen}

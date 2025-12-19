@@ -21,10 +21,20 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Search, Plus, Edit, Trash2 } from 'lucide-react';
+import { Search, Plus, Edit, Trash2, Download } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import type { Branch, Department, Role } from '@/data/mockDataExtended';
 import * as catalogsApi from '@/api/catalogs';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { sortByString } from '@/lib/sort';
 import { useSort } from '@/lib/useSort';
 import BranchFormModal from '@/components/BranchFormModal';
@@ -66,6 +76,10 @@ export default function Catalogs() {
     id: string;
     name: string;
   } | null>(null);
+
+  // Report preview state
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const [filterType, setFilterType] = useState<'all' | 'branches' | 'departments' | 'roles'>('all');
 
   // Load data
   useEffect(() => {
@@ -236,33 +250,136 @@ export default function Catalogs() {
   const rolesTotalPages = Math.max(1, Math.ceil(displayedRoles.length / rolesLimit));
   const paginatedRoles = displayedRoles.slice((rolesPage - 1) * rolesLimit, rolesPage * rolesLimit);
 
+  // Report data based on filters
+  const getReportData = () => {
+    switch (filterType) {
+      case 'branches':
+        return { branches, departments: [], roles: [] };
+      case 'departments':
+        return { branches: [], departments, roles: [] };
+      case 'roles':
+        return { branches: [], departments: [], roles };
+      default:
+        return { branches, departments, roles };
+    }
+  };
+
+  const downloadReport = () => {
+    const doc = new jsPDF();
+    const reportData = getReportData();
+    let yPosition = 20;
+
+    // Title
+    doc.setFontSize(18);
+    doc.text('Reporte de Catálogos', 14, yPosition);
+    yPosition += 10;
+
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${new Date().toLocaleDateString('es-ES')}`, 14, yPosition);
+    yPosition += 5;
+    doc.text(`Filtro: ${filterType === 'all' ? 'Todos los catálogos' : filterType === 'branches' ? 'Sucursales' : filterType === 'departments' ? 'Departamentos' : 'Roles'}`, 14, yPosition);
+    yPosition += 10;
+
+    // Branches
+    if (reportData.branches.length > 0) {
+      doc.setFontSize(14);
+      doc.text('Sucursales', 14, yPosition);
+      yPosition += 7;
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Nombre', 'Dirección', 'Región']],
+        body: reportData.branches.map((b) => [b.name, b.address, b.region]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Departments
+    if (reportData.departments.length > 0) {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.setFontSize(14);
+      doc.text('Departamentos', 14, yPosition);
+      yPosition += 7;
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Nombre', 'Descripción']],
+        body: reportData.departments.map((d) => [d.name, d.description]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+
+      yPosition = (doc as any).lastAutoTable.finalY + 10;
+    }
+
+    // Roles
+    if (reportData.roles.length > 0) {
+      if (yPosition > 250) {
+        doc.addPage();
+        yPosition = 20;
+      }
+      doc.setFontSize(14);
+      doc.text('Roles', 14, yPosition);
+      yPosition += 7;
+
+      autoTable(doc, {
+        startY: yPosition,
+        head: [['Nombre', 'Descripción']],
+        body: reportData.roles.map((r) => [r.name, r.description]),
+        theme: 'grid',
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 9 },
+      });
+    }
+
+    doc.save(`Reporte_Catalogos_${new Date().toISOString().split('T')[0]}.pdf`);
+    toast({ title: 'Reporte descargado exitosamente' });
+  };
+
   return (
     <Layout>
       <div className="p-6 md:pl-0 space-y-6">
         {/* Header */}
-        <div>
-          <h1 className="text-3xl font-bold">Catálogos</h1>
-          <p className="text-muted-foreground mt-1">
-            Gestión de sucursales, departamentos y roles
-          </p>
+        <div className="flex items-start justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Catálogos</h1>
+            <p className="text-muted-foreground mt-1">
+              Gestión de sucursales, departamentos y roles
+            </p>
+          </div>
         </div>
 
-        {/* Search */}
-        <div className="relative max-w-md">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            type="text"
-            placeholder="Buscar..."
-            className="pl-10"
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value);
-              // Reset pagination for all catalog tables
-              setBranchesPage(1);
-              setDepartmentsPage(1);
-              setRolesPage(1);
-            }}
-          />
+        {/* Acciones y buscador */}
+        <div className="flex flex-col gap-3">
+          <div className="flex justify-end gap-2">
+            <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
+              <Download className="h-4 w-4" />
+              Generar Reporte PDF
+            </Button>
+          </div>
+          <div className="relative w-full">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Buscar..."
+              className="pl-10"
+              value={searchTerm}
+              onChange={(e) => {
+                setSearchTerm(e.target.value);
+                setBranchesPage(1);
+                setDepartmentsPage(1);
+                setRolesPage(1);
+              }}
+            />
+          </div>
         </div>
 
         {/* Tabs */}
@@ -494,6 +611,212 @@ export default function Catalogs() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Report Preview Modal */}
+        {previewOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
+            <div className="w-full max-w-6xl rounded-lg bg-white shadow-xl my-8">
+              {/* Header */}
+              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">Previsualización del Reporte de Catálogos</h2>
+                  <p className="text-sm text-blue-100 mt-1">
+                    Ajusta los filtros y verifica los datos antes de descargar
+                  </p>
+                </div>
+                <Button 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={() => setPreviewOpen(false)}
+                  className="text-white hover:bg-blue-800"
+                >
+                  ✕
+                </Button>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                {/* Filtros */}
+                <div className="mb-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-lg shadow-sm">
+                  <h3 className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filtros del Reporte
+                  </h3>
+                  <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
+                    <div>
+                      <label className="text-xs font-semibold text-blue-900 mb-2 block">
+                        Tipo de Catálogo
+                      </label>
+                      <Select value={filterType} onValueChange={(v: any) => setFilterType(v)}>
+                        <SelectTrigger className="bg-white">
+                          <SelectValue placeholder="Todos los catálogos" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todos los catálogos</SelectItem>
+                          <SelectItem value="branches">Sucursales</SelectItem>
+                          <SelectItem value="departments">Departamentos</SelectItem>
+                          <SelectItem value="roles">Roles</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Resumen de estadísticas */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                  {(filterType === 'all' || filterType === 'branches') && (
+                    <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center transform transition hover:scale-105">
+                      <div className="text-3xl font-bold text-blue-700">{branches.length}</div>
+                      <div className="text-sm text-blue-600 font-medium mt-1">Sucursales</div>
+                    </div>
+                  )}
+                  {(filterType === 'all' || filterType === 'departments') && (
+                    <div className="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 text-center transform transition hover:scale-105">
+                      <div className="text-3xl font-bold text-indigo-700">{departments.length}</div>
+                      <div className="text-sm text-indigo-600 font-medium mt-1">Departamentos</div>
+                    </div>
+                  )}
+                  {(filterType === 'all' || filterType === 'roles') && (
+                    <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 text-center transform transition hover:scale-105">
+                      <div className="text-3xl font-bold text-purple-700">{roles.length}</div>
+                      <div className="text-sm text-purple-600 font-medium mt-1">Roles</div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Vista previa de datos */}
+                {(filterType === 'all' || filterType === 'branches') && branches.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden shadow-sm mb-6">
+                    <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                      <h3 className="text-sm font-semibold text-gray-700">
+                        Sucursales ({branches.length} registros)
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-blue-600 text-white">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Nombre</th>
+                            <th className="px-3 py-2 text-left">Dirección</th>
+                            <th className="px-3 py-2 text-left">Región</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {branches.slice(0, 5).map((branch, idx) => (
+                            <tr key={branch.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="px-3 py-2 border-t font-medium">{branch.name}</td>
+                              <td className="px-3 py-2 border-t">{branch.address}</td>
+                              <td className="px-3 py-2 border-t">{branch.region}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {branches.length > 5 && (
+                      <div className="bg-gray-50 px-4 py-3 border-t text-center">
+                        <p className="text-xs text-gray-600">
+                          ... y {branches.length - 5} sucursales más en el reporte completo
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(filterType === 'all' || filterType === 'departments') && departments.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden shadow-sm mb-6">
+                    <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                      <h3 className="text-sm font-semibold text-gray-700">
+                        Departamentos ({departments.length} registros)
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-blue-600 text-white">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Nombre</th>
+                            <th className="px-3 py-2 text-left">Descripción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {departments.slice(0, 5).map((dept, idx) => (
+                            <tr key={dept.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="px-3 py-2 border-t font-medium">{dept.name}</td>
+                              <td className="px-3 py-2 border-t">{dept.description}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {departments.length > 5 && (
+                      <div className="bg-gray-50 px-4 py-3 border-t text-center">
+                        <p className="text-xs text-gray-600">
+                          ... y {departments.length - 5} departamentos más en el reporte completo
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {(filterType === 'all' || filterType === 'roles') && roles.length > 0 && (
+                  <div className="border rounded-lg overflow-hidden shadow-sm mb-6">
+                    <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
+                      <h3 className="text-sm font-semibold text-gray-700">
+                        Roles ({roles.length} registros)
+                      </h3>
+                    </div>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-xs">
+                        <thead className="bg-blue-600 text-white">
+                          <tr>
+                            <th className="px-3 py-2 text-left">Nombre</th>
+                            <th className="px-3 py-2 text-left">Descripción</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {roles.slice(0, 5).map((role, idx) => (
+                            <tr key={role.id} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
+                              <td className="px-3 py-2 border-t font-medium">{role.name}</td>
+                              <td className="px-3 py-2 border-t">{role.description}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {roles.length > 5 && (
+                      <div className="bg-gray-50 px-4 py-3 border-t text-center">
+                        <p className="text-xs text-gray-600">
+                          ... y {roles.length - 5} roles más en el reporte completo
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Footer */}
+              <div className="border-t px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
+                <Button 
+                  variant="outline" 
+                  onClick={() => setPreviewOpen(false)}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  className="gap-2 bg-blue-600 hover:bg-blue-700 text-white"
+                  onClick={() => {
+                    downloadReport();
+                    setPreviewOpen(false);
+                  }}
+                >
+                  <Download className="h-4 w-4" />
+                  Descargar PDF
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </Layout>
   );

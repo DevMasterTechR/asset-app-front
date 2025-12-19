@@ -121,7 +121,7 @@ export default function AssignmentFormModal({
         try {
           const allAssets = await devicesApi.getAll(undefined, 1, 1000);
           const assetList = Array.isArray(allAssets) ? allAssets : (allAssets as any).data || [];
-          const fullAsset = assetList.find((a: any) => String(a.id) === String(formData.assetId));
+          const fullAsset = assetList.find((a: any) => String(a.id) === String(formData.assetId) && a.assetType !== 'security');
           
           if (fullAsset?.purchaseDate && isOlderThanFiveYears(fullAsset.purchaseDate)) {
             // Mostrar alerta personalizada
@@ -205,7 +205,7 @@ export default function AssignmentFormModal({
                   const res = await devicesApi.getAll(q, 1, 20);
                   const list = Array.isArray(res) ? res : res.data;
                   return (list as any[])
-                    .filter(a => (a.status || '') === 'available')
+                    .filter(a => (a.status || '') === 'available' && a.assetType !== 'security')
                     .map(a => ({ label: `${a.assetCode || a.assetCode} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
                 } catch (err) {
                   return [];

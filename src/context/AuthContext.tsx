@@ -74,9 +74,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // Mantener la sesión viva en el servidor y mostrar advertencia previa
-  // Usar 15 minutos de sesión y advertir 30 segundos antes
-  useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
+  // DESACTIVADO: No cerrar sesión automáticamente. El usuario solo puede cerrar sesión manualmente.
+  // useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
 
   const login = async (username: string, password: string) => {
     const response = await authApi.login({ username, password });

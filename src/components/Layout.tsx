@@ -3,7 +3,7 @@ import LayoutContext from '@/context/LayoutContext';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
   LayoutDashboard,
   Laptop,
@@ -17,6 +17,7 @@ import {
   ArrowLeft,
   ArrowRight,
   Key,
+  ShieldCheck,
 } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
@@ -40,6 +41,7 @@ const navItems: NavItem[] = [
   { title: 'Catálogos', href: '/catalogs', icon: FolderTree },
   { title: 'Consumibles', href: '/consumables', icon: Package },
   { title: 'Credenciales', href: '/credentials', icon: Key },
+  { title: 'Seguridad', href: '/security', icon: ShieldCheck },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -48,6 +50,8 @@ export default function Layout({ children }: LayoutProps) {
   const { user, logout } = useAuth();
   const { toast } = useToast();
   const [isOpen, setIsOpen] = useState(false);
+  const [showCreator, setShowCreator] = useState(false);
+  const [keySequence, setKeySequence] = useState<string[]>([]);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
     try {
       const v = localStorage.getItem('sidebar:collapsed');
@@ -77,6 +81,24 @@ export default function Layout({ children }: LayoutProps) {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  // Easter egg: secuencia de teclas "creator"
+  useEffect(() => {
+    const handleKeyPress = (e: KeyboardEvent) => {
+      setKeySequence(prev => {
+        const newSeq = [...prev, e.key.toLowerCase()].slice(-7);
+        if (newSeq.join('') === 'creator') {
+          setShowCreator(true);
+          return [];
+        }
+        return newSeq;
+      });
+    };
+
+    window.addEventListener('keypress', handleKeyPress);
+    return () => window.removeEventListener('keypress', handleKeyPress);
+  }, []);
+
   const [sessionCountdown, setSessionCountdown] = useState<number | null>(null);
 
   const handleLogout = async () => {
@@ -122,6 +144,38 @@ export default function Layout({ children }: LayoutProps) {
     } catch (e) {
       toast({ title: 'Error', description: 'No se pudo extender la sesión', variant: 'destructive' });
     }
+  };
+
+  const getUserInitials = () => {
+    const firstName = user?.firstName?.trim() || '';
+    const lastName = user?.lastName?.trim() || '';
+    const username = user?.username?.trim() || '';
+    
+    if (firstName && lastName) {
+      return `${firstName[0]}${lastName[0]}`.toUpperCase();
+    }
+    
+    if (firstName) {
+      const words = firstName.split(/\s+/);
+      if (words.length > 1) {
+        return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      }
+      return firstName[0].toUpperCase();
+    }
+    
+    if (lastName) {
+      const words = lastName.split(/\s+/);
+      if (words.length > 1) {
+        return words.slice(0, 2).map(w => w[0]).join('').toUpperCase();
+      }
+      return lastName[0].toUpperCase();
+    }
+    
+    if (username) {
+      return username[0].toUpperCase();
+    }
+    
+    return 'U';
   };
 
   const NavContent = () => (
@@ -183,7 +237,7 @@ export default function Layout({ children }: LayoutProps) {
         ) : (
           <div className="text-center">
             <p className="text-sm font-medium">
-              {user?.firstName?.slice(0, 1).toUpperCase() || user?.lastName?.slice(0, 1).toUpperCase() || user?.username?.slice(0, 1).toUpperCase() || 'U'}
+              {getUserInitials()}
             </p>
           </div>
         )}
@@ -265,6 +319,8 @@ export default function Layout({ children }: LayoutProps) {
           <div className="w-10" />
         </div>
         <SheetContent side="left" className="p-0 w-64">
+          <SheetTitle className="sr-only">Navigation Menu</SheetTitle>
+          <SheetDescription className="sr-only">Mobile navigation menu with links to different sections</SheetDescription>
           <NavContent />
         </SheetContent>
       </Sheet>
@@ -284,6 +340,80 @@ export default function Layout({ children }: LayoutProps) {
         )}
         {children}
       </main>
+
+      {/* Easter Egg: The Creator */}
+      {showCreator && (
+        <div 
+          className="fixed inset-0 z-[9999] bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 text-white flex items-center justify-center p-6 overflow-hidden"
+          onClick={() => setShowCreator(false)}
+        >
+          <style>{`
+            @keyframes fall {
+              0% { transform: translateY(-20vh) rotate(0deg); opacity: 0; }
+              10% { opacity: 1; }
+              100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+            }
+            .confetti-piece {
+              position: absolute;
+              top: -10px;
+              border-radius: 9999px;
+              opacity: 0;
+            }
+            .glow {
+              box-shadow: 0 0 25px rgba(255,255,255,0.12), 0 0 60px rgba(99,102,241,0.18);
+            }
+            .pulse {
+              animation: pulse 2.4s ease-in-out infinite;
+            }
+            @keyframes pulse {
+              0%, 100% { transform: scale(1); opacity: 0.9; }
+              50% { transform: scale(1.03); opacity: 1; }
+            }
+          `}</style>
+
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            {Array.from({ length: 80 }).map((_, i) => {
+              const colors = ["#f97316", "#6366f1", "#10b981", "#facc15", "#ec4899", "#0ea5e9"];
+              const left = Math.random() * 100;
+              const delay = Math.random() * 2;
+              const duration = 3 + Math.random() * 2;
+              const size = 6 + Math.random() * 8;
+              const rotate = Math.random() * 360;
+              const color = colors[i % colors.length];
+              return (
+                <span
+                  key={i}
+                  className="confetti-piece"
+                  style={{
+                    left: `${left}%`,
+                    width: `${size}px`,
+                    height: `${size * 3}px`,
+                    background: color,
+                    animation: `fall ${duration}s linear ${delay}s infinite`,
+                    transform: `rotate(${rotate}deg)`,
+                  }}
+                />
+              );
+            })}
+          </div>
+
+          <div className="relative z-10 max-w-xl text-center space-y-4">
+            <div className="inline-flex px-4 py-2 rounded-full border border-white/20 bg-white/5 text-xs uppercase tracking-[0.28em] text-gray-200">
+              The Creator
+            </div>
+            <h1 className="text-3xl sm:text-5xl font-bold leading-tight glow">
+              Creado por <span className="text-indigo-400">Bryan Quispe</span>
+              <span className="block text-lg sm:text-2xl text-gray-300 mt-2">(Bryan406)</span>
+            </h1>
+            <p className="text-sm sm:text-base text-gray-300 max-w-lg mx-auto pulse">
+              Si llegaste hasta aquí, encontraste la pista oculta. Sigue creando, rompiendo y reconstruyendo.
+            </p>
+            <p className="text-xs text-gray-500 mt-4">
+              (Haz clic en cualquier lugar para cerrar)
+            </p>
+          </div>
+        </div>
+      )}
       
       </div>
     </LayoutContext.Provider>
