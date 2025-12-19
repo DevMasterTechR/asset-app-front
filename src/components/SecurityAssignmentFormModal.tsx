@@ -1,0 +1,226 @@
+"use client"
+
+import type React from "react"
+
+import { useState, useEffect } from "react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Textarea } from "@/components/ui/textarea"
+import SearchableSelect from '@/components/ui/searchable-select'
+import { peopleApi } from '@/api/people'
+import { devicesApi } from '@/api/devices'
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import type { Assignment } from "@/data/mockDataExtended"
+import type { CreateAssignmentDto } from "@/api/assignments"
+import { Loader2 } from "lucide-react"
+import { useMemo } from 'react'
+import { sortByString } from '@/lib/sort'
+
+interface SecurityAssignmentFormModalProps {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onSave: (data: CreateAssignmentDto) => Promise<void>
+  assignment?: Assignment | null
+  mode: "create" | "edit"
+  assets: Array<{ id: string; code: string; name: string }>
+  people: Array<{ id: string; firstName: string; lastName: string }>
+  branches: Array<{ id: number; name: string }>
+}
+
+function getLocalDateTimeString(date = new Date()): string {
+  const year = date.getFullYear()
+  const month = String(date.getMonth() + 1).padStart(2, "0")
+  const day = String(date.getDate()).padStart(2, "0")
+  const hours = String(date.getHours()).padStart(2, "0")
+  const minutes = String(date.getMinutes()).padStart(2, "0")
+  // Retorna formato compatible con datetime-local input
+  return `${year}-${month}-${day}T${hours}:${minutes}`
+}
+
+function formatDateToISO(dateString: string): string {
+  // Convierte el valor de datetime-local a ISO-8601
+  if (!dateString) return new Date().toISOString()
+  const date = new Date(dateString + ':00')
+  return date.toISOString()
+}
+
+export default function SecurityAssignmentFormModal({
+  open,
+  onOpenChange,
+  onSave,
+  assignment,
+  mode,
+  assets,
+  people,
+  branches,
+}: SecurityAssignmentFormModalProps) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState<CreateAssignmentDto>({
+    assetId: "",
+    personId: "",
+    branchId: "",
+    assignmentDate: getLocalDateTimeString(),
+    deliveryCondition: "good",
+    deliveryNotes: "",
+  })
+
+  useEffect(() => {
+    if (assignment && mode === "edit") {
+      setFormData({
+        assetId: String(assignment.assetId),
+        personId: String(assignment.personId),
+        branchId: assignment.branchId ? String(assignment.branchId) : "",
+        assignmentDate: assignment.assignmentDate || getLocalDateTimeString(),
+        deliveryCondition: (assignment.deliveryCondition as any) || "good",
+        deliveryNotes: assignment.deliveryNotes || "",
+      })
+    } else {
+      setFormData({
+        assetId: "",
+        personId: "",
+        branchId: "",
+        assignmentDate: getLocalDateTimeString(),
+        deliveryCondition: "good",
+        deliveryNotes: "",
+      })
+    }
+  }, [assignment, mode, open])
+
+  const sortedAssets = useMemo(() => sortByString(assets || [], (a: any) => `${a.code ? a.code + ' - ' : ''}${a.name || ''}`.trim()), [assets])
+  const sortedPeople = useMemo(() => sortByString(people || [], (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()), [people])
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+
+    if (!formData.assetId || !formData.personId) {
+      alert("Por favor completa los campos obligatorios")
+      return
+    }
+
+    setLoading(true)
+    try {
+      // Convertir la fecha al formato ISO-8601 antes de enviar
+      const dataToSend = {
+        ...formData,
+        assignmentDate: formatDateToISO(formData.assignmentDate)
+      }
+      await onSave(dataToSend)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>
+            {mode === "create" ? "Nueva Asignación de Seguridad" : "Editar Asignación de Seguridad"}
+          </DialogTitle>
+          <DialogDescription>
+            {mode === "create"
+              ? "Asigna un dispositivo de seguridad a una persona"
+              : "Actualiza los datos de la asignación"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="assetId">
+              Dispositivo de Seguridad <span className="text-destructive">*</span>
+            </Label>
+            <SearchableSelect
+              value={String(formData.assetId)}
+              onValueChange={(value) => setFormData({ ...formData, assetId: value })}
+              placeholder="Selecciona dispositivo"
+              options={sortedAssets.map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }))}
+              onSearch={async (q) => {
+                try {
+                  const res = await devicesApi.getAll(q, 1, 20);
+                  const list = Array.isArray(res) ? res : res.data;
+                  return (list as any[])
+                    .filter(a => (a.status || '') === 'available' && a.assetType === 'security')
+                    .map(a => ({ label: `${a.assetCode || a.assetCode} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
+                } catch (err) {
+                  return [];
+                }
+              }}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="personId">
+              Persona <span className="text-destructive">*</span>
+            </Label>
+            <SearchableSelect
+              value={String(formData.personId)}
+              onValueChange={(value) => setFormData({ ...formData, personId: value })}
+              placeholder="Selecciona persona"
+              options={sortedPeople.map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="branchId">Sucursal</Label>
+            <SearchableSelect
+              value={String(formData.branchId || '')}
+              onValueChange={(value) => setFormData({ ...formData, branchId: value })}
+              placeholder="Selecciona sucursal"
+              options={branches.map(b => ({ label: b.name, value: String(b.id) }))}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="assignmentDate">Fecha de Entrega</Label>
+            <Input
+              id="assignmentDate"
+              type="datetime-local"
+              value={formData.assignmentDate}
+              onChange={(e) => setFormData({ ...formData, assignmentDate: e.target.value })}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="deliveryNotes">Observaciones</Label>
+            <Textarea
+              id="deliveryNotes"
+              value={formData.deliveryNotes}
+              onChange={(e) => setFormData({ ...formData, deliveryNotes: e.target.value })}
+              placeholder="Notas adicionales sobre la asignación..."
+              rows={3}
+            />
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => onOpenChange(false)}
+              disabled={loading}
+            >
+              Cancelar
+            </Button>
+            <Button type="submit" disabled={loading}>
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Guardando...
+                </>
+              ) : (
+                mode === "create" ? "Crear Asignación" : "Guardar Cambios"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}

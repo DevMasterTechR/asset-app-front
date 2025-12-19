@@ -39,7 +39,7 @@ import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import DeviceFormModal from '@/components/DeviceFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
-import PreviewDevicesReportModal from '@/components/PreviewDevicesReportModal';
+import PreviewDevicesReportModal from '@/reports/PreviewDevicesReportModal';
 import { Person } from '@/data/mockDataExtended';
 
 const statusVariantMap = {

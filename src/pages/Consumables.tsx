@@ -99,6 +99,9 @@ export default function Consumables() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'inks' | 'cables' | 'connectors' | 'strips'>('all');
 
+  // Control de pestaña actual para botón dinámico de agregar
+  const [currentTab, setCurrentTab] = useState<'inks' | 'cables' | 'connectors' | 'powerstrips'>('inks');
+
   // Load initial data
   useEffect(() => {
     loadData();
@@ -399,6 +402,37 @@ export default function Consumables() {
         {/* Acciones y buscador */}
         <div className="flex flex-col gap-3">
           <div className="flex justify-end gap-2">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                if (currentTab === 'inks') {
+                  setInkModalMode('create');
+                  setSelectedInk(null);
+                  setInkModalOpen(true);
+                } else if (currentTab === 'cables') {
+                  setCableModalMode('create');
+                  setSelectedCable(null);
+                  setCableModalOpen(true);
+                } else if (currentTab === 'connectors') {
+                  setConnectorModalMode('create');
+                  setSelectedConnector(null);
+                  setConnectorModalOpen(true);
+                } else {
+                  setStripModalMode('create');
+                  setSelectedStrip(null);
+                  setStripModalOpen(true);
+                }
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {currentTab === 'inks'
+                ? 'Agregar Tinta'
+                : currentTab === 'cables'
+                  ? 'Agregar Cable'
+                  : currentTab === 'connectors'
+                    ? 'Agregar Conector'
+                    : 'Agregar Regleta'}
+            </Button>
             <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
               <Download className="h-4 w-4" />
               Generar Reporte PDF
@@ -423,7 +457,7 @@ export default function Consumables() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="inks" className="space-y-6">
+        <Tabs value={currentTab} onValueChange={(v) => setCurrentTab(v as 'inks' | 'cables' | 'connectors' | 'powerstrips')} className="space-y-6">
           <TabsList>
             <TabsTrigger value="inks">Tintas</TabsTrigger>
             <TabsTrigger value="cables">Cables UTP</TabsTrigger>
@@ -435,14 +469,6 @@ export default function Consumables() {
           <TabsContent value="inks" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Tintas</h2>
-              <Button onClick={() => {
-                setInkModalMode('create');
-                setSelectedInk(null);
-                setInkModalOpen(true);
-              }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Tinta
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -516,14 +542,6 @@ export default function Consumables() {
           <TabsContent value="cables" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Cables UTP</h2>
-              <Button onClick={() => {
-                setCableModalMode('create');
-                setSelectedCable(null);
-                setCableModalOpen(true);
-              }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Cable
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -593,14 +611,6 @@ export default function Consumables() {
           <TabsContent value="connectors" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Conectores RJ45</h2>
-              <Button onClick={() => {
-                setConnectorModalMode('create');
-                setSelectedConnector(null);
-                setConnectorModalOpen(true);
-              }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Conector
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -668,14 +678,6 @@ export default function Consumables() {
           <TabsContent value="powerstrips" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Regletas</h2>
-              <Button onClick={() => {
-                setStripModalMode('create');
-                setSelectedStrip(null);
-                setStripModalOpen(true);
-              }}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Regleta
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">

@@ -14,12 +14,17 @@ export interface Device {
   branchId?: number;
   assignedPersonId?: number;
   purchaseDate?: string;
-  deliveryDate?: string;x
+  deliveryDate?: string;
   receivedDate?: string;
   notes?: string;
   attributesJson?: Record<string, string | number | boolean>;
   createdAt?: string;
   updatedAt?: string;
+  branch?: {
+    id: number;
+    name: string;
+  };
+  branchName?: string;
 }
 
 export interface CreateDeviceDto {

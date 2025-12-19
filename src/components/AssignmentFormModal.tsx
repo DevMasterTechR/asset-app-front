@@ -195,7 +195,7 @@ export default function AssignmentFormModal({
               Activo <span className="text-destructive">*</span>
             </Label>
             <SearchableSelect
-              value={formData.assetId}
+              value={String(formData.assetId)}
               onValueChange={(value) => handleChange('assetId', value)}
               placeholder="Selecciona activo"
               searchPlaceholder="Buscar activo (por código, marca o modelo)"
@@ -219,7 +219,7 @@ export default function AssignmentFormModal({
               Persona <span className="text-destructive">*</span>
             </Label>
             <SearchableSelect
-              value={formData.personId}
+              value={String(formData.personId)}
               onValueChange={(value) => handleChange('personId', value)}
               placeholder="Selecciona persona"
               searchPlaceholder="Buscar persona..."
@@ -241,11 +241,10 @@ export default function AssignmentFormModal({
               Sucursal <span className="text-destructive">*</span>
             </Label>
             <SearchableSelect
-              value={formData.branchId}
+              value={String(formData.branchId)}
               onValueChange={(value) => handleChange('branchId', value)}
               placeholder="Selecciona sucursal"
               options={sortedBranches.map(b => ({ label: b.name, value: String(b.id) }))}
-              required
             />
           </div>
 
@@ -277,7 +276,6 @@ export default function AssignmentFormModal({
                   { label: 'Regular', value: 'fair' },
                   { label: 'Malo', value: 'poor' },
                 ]}
-                required
               />
             </div>
           </div>

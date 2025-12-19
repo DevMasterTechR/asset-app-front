@@ -731,55 +731,67 @@ export default function DeviceFormModal({
           {/* Fechas */}
           <div className="border-t pt-4">
             <h3 className="text-sm font-semibold mb-3">Fechas</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2 md:pr-4 md:border-r md:border-muted">
-                <Label>Fecha de compra/procesador</Label>
-                
+            {fixedType === 'security' ? (
+              // Para seguridad: solo fecha de compra
+              <div className="space-y-2">
+                <Label>Fecha de compra</Label>
                 <DateTimePicker
                   value={formData.purchaseDate}
                   onChange={(value) => handleChange('purchaseDate', value)}
                 />
               </div>
-
-              <div className="space-y-2 md:pl-4">
-                <Label>Fecha de entrega</Label>
-                <div className="text-sm text-muted-foreground">
-                  {deliveryDateAuto
-                    ? deliveryDateAuto.replace('T', ' ')
-                    : 'Sin fecha (pendiente o asignación completada)'}
+            ) : (
+              // Para otros tipos: todas las fechas
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2 md:pr-4 md:border-r md:border-muted">
+                  <Label>Fecha de compra</Label>
+                  
+                  <DateTimePicker
+                    value={formData.purchaseDate}
+                    onChange={(value) => handleChange('purchaseDate', value)}
+                  />
                 </div>
-              </div>
 
-              <div className="space-y-2 md:col-span-2 flex justify-center items-center">
-                <div className="w-full max-w-xl">
-                  <Label className="text-center">Fecha de recepción</Label>
-                  <div className="flex items-center gap-3 mt-2">
-                    <div className="flex-1">
-                      <DateTimePicker
-                        value={formData.receivedDate}
-                        onChange={(value) => handleChange('receivedDate', value)}
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <input
-                        id="pendingReceived"
-                        type="checkbox"
-                        checked={pendingReceived}
-                        onChange={(e) => {
-                          const checked = e.target.checked;
-                          setPendingReceived(checked);
-                          if (checked) {
-                            handleChange('receivedDate', '');
-                          }
-                        }}
-                        disabled={hasActiveAssignment}
-                      />
-                      <Label htmlFor="pendingReceived" className="cursor-pointer">Recepción pendiente</Label>
+                <div className="space-y-2 md:pl-4">
+                  <Label>Fecha de entrega</Label>
+                  <div className="text-sm text-muted-foreground">
+                    {deliveryDateAuto
+                      ? deliveryDateAuto.replace('T', ' ')
+                      : 'Sin fecha (pendiente o asignación completada)'}
+                  </div>
+                </div>
+
+                <div className="space-y-2 md:col-span-2 flex justify-center items-center">
+                  <div className="w-full max-w-xl">
+                    <Label className="text-center">Fecha de recepción</Label>
+                    <div className="flex items-center gap-3 mt-2">
+                      <div className="flex-1">
+                        <DateTimePicker
+                          value={formData.receivedDate}
+                          onChange={(value) => handleChange('receivedDate', value)}
+                        />
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <input
+                          id="pendingReceived"
+                          type="checkbox"
+                          checked={pendingReceived}
+                          onChange={(e) => {
+                            const checked = e.target.checked;
+                            setPendingReceived(checked);
+                            if (checked) {
+                              handleChange('receivedDate', '');
+                            }
+                          }}
+                          disabled={hasActiveAssignment}
+                        />
+                        <Label htmlFor="pendingReceived" className="cursor-pointer">Recepción pendiente</Label>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Notas */}

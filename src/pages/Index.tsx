@@ -197,7 +197,12 @@ const Index = () => {
 
       const assignmentsResAny = assignmentsRes as any;
       const assignmentsList = Array.isArray(assignmentsResAny) ? assignmentsResAny : (assignmentsResAny?.data ?? []);
-      const activeAssignments = (assignmentsList || []).filter((a: any) => !a.returnDate);
+      // Excluir asignaciones de dispositivos tipo seguridad
+      const assignmentsWithoutSecurity = (assignmentsList || []).filter((a: any) => {
+        const assetType = a.asset?.assetType || devicesList.find((d: any) => String(d.id) === String(a.assetId))?.assetType;
+        return assetType !== 'security';
+      });
+      const activeAssignments = assignmentsWithoutSecurity.filter((a: any) => !a.returnDate);
 
       const byUser = new Map<string, any>();
 
@@ -245,7 +250,7 @@ const Index = () => {
 
       setUserAssignments(Array.from(byUser.values()));
       setActiveAssignments(activeAssignments || []);
-      setAssignmentsAll(assignmentsList || []);
+      setAssignmentsAll(assignmentsWithoutSecurity || []);
       setDevicesRaw(devicesList || []);
       setConsumablesReport(consumablesAll || []);
     } catch (err) {

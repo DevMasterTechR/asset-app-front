@@ -81,6 +81,9 @@ export default function Catalogs() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [filterType, setFilterType] = useState<'all' | 'branches' | 'departments' | 'roles'>('all');
 
+  // Control de pestaña actual para botón dinámico de agregar
+  const [currentTab, setCurrentTab] = useState<'branches' | 'departments' | 'roles'>('branches');
+
   // Load data
   useEffect(() => {
     loadData();
@@ -360,6 +363,25 @@ export default function Catalogs() {
         {/* Acciones y buscador */}
         <div className="flex flex-col gap-3">
           <div className="flex justify-end gap-2">
+            <Button
+              className="bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={() => {
+                if (currentTab === 'branches') {
+                  setBranchModal({ open: true, mode: 'create', data: null });
+                } else if (currentTab === 'departments') {
+                  setDepartmentModal({ open: true, mode: 'create', data: null });
+                } else {
+                  setRoleModal({ open: true, mode: 'create', data: null });
+                }
+              }}
+            >
+              <Plus className="mr-2 h-4 w-4" />
+              {currentTab === 'branches'
+                ? 'Agregar Sucursal'
+                : currentTab === 'departments'
+                  ? 'Agregar Departamento'
+                  : 'Agregar Rol'}
+            </Button>
             <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
               <Download className="h-4 w-4" />
               Generar Reporte PDF
@@ -383,7 +405,7 @@ export default function Catalogs() {
         </div>
 
         {/* Tabs */}
-        <Tabs defaultValue="branches" className="space-y-6">
+        <Tabs value={currentTab} onValueChange={(v) => setCurrentTab(v as 'branches' | 'departments' | 'roles')} className="space-y-6">
           <TabsList>
             <TabsTrigger value="branches">Sucursales</TabsTrigger>
             <TabsTrigger value="departments">Departamentos</TabsTrigger>
@@ -394,10 +416,6 @@ export default function Catalogs() {
           <TabsContent value="branches" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Sucursales</h2>
-              <Button onClick={() => setBranchModal({ open: true, mode: 'create', data: null })}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Sucursal
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -452,10 +470,6 @@ export default function Catalogs() {
           <TabsContent value="departments" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Departamentos</h2>
-              <Button onClick={() => setDepartmentModal({ open: true, mode: 'create', data: null })}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Departamento
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -515,10 +529,6 @@ export default function Catalogs() {
           <TabsContent value="roles" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Roles</h2>
-              <Button onClick={() => setRoleModal({ open: true, mode: 'create', data: null })}>
-                <Plus className="mr-2 h-4 w-4" />
-                Agregar Rol
-              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">

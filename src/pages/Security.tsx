@@ -25,6 +25,7 @@ import {
   Eye,
   EyeOff,
   X,
+  PackageCheck,
 } from 'lucide-react';
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
@@ -34,8 +35,39 @@ import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
 import DeviceFormModal from '@/components/DeviceFormModal';
 import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
-import PreviewSecurityReportModal from '@/components/PreviewSecurityReportModal';
+import PreviewSecurityReportModal from '@/reports/PreviewSecurityReportModal';
+import PreviewAssignmentsReportModal from '@/reports/PreviewAssignmentsReportModal';
+import AssignmentFormModal from '@/components/AssignmentFormModal';
+import SecurityAssignmentFormModal from '@/components/SecurityAssignmentFormModal';
+import ReturnAssignmentModal from '@/components/ReturnAssignmentModal';
 import { Person } from '@/data/mockDataExtended';
+import { assignmentsApi, type CreateAssignmentDto } from '@/api/assignments';
+import type { Assignment } from '@/data/mockDataExtended';
+
+// Función para convertir URLs de galería de Imgur a URLs directas de imagen
+const convertImgurUrl = (url: string): string => {
+  if (!url) return url;
+  
+  // Si ya es una URL directa de imagen de Imgur, devolverla tal cual
+  if (url.includes('i.imgur.com')) return url;
+  
+  // Convertir URLs de galería de Imgur a URLs directas de imagen
+  if (url.includes('imgur.com/gallery/') || url.includes('imgur.com/a/')) {
+    // Extraer el ID de la imagen del hash o del path
+    const hashMatch = url.match(/#(\w+)/);
+    const pathMatch = url.match(/imgur\.com\/(?:gallery|a)\/([^#\s]+)/);
+    
+    if (hashMatch) {
+      // Si hay un hash, usar ese ID
+      return `https://i.imgur.com/${hashMatch[1]}.jpg`;
+    } else if (pathMatch) {
+      // Si no hay hash, intentar con el ID del path
+      return `https://i.imgur.com/${pathMatch[1]}.jpg`;
+    }
+  }
+  
+  return url;
+};
 
 const statusVariantMap = {
   available: 'success' as const,
@@ -67,7 +99,20 @@ function SecurityPage() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [previewAssignmentsOpen, setPreviewAssignmentsOpen] = useState(false);
   const [imageModalUrl, setImageModalUrl] = useState<string | null>(null);
+
+  // Estados para asignaciones de seguridad
+  const [securityAssignments, setSecurityAssignments] = useState<Assignment[]>([]);
+  const [securityFormOpen, setSecurityFormOpen] = useState(false);
+  const [assignmentModalOpen, setAssignmentModalOpen] = useState(false);
+  const [assignmentMode, setAssignmentMode] = useState<'create' | 'edit'>('create');
+  const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [assignmentToReturn, setAssignmentToReturn] = useState<string | null>(null);
+  const [assignmentSearchTerm, setAssignmentSearchTerm] = useState('');
+  const [assignmentViewMode, setAssignmentViewMode] = useState<'active' | 'history'>('active');
+  const [currentTab, setCurrentTab] = useState<'devices' | 'assignments'>('devices');
 
   useEffect(() => {
     loadData();
@@ -81,9 +126,10 @@ function SecurityPage() {
         devicesApi.getAll(searchTerm || undefined, 1, 1000),
         peopleApi.getAll(),
         catalogsApi.getBranches(),
+        assignmentsApi.getAll(),
       ]);
 
-      const [devicesRes, peopleRes, branchesRes] = results;
+      const [devicesRes, peopleRes, branchesRes, assignmentsRes] = results;
 
       if (devicesRes.status === 'fulfilled') {
         const payload: any = devicesRes.value;
@@ -93,6 +139,18 @@ function SecurityPage() {
         const sorted = sortByString(securityDevices, (d: any) => (d.assetCode || '').toString());
         setDevices(sorted);
         setTotalPages(Math.max(1, Math.ceil(sorted.length / limit)));
+
+        // Filtrar asignaciones sólo para dispositivos de seguridad usando devicesList para garantizar disponibilidad
+        if (assignmentsRes.status === 'fulfilled') {
+          const assignmentsList = extractArray<Assignment>(assignmentsRes.value);
+          const securityAssignmentsList = assignmentsList.filter((a: any) => {
+            const device = devicesList.find(d => String(d.id) === String(a.assetId));
+            return device?.assetType === 'security';
+          });
+          setSecurityAssignments(securityAssignmentsList);
+        } else {
+          setSecurityAssignments([]);
+        }
       } else {
         throw devicesRes.reason ?? new Error('Error cargando dispositivos de seguridad');
       }
@@ -110,6 +168,7 @@ function SecurityPage() {
       } else {
         setBranches([]);
       }
+
     } catch (error) {
       console.error('❌ Error cargando datos:', error);
       toast({
@@ -137,6 +196,18 @@ function SecurityPage() {
       device.serialNumber?.toLowerCase().includes(search) ||
       (device.attributesJson as any)?.location?.toLowerCase().includes(search)
     );
+  });
+
+  const filteredAssignments = securityAssignments.filter((assignment) => {
+    const hasReturn = !!assignment.returnDate;
+    const matchesView = assignmentViewMode === 'active' ? !hasReturn : hasReturn;
+    const device = devices.find(d => String(d.id) === String(assignment.assetId));
+    const person = people.find(p => p.id === assignment.personId);
+    const search = assignmentSearchTerm.toLowerCase();
+    const matchesSearch = search === '' ||
+      (device?.assetCode?.toLowerCase().includes(search)) ||
+      (`${person?.firstName || ''} ${person?.lastName || ''}`.toLowerCase().includes(search));
+    return matchesView && matchesSearch;
   });
 
   const sort = useSort();
@@ -234,17 +305,66 @@ function SecurityPage() {
             </p>
           </div>
           <div className="flex gap-2">
-            <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
-              <Download className="h-4 w-4" />
-              Generar Reporte PDF
-            </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate}>
-              <Plus className="mr-2 h-4 w-4" />
-              Agregar Dispositivo
-            </Button>
+            {currentTab === 'devices' ? (
+              <>
+                <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
+                  <Download className="h-4 w-4" />
+                  Generar Reporte PDF
+                </Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleCreate}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Dispositivo
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button variant="destructive" className="gap-2" onClick={() => setPreviewAssignmentsOpen(true)}>
+                  <Download className="h-4 w-4" />
+                  Generar Reporte PDF
+                </Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => setSecurityFormOpen(true)}>
+                  <Plus className="mr-2 h-4 w-4" />
+                  Agregar Asignación
+                </Button>
+              </>
+            )}
           </div>
         </div>
 
+        {/* Pestañas de sección */}
+        <div className="border-b flex gap-4">
+          <button
+            onClick={() => {
+              setCurrentTab('devices');
+              setSearchTerm('');
+              setPage(1);
+            }}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+              currentTab === 'devices'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Dispositivos
+          </button>
+          <button
+            onClick={() => {
+              setCurrentTab('assignments');
+              setAssignmentViewMode('active');
+            }}
+            className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+              currentTab === 'assignments'
+                ? 'border-blue-600 text-blue-600'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            Asignaciones
+          </button>
+        </div>
+
+        {/* SECCIÓN DE DISPOSITIVOS */}
+        {currentTab === 'devices' && (
+        <>
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
           <div className="lg:col-span-3">
             <div className="relative">
@@ -265,7 +385,6 @@ function SecurityPage() {
             </div>
           </div>
         </div>
-
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -331,7 +450,10 @@ function SecurityPage() {
                               <Eye className="h-5 w-5 text-blue-600" />
                             </button>
                           ) : (
-                            <EyeOff className="h-5 w-5 text-gray-400 mx-auto" />
+                            <div className="flex flex-col items-center text-gray-400 text-xs" title="Imagen no asignada">
+                              <EyeOff className="h-5 w-5" />
+                              <span className="mt-1">Imagen no asignada</span>
+                            </div>
                           )}
                         </TableCell>
                         <TableCell className="text-sm max-w-xs break-words">{device.notes || '-'}</TableCell>
@@ -390,6 +512,163 @@ function SecurityPage() {
             />
           </div>
         </div>
+        </>
+        )}
+
+        {/* SECCIÓN DE ASIGNACIONES */}
+        {currentTab === 'assignments' && (
+        <>
+          {/* Pestañas internas de asignaciones */}
+          <div className="border-b flex gap-4 ml-4">
+            <button
+              onClick={() => setAssignmentViewMode('active')}
+              className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                assignmentViewMode === 'active'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Asignaciones Activas
+            </button>
+            <button
+              onClick={() => setAssignmentViewMode('history')}
+              className={`px-4 py-2 font-medium border-b-2 transition-colors ${
+                assignmentViewMode === 'history'
+                  ? 'border-blue-600 text-blue-600'
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              Historial de Asignaciones
+            </button>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <div className="lg:col-span-3">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Buscar por código, persona, estado..."
+                  className="pl-10"
+                  value={assignmentSearchTerm}
+                  onChange={(e) => setAssignmentSearchTerm(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="flex items-center justify-center bg-muted rounded-lg p-4">
+              <div className="text-center">
+                <p className="text-2xl font-bold">{filteredAssignments.length}</p>
+                <p className="text-sm text-muted-foreground">
+                  {assignmentViewMode === 'active' ? 'Asignaciones activas' : 'Asignaciones en historial'}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Botón de 'Nueva Asignación' eliminado según solicitud */}
+
+          {loading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : (
+            <div className="border rounded-lg bg-card overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Dispositivo</TableHead>
+                    <TableHead>Asignado a</TableHead>
+                    <TableHead>Fecha de Asignación</TableHead>
+                    {assignmentViewMode === 'active' && <TableHead>Fecha de Entrega Esperada</TableHead>}
+                    {assignmentViewMode === 'history' && <TableHead>Fecha de Devolución</TableHead>}
+                    <TableHead className="text-right">Acciones</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredAssignments.length > 0 ? (
+                    filteredAssignments.map((assignment: any) => (
+                      <TableRow key={assignment.id}>
+                         <TableCell className="font-medium">{devices.find(d => String(d.id) === String(assignment.assetId))?.assetCode || '-'}</TableCell>
+                         <TableCell>{`${people.find(p => String(p.id) === String(assignment.personId))?.firstName || ''} ${people.find(p => String(p.id) === String(assignment.personId))?.lastName || ''}`.trim() || '-'}</TableCell>
+                        <TableCell>{new Date(assignment.assignmentDate).toLocaleDateString('es-ES')}</TableCell>
+                        {assignmentViewMode === 'active' && (
+                          <TableCell>{assignment.expectedReturnDate ? new Date(assignment.expectedReturnDate).toLocaleDateString('es-ES') : '-'}</TableCell>
+                        )}
+                        {assignmentViewMode === 'history' && (
+                          <TableCell>{assignment.returnDate ? new Date(assignment.returnDate).toLocaleDateString('es-ES') : '-'}</TableCell>
+                        )}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {assignmentViewMode === 'active' && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => {
+                                    setAssignmentToReturn(String(assignment.id));
+                                    setReturnModalOpen(true);
+                                  }}
+                                  title="Devolver"
+                                >
+                                  <PackageCheck className="h-4 w-4" />
+                                </Button>
+                              </>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setAssignmentMode('edit');
+                                setSelectedAssignment(assignment);
+                                setSecurityFormOpen(true);
+                              }}
+                              title="Editar asignación"
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={async () => {
+                                const ok = window.confirm('¿Eliminar esta asignación? Esta acción no se puede deshacer.');
+                                if (!ok) return;
+                                try {
+                                  await assignmentsApi.delete(String(assignment.id));
+                                  toast({ title: 'Éxito', description: 'Asignación eliminada correctamente' });
+                                  await loadData();
+                                } catch (error) {
+                                  const msg = error instanceof Error ? error.message : String(error);
+                                  toast({ title: 'Error', description: msg || 'No se pudo eliminar la asignación', variant: 'destructive' });
+                                }
+                              }}
+                              title="Eliminar asignación"
+                            >
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-12">
+                        <Shield className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                        <h3 className="text-lg font-semibold mb-2">
+                          No se encontraron asignaciones
+                        </h3>
+                        <p className="text-muted-foreground">
+                          {assignmentViewMode === 'active'
+                            ? 'No hay asignaciones activas de seguridad'
+                            : 'No hay historial de asignaciones'}
+                        </p>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </>
+        )}
       </div>
 
       <DeviceFormModal
@@ -421,6 +700,25 @@ function SecurityPage() {
         />
       )}
 
+      {previewAssignmentsOpen && (
+        <PreviewAssignmentsReportModal
+          assignments={securityAssignments}
+          assets={devices.map(d => ({
+            id: String(d.id),
+            code: d.assetCode || '',
+            name: `${d.brand || ''} ${d.model || ''}`.trim() || d.assetCode || '',
+            brand: d.brand,
+            model: d.model,
+            purchaseDate: d.purchaseDate,
+            assetCode: d.assetCode,
+          }))}
+          people={people}
+          branches={branches}
+          onClose={() => setPreviewAssignmentsOpen(false)}
+          toast={toast}
+        />
+      )}
+
       {/* Modal de Imagen */}
       {imageModalUrl && (
         <div 
@@ -439,9 +737,10 @@ function SecurityPage() {
               <X className="h-6 w-6 text-gray-700" />
             </button>
             <img 
-              src={imageModalUrl} 
+              src={convertImgurUrl(imageModalUrl)} 
               alt="Dispositivo de seguridad" 
               className="max-w-full max-h-[85vh] object-contain rounded-lg shadow-2xl"
+              crossOrigin="anonymous"
               onError={(e) => {
                 (e.target as HTMLImageElement).src = '';
                 (e.target as HTMLImageElement).alt = 'Error al cargar imagen';
@@ -450,6 +749,79 @@ function SecurityPage() {
           </div>
         </div>
       )}
+
+      {/* Modales de Asignación */}
+      <SecurityAssignmentFormModal
+        open={securityFormOpen}
+        onOpenChange={setSecurityFormOpen}
+        onSave={async (data: CreateAssignmentDto) => {
+          try {
+            if (assignmentMode === 'create') {
+              await assignmentsApi.create(data);
+              toast({
+                title: 'Éxito',
+                description: 'Asignación creada correctamente',
+              });
+            } else if (selectedAssignment) {
+              await assignmentsApi.update(selectedAssignment.id, data);
+              toast({
+                title: 'Éxito',
+                description: 'Asignación actualizada correctamente',
+              });
+            }
+            await loadData();
+            setSecurityFormOpen(false);
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            toast({
+              title: 'Error',
+              description: msg || 'No se pudo guardar la asignación',
+              variant: 'destructive',
+            });
+            throw error;
+          }
+        }}
+        assignment={selectedAssignment || undefined}
+        mode={assignmentMode}
+        assets={devices.filter(d => d.assetType === 'security').map(d => ({
+          id: String(d.id),
+          code: d.assetCode,
+          name: `${d.brand || ''} ${d.model || ''}`.trim(),
+          brand: d.brand,
+          model: d.model,
+          purchaseDate: d.purchaseDate,
+          assetCode: d.assetCode,
+        }))}
+        people={people}
+        branches={branches}
+      />
+
+      <ReturnAssignmentModal
+        open={returnModalOpen}
+        onOpenChange={setReturnModalOpen}
+        onSave={async (returnCondition, returnNotes) => {
+          try {
+            if (assignmentToReturn) {
+              await assignmentsApi.registerReturn(assignmentToReturn, returnCondition, returnNotes);
+              toast({
+                title: 'Éxito',
+                description: 'Asignación devuelta correctamente',
+              });
+              await loadData();
+              setReturnModalOpen(false);
+              setAssignmentToReturn(null);
+            }
+          } catch (error) {
+            const msg = error instanceof Error ? error.message : String(error);
+            toast({
+              title: 'Error',
+              description: msg || 'No se pudo procesar la devolución',
+              variant: 'destructive',
+            });
+          }
+        }}
+        assignmentId={assignmentToReturn as string}
+      />
     </Layout>
   );
 }
