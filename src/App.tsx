@@ -16,9 +16,12 @@ import NotFound from "./pages/NotFound";
 import Credentials from "./pages/Credentials";
 import Security from "./pages/Security";
 import { PrivateRoute } from "@/components/PrivateRout";
+import UserDashboard from "./pages/UserDashboard";
+import UserRequests from "./pages/UserRequests";
 
 
 const queryClient = new QueryClient();
+const adminRoles = ['Admin', 'Administrador', 'admin'];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -32,43 +35,54 @@ const App = () => (
             <Route path="/auth" element={<Auth />} /> 
 
             {/* Protegidas */}
+            {/* Dashboard: diferenciado por rol */}
             <Route path="/" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Index />
               </PrivateRoute>
             } />
-            <Route path="/devices" element={
+            <Route path="/user-dashboard" element={
               <PrivateRoute>
+                <UserDashboard />
+              </PrivateRoute>
+            } />
+            <Route path="/user-requests" element={
+              <PrivateRoute>
+                <UserRequests />
+              </PrivateRoute>
+            } />
+            <Route path="/devices" element={
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Devices />
               </PrivateRoute>
             } />
             <Route path="/people" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <People />
               </PrivateRoute>
             } />
             <Route path="/assignments" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Assignments />
               </PrivateRoute>
             } />
             <Route path="/catalogs" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Catalogs />
               </PrivateRoute>
             } />
             <Route path="/consumables" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Consumables />
               </PrivateRoute>
             } />
             <Route path="/credentials" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Credentials />
               </PrivateRoute>
             } />
             <Route path="/security" element={
-              <PrivateRoute>
+              <PrivateRoute allowedRoles={adminRoles}>
                 <Security />
               </PrivateRoute>
             } />

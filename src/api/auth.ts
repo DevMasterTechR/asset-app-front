@@ -13,6 +13,7 @@ export interface AuthUser {
   firstName?: string;
   lastName?: string;
   nationalId?: string;
+  role?: { id: number; name: string } | string | null;
 }
 
 /**

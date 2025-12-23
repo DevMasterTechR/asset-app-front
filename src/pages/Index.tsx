@@ -3,6 +3,7 @@ import Layout from "@/components/Layout";
 import { StatsCard } from "@/components/StatsCard";
 import DevicesSummaryModal from '@/components/DevicesSummaryModal';
 import { DevicesTable } from "@/components/DevicesTable";
+import GenerateActaModal from "@/components/GenerateActaModal";
 import Pagination from "@/components/Pagination";
 import { devicesApi } from "@/api/devices";
 import * as consumablesApi from '@/api/consumables';
@@ -12,7 +13,7 @@ import { credentialsApi, type Credential } from "@/api/credentials";
 import { extractArray } from "@/lib/extractData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download } from "lucide-react";
+import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download, FileText } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
@@ -45,6 +46,8 @@ const Index = () => {
   const [consumablesReport, setConsumablesReport] = useState<any[]>([]);
   const [assignmentsAll, setAssignmentsAll] = useState<any[]>([]);
   const [assignmentsMode, setAssignmentsMode] = useState<'active' | 'history'>('active');
+  const [actaModalOpen, setActaModalOpen] = useState(false);
+  const [selectedUserForActa, setSelectedUserForActa] = useState<any>(null);
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -148,6 +151,11 @@ const Index = () => {
       setPeople(peopleList || []);
       setCredentials(credentialsRes || []);
 
+      console.log("PeopleList completo:", peopleList);
+      if (peopleList.length > 0) {
+        console.log("Primera persona ejemplo:", peopleList[0]);
+      }
+
       const peopleMap = new Map<string, string>();
       peopleList.forEach((p: any) => {
         peopleMap.set(String(p.id), `${p.firstName} ${p.lastName}`);
@@ -209,15 +217,22 @@ const Index = () => {
       activeAssignments.forEach((a) => {
         const userId = String(a.personId);
         const person = a.person;
-        const name = person ? `${person.firstName} ${person.lastName}` : "Desconocido";
+        
+        // Hacer lookup de la persona completa desde peopleList para obtener todos los datos
+        const fullPerson = peopleList.find((p: any) => String(p.id) === String(a.personId)) || person;
+        const name = fullPerson ? `${fullPerson.firstName} ${fullPerson.lastName}` : "Desconocido";
 
         // Hacer lookup del asset completo desde devicesList si es necesario
         const fullAsset = devicesList.find((d: any) => String(d.id) === String(a.assetId)) || a.asset;
 
         const dev = {
           type: a.asset?.assetType || fullAsset?.assetType || "Laptop",
+          assetType: a.asset?.assetType || fullAsset?.assetType || "Laptop",
           model: a.asset?.model || fullAsset?.model || "",
           code: a.asset?.assetCode || a.asset?.code || fullAsset?.assetCode || fullAsset?.code || a.asset?.id || '',
+          brand: a.asset?.brand || fullAsset?.brand || "-",
+          serialNumber: a.asset?.serialNumber || fullAsset?.serialNumber || a.asset?.serial || fullAsset?.serial || "-",
+          status: a.asset?.status || fullAsset?.status || "Activo",
           assignmentId: a.id,
           assetId: a.assetId,
           purchaseDate: fullAsset?.purchaseDate || fullAsset?.purchase_date || a.asset?.purchaseDate || a.asset?.purchase_date,
@@ -228,9 +243,9 @@ const Index = () => {
             a.asset?.branchName ||
             a.asset?.branch?.name ||
             a.asset?.branch ||
-            person?.branchName ||
-            person?.branch?.name ||
-            person?.branch ||
+            fullPerson?.branchName ||
+            fullPerson?.branch?.name ||
+            fullPerson?.branch ||
             '-',
         };
 
@@ -238,9 +253,10 @@ const Index = () => {
           byUser.set(userId, {
             userId,
             userName: name,
-            email: person?.username || "",
-            department: person?.departmentName || "-",
+            email: fullPerson?.username || "",
+            department: fullPerson?.departmentName || "-",
             branch: dev.branch,
+            nationalId: fullPerson?.nationalId || "No especificado",
             devices: [dev],
           });
         } else {
@@ -665,12 +681,13 @@ const Index = () => {
                       <th className="px-4 py-3">Persona</th>
                       <th className="px-4 py-3">Sucursal</th>
                       <th className="px-4 py-3">Equipos</th>
+                      <th className="px-4 py-3">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayedUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">No hay asignaciones activas para mostrar.</td>
+                        <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No hay asignaciones activas para mostrar.</td>
                       </tr>
                     ) : (
                       displayedUsers.map((u) => (
@@ -706,6 +723,20 @@ const Index = () => {
                                 <span className="text-muted-foreground">Sin equipos</span>
                               )}
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setSelectedUserForActa(u);
+                                setActaModalOpen(true);
+                              }}
+                              className="gap-2"
+                            >
+                              <FileText className="h-4 w-4" />
+                              Generar acta
+                            </Button>
                           </td>
                         </tr>
                       ))
@@ -1022,6 +1053,13 @@ const Index = () => {
           </div>
         )}
       </div>
+
+      {/* Modal Generar Acta */}
+      <GenerateActaModal
+        open={actaModalOpen}
+        onOpenChange={setActaModalOpen}
+        user={selectedUserForActa}
+      />
     </Layout>
   );
 };

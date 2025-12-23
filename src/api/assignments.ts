@@ -70,6 +70,13 @@ export const assignmentsApi = {
     return data.map(mapBackendToFrontend)
   },
 
+  async getMyAssignments(): Promise<Assignment[]> {
+    const res = await apiFetch('/assignment-history/user/my-assignments', { method: 'GET' })
+    await handleApiError(res)
+    const data = await res.json()
+    return data.map(mapBackendToFrontend)
+  },
+
   async create(payload: CreateAssignmentDto): Promise<{ assignment: Assignment; asset?: any }> {
     const body = {
       assetId: Number(payload.assetId),

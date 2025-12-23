@@ -8,6 +8,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Laptop, User, Lock, Eye, EyeOff } from 'lucide-react';
 
+const adminRoles = ['Admin', 'Administrador', 'admin'];
+
+function isAdminRole(role: string | { name?: string } | null | undefined) {
+  const value = typeof role === 'string' ? role : role?.name;
+  return value ? adminRoles.some((r) => r.toLowerCase() === value.toLowerCase()) : false;
+}
+
 export default function Auth() {
   const navigate = useNavigate();
   const { login, user } = useAuth();
@@ -15,10 +22,15 @@ export default function Auth() {
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
-  // Redirigir si ya está autenticado
   useEffect(() => {
     if (user) {
-      navigate('/');
+      if (isAdminRole(user.role as any)) {
+        // Administrador → / (Index)
+        navigate('/');
+      } else {
+        // Usuario normal → /user-dashboard
+        navigate('/user-dashboard');
+      }
     }
   }, [user, navigate]);
 

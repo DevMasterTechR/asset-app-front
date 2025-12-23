@@ -5,7 +5,10 @@ type LayoutContextType = {
   setSidebarCollapsed: (value: boolean) => void;
 };
 
-export const LayoutContext = React.createContext<LayoutContextType | null>(null);
+export const LayoutContext = React.createContext<LayoutContextType>({
+  sidebarCollapsed: false,
+  setSidebarCollapsed: () => {},
+});
 
 export function useLayoutContext() {
   const ctx = React.useContext(LayoutContext);
