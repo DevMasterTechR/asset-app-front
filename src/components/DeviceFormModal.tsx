@@ -36,6 +36,7 @@ interface DeviceFormModalProps {
 
 const deviceTypes = [
   { value: 'laptop', label: 'Laptop' },
+  { value: 'desktop', label: 'PC/Sobremesa' },
   { value: 'smartphone', label: 'Smartphone' },
   { value: 'tablet', label: 'Tablet' },
   { value: 'monitor', label: 'Monitor' },
@@ -43,6 +44,7 @@ const deviceTypes = [
   { value: 'keyboard', label: 'Teclado' },
   { value: 'server', label: 'Servidor' },
   { value: 'printer', label: 'Impresora' },
+  { value: 'ip-phone', label: 'Teléfono IP' },
 ];
 
 const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
@@ -320,6 +322,82 @@ export default function DeviceFormModal({
               />
               <Label htmlFor="hasBag" className="cursor-pointer">¿Tiene maletín/bolso?</Label>
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasMouse"
+                checked={Boolean(getAttrValue('hasMouse'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasMouse', checked === true)}
+              />
+              <Label htmlFor="hasMouse" className="cursor-pointer">¿Tiene mouse?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasMousePad"
+                checked={Boolean(getAttrValue('hasMousePad'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasMousePad', checked === true)}
+              />
+              <Label htmlFor="hasMousePad" className="cursor-pointer">¿Tiene mouse pad?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasKeyboard"
+                checked={Boolean(getAttrValue('hasKeyboard'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasKeyboard', checked === true)}
+              />
+              <Label htmlFor="hasKeyboard" className="cursor-pointer">¿Tiene teclado?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasStand"
+                checked={Boolean(getAttrValue('hasStand'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasStand', checked === true)}
+              />
+              <Label htmlFor="hasStand" className="cursor-pointer">¿Tiene soporte?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasNetworkAdapter"
+                checked={Boolean(getAttrValue('hasNetworkAdapter'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasNetworkAdapter', checked === true)}
+              />
+              <Label htmlFor="hasNetworkAdapter" className="cursor-pointer">¿Tiene adaptador de red?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasMemoryAdapter"
+                checked={Boolean(getAttrValue('hasMemoryAdapter'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasMemoryAdapter', checked === true)}
+              />
+              <Label htmlFor="hasMemoryAdapter" className="cursor-pointer">¿Tiene adaptador de memoria?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasScreen"
+                checked={Boolean(getAttrValue('hasScreen'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasScreen', checked === true)}
+              />
+              <Label htmlFor="hasScreen" className="cursor-pointer">¿Tiene pantalla(s) externa(s)?</Label>
+            </div>
+            {getAttrValue('hasScreen') && (
+              <div className="space-y-2 ml-6">
+                <Label>Número de pantallas externas</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={Number(getAttrValue('screenCount')) || 1}
+                  onChange={(e) => handleAttributeChange('screenCount', e.target.value ? Number(e.target.value) : 1)}
+                  placeholder="1"
+                />
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasHub"
+                checked={Boolean(getAttrValue('hasHub'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasHub', checked === true)}
+              />
+              <Label htmlFor="hasHub" className="cursor-pointer">¿Tiene HUB?</Label>
+            </div>
           </>
         );
 
@@ -350,6 +428,14 @@ export default function DeviceFormModal({
                 value={String(getAttrValue('storage') || '')}
                 onChange={(e) => handleAttributeChange('storage', e.target.value)}
                 placeholder="256GB"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>IMEI</Label>
+              <Input
+                value={String(getAttrValue('imei') || '')}
+                onChange={(e) => handleAttributeChange('imei', e.target.value)}
+                placeholder="123456789012345"
               />
             </div>
             <div className="space-y-2">
@@ -393,6 +479,96 @@ export default function DeviceFormModal({
                 onCheckedChange={(checked) => handleAttributeChange('hasCase', checked === true)}
               />
               <Label htmlFor="hasCase" className="cursor-pointer">¿Tiene funda/case?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasScreenProtector"
+                checked={Boolean(getAttrValue('hasScreenProtector'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasScreenProtector', checked === true)}
+              />
+              <Label htmlFor="hasScreenProtector" className="cursor-pointer">¿Tiene mica/protector de pantalla?</Label>
+            </div>
+          </>
+        );
+
+      case 'desktop':
+        return (
+          <>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasMouse"
+                checked={Boolean(getAttrValue('hasMouse'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasMouse', checked === true)}
+              />
+              <Label htmlFor="hasMouse" className="cursor-pointer">¿Tiene mouse?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasKeyboard"
+                checked={Boolean(getAttrValue('hasKeyboard'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasKeyboard', checked === true)}
+              />
+              <Label htmlFor="hasKeyboard" className="cursor-pointer">¿Tiene teclado?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasMousePad"
+                checked={Boolean(getAttrValue('hasMousePad'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasMousePad', checked === true)}
+              />
+              <Label htmlFor="hasMousePad" className="cursor-pointer">¿Tiene mouse pad?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasWifiCard"
+                checked={Boolean(getAttrValue('hasWifiCard'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasWifiCard', checked === true)}
+              />
+              <Label htmlFor="hasWifiCard" className="cursor-pointer">¿Tiene tarjeta WiFi?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasMemoryAdapter"
+                checked={Boolean(getAttrValue('hasMemoryAdapter'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasMemoryAdapter', checked === true)}
+              />
+              <Label htmlFor="hasMemoryAdapter" className="cursor-pointer">¿Tiene adaptador de memoria?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasScreen"
+                checked={Boolean(getAttrValue('hasScreen'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasScreen', checked === true)}
+              />
+              <Label htmlFor="hasScreen" className="cursor-pointer">¿Tiene pantalla(s)?</Label>
+            </div>
+            {getAttrValue('hasScreen') && (
+              <div className="space-y-2 ml-6">
+                <Label>Número de pantallas</Label>
+                <Input
+                  type="number"
+                  min="1"
+                  value={Number(getAttrValue('screenCount')) || 1}
+                  onChange={(e) => handleAttributeChange('screenCount', e.target.value ? Number(e.target.value) : 1)}
+                  placeholder="1"
+                />
+              </div>
+            )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasHub"
+                checked={Boolean(getAttrValue('hasHub'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasHub', checked === true)}
+              />
+              <Label htmlFor="hasHub" className="cursor-pointer">¿Tiene HUB?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasPowerCable"
+                checked={Boolean(getAttrValue('hasPowerCable'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasPowerCable', checked === true)}
+              />
+              <Label htmlFor="hasPowerCable" className="cursor-pointer">¿Tiene cable de poder?</Label>
             </div>
           </>
         );
@@ -602,6 +778,28 @@ export default function DeviceFormModal({
                 onChange={(e) => handleAttributeChange('imageUrl', e.target.value)}
                 placeholder="https://ejemplo.com/imagen.jpg"
               />
+            </div>
+          </>
+        );
+
+      case 'ip-phone':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Número</Label>
+              <Input
+                value={String(getAttrValue('phoneNumber') || '')}
+                onChange={(e) => handleAttributeChange('phoneNumber', e.target.value)}
+                placeholder="Ej: +593 2 1234567 o ext. 101"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="hasCharger"
+                checked={Boolean(getAttrValue('hasCharger'))}
+                onCheckedChange={(checked) => handleAttributeChange('hasCharger', checked === true)}
+              />
+              <Label htmlFor="hasCharger" className="cursor-pointer">¿Tiene cargador/adaptador?</Label>
             </div>
           </>
         );

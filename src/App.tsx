@@ -17,11 +17,15 @@ import Credentials from "./pages/Credentials";
 import Security from "./pages/Security";
 import { PrivateRoute } from "@/components/PrivateRout";
 import UserDashboard from "./pages/UserDashboard";
+import HumanResourcesDashboard from "./pages/HumanResourcesDashboard";
+import HumanResourcesRequests from "./pages/HumanResourcesRequests";
+import AdminRequests from "./pages/AdminRequests";
 import UserRequests from "./pages/UserRequests";
 
 
 const queryClient = new QueryClient();
 const adminRoles = ['Admin', 'Administrador', 'admin'];
+const hrRoles = ['Recursos Humanos', 'Human Resources', 'RRHH', ...adminRoles];
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
@@ -46,9 +50,24 @@ const App = () => (
                 <UserDashboard />
               </PrivateRoute>
             } />
+            <Route path="/human-resources" element={
+              <PrivateRoute allowedRoles={hrRoles}>
+                <HumanResourcesDashboard />
+              </PrivateRoute>
+            } />
             <Route path="/user-requests" element={
               <PrivateRoute>
                 <UserRequests />
+              </PrivateRoute>
+            } />
+            <Route path="/human-resources/requests" element={
+              <PrivateRoute allowedRoles={hrRoles}>
+                <HumanResourcesRequests />
+              </PrivateRoute>
+            } />
+            <Route path="/admin/requests" element={
+              <PrivateRoute allowedRoles={adminRoles}>
+                <AdminRequests />
               </PrivateRoute>
             } />
             <Route path="/devices" element={

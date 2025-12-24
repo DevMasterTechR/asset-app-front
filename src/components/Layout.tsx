@@ -18,6 +18,7 @@ import {
   ArrowRight,
   Key,
   ShieldCheck,
+  FileText,
 } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
@@ -38,6 +39,7 @@ const navItems: NavItem[] = [
   { title: 'Dispositivos', href: '/devices', icon: Laptop },
   { title: 'Personas', href: '/people', icon: Users },
   { title: 'Asignaciones', href: '/assignments', icon: ClipboardList },
+  { title: 'Solicitudes', href: '/admin/requests', icon: FileText },
   { title: 'Catálogos', href: '/catalogs', icon: FolderTree },
   { title: 'Consumibles', href: '/consumables', icon: Package },
   { title: 'Credenciales', href: '/credentials', icon: Key },

@@ -9,10 +9,16 @@ import { useToast } from '@/hooks/use-toast';
 import { Laptop, User, Lock, Eye, EyeOff } from 'lucide-react';
 
 const adminRoles = ['Admin', 'Administrador', 'admin'];
+const hrRoles = ['Recursos Humanos', 'Human Resources', 'RRHH'];
 
 function isAdminRole(role: string | { name?: string } | null | undefined) {
   const value = typeof role === 'string' ? role : role?.name;
   return value ? adminRoles.some((r) => r.toLowerCase() === value.toLowerCase()) : false;
+}
+
+function isHrRole(role: string | { name?: string } | null | undefined) {
+  const value = typeof role === 'string' ? role : role?.name;
+  return value ? hrRoles.some((r) => r.toLowerCase() === value.toLowerCase()) : false;
 }
 
 export default function Auth() {
@@ -27,6 +33,8 @@ export default function Auth() {
       if (isAdminRole(user.role as any)) {
         // Administrador → / (Index)
         navigate('/');
+      } else if (isHrRole(user.role as any)) {
+        navigate('/human-resources');
       } else {
         // Usuario normal → /user-dashboard
         navigate('/user-dashboard');

@@ -39,7 +39,7 @@ const Index = () => {
   const [newOwnerId, setNewOwnerId] = useState<string>("");
   const [ownerSaving, setOwnerSaving] = useState(false);
   const [ownerError, setOwnerError] = useState<string>("");
-  const [previewOpen, setPreviewOpen] = useState(false);
+  // Se elimina la previsualización del reporte general; solo descarga directa
   const [credentials, setCredentials] = useState<Credential[]>([]);
   const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
   const [devicesRaw, setDevicesRaw] = useState<any[]>([]);
@@ -237,6 +237,7 @@ const Index = () => {
           assetId: a.assetId,
           purchaseDate: fullAsset?.purchaseDate || fullAsset?.purchase_date || a.asset?.purchaseDate || a.asset?.purchase_date,
           branchId: a.branchId || a.branch?.id || a.asset?.branchId,
+          attributesJson: fullAsset?.attributesJson || a.asset?.attributesJson || {},
           branch:
             a.branch?.name ||
             a.branchName ||
@@ -615,9 +616,9 @@ const Index = () => {
         {/* Acciones y buscador */}
         <div className="mt-4 space-y-3">
           <div className="flex justify-end gap-2">
-             <Button variant="destructive" className="gap-2" onClick={() => setPreviewOpen(true)}>
+             <Button variant="destructive" className="gap-2" onClick={() => downloadReport()}>
               <Download className="h-4 w-4" />
-             Generar Reporte General PDF
+             Descargar Reporte General PDF
             </Button>
             <Button onClick={loadData} disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
@@ -815,243 +816,7 @@ const Index = () => {
           </div>
         )}
 
-        {/* Report Preview Modal */}
-        {previewOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto">
-            <div className="w-full max-w-6xl rounded-lg bg-white shadow-xl my-8">
-              <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-4 rounded-t-lg flex items-center justify-between">
-                <div>
-                  <h2 className="text-xl font-bold">Previsualización del reporte general</h2>
-                  <p className="text-sm text-blue-100 mt-1">Personas, credenciales, dispositivos, consumibles y asignaciones</p>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setPreviewOpen(false)}
-                  className="text-white hover:bg-blue-800"
-                >
-                  ✕
-                </Button>
-              </div>
-
-              <div className="p-6 max-h-[75vh] overflow-y-auto space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-                  <div className="bg-blue-50 border-2 border-blue-200 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-blue-700">{people.length}</div>
-                    <div className="text-sm text-blue-600 font-medium mt-1">Personas</div>
-                  </div>
-                  <div className="bg-indigo-50 border-2 border-indigo-200 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-indigo-700">{credentials.length}</div>
-                    <div className="text-sm text-indigo-600 font-medium mt-1">Credenciales</div>
-                  </div>
-                  <div className="bg-emerald-50 border-2 border-emerald-200 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-emerald-700">{devicesRaw.length}</div>
-                    <div className="text-sm text-emerald-600 font-medium mt-1">Dispositivos</div>
-                  </div>
-                  <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-amber-700">{consumablesReport.length}</div>
-                    <div className="text-sm text-amber-600 font-medium mt-1">Consumibles</div>
-                  </div>
-                  <div className="bg-purple-50 border-2 border-purple-200 rounded-lg p-4 text-center">
-                    <div className="text-3xl font-bold text-purple-700">{assignmentsForDisplay.length}</div>
-                    <div className="text-sm text-purple-600 font-medium mt-1">{assignmentsLabel}</div>
-                  </div>
-                </div>
-
-                {/* Personas */}
-                <div className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
-                    <h3 className="text-sm font-semibold text-gray-700">Personas ({people.length})</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-blue-600 text-white">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Nombre</th>
-                          <th className="px-3 py-2 text-left">Sucursal</th>
-                          <th className="px-3 py-2 text-left">Departamento</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {people.slice(0, 6).map((p, idx) => (
-                          <tr key={p.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="px-3 py-2 border-t font-medium">{`${p.firstName || ''} ${p.lastName || ''}`.trim() || '-'}</td>
-                            <td className="px-3 py-2 border-t">{p.branch?.name || p.branchName || '-'}</td>
-                            <td className="px-3 py-2 border-t">{p.department?.name || p.departmentName || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {people.length > 6 && (
-                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {people.length - 6} personas más</div>
-                  )}
-                </div>
-
-                {/* Credenciales */}
-                <div className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
-                    <h3 className="text-sm font-semibold text-gray-700">Credenciales ({credentials.length})</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-blue-600 text-white">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Persona</th>
-                          <th className="px-3 py-2 text-left">Sistema</th>
-                          <th className="px-3 py-2 text-left">Usuario</th>
-                          <th className="px-3 py-2 text-left">Notas</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {credentials.slice(0, 6).map((c, idx) => (
-                          <tr key={c.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="px-3 py-2 border-t font-medium">{getPersonNameById(c.personId)}</td>
-                            <td className="px-3 py-2 border-t">{c.system?.toUpperCase?.() || c.system || '-'}</td>
-                            <td className="px-3 py-2 border-t">{c.username || '-'}</td>
-                            <td className="px-3 py-2 border-t">{c.notes || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {credentials.length > 6 && (
-                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {credentials.length - 6} credenciales más</div>
-                  )}
-                </div>
-
-                {/* Dispositivos */}
-                <div className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
-                    <h3 className="text-sm font-semibold text-gray-700">Dispositivos ({devicesRaw.length})</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-blue-600 text-white">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Código</th>
-                          <th className="px-3 py-2 text-left">Tipo</th>
-                          <th className="px-3 py-2 text-left">Marca</th>
-                          <th className="px-3 py-2 text-left">Modelo</th>
-                          <th className="px-3 py-2 text-left">Estado</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {devicesRaw.slice(0, 6).map((d, idx) => (
-                          <tr key={d.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="px-3 py-2 border-t font-medium">{d.assetCode || d.code || '-'}</td>
-                            <td className="px-3 py-2 border-t">{d.assetType || d.type || '-'}</td>
-                            <td className="px-3 py-2 border-t">{d.brand || '-'}</td>
-                            <td className="px-3 py-2 border-t">{d.model || '-'}</td>
-                            <td className="px-3 py-2 border-t">{d.status || '-'}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {devicesRaw.length > 6 && (
-                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {devicesRaw.length - 6} dispositivos más</div>
-                  )}
-                </div>
-
-                {/* Consumibles */}
-                <div className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b">
-                    <h3 className="text-sm font-semibold text-gray-700">Consumibles ({consumablesReport.length})</h3>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-blue-600 text-white">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Tipo</th>
-                          <th className="px-3 py-2 text-left">Marca</th>
-                          <th className="px-3 py-2 text-left">Modelo</th>
-                          <th className="px-3 py-2 text-left">Cantidad</th>
-                          <th className="px-3 py-2 text-left">F. Compra</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {consumablesReport.slice(0, 6).map((c, idx) => (
-                          <tr key={c.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                            <td className="px-3 py-2 border-t font-medium">{c.assetType || 'Consumible'}</td>
-                            <td className="px-3 py-2 border-t">{c.brand || '-'}</td>
-                            <td className="px-3 py-2 border-t">{c.model || '-'}</td>
-                            <td className="px-3 py-2 border-t">{c.quantity ?? '-'}</td>
-                            <td className="px-3 py-2 border-t">{formatDateShort(c.purchaseDate)}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                  {consumablesReport.length > 6 && (
-                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {consumablesReport.length - 6} consumibles más</div>
-                  )}
-                </div>
-
-                {/* Asignaciones */}
-                <div className="border rounded-lg overflow-hidden shadow-sm">
-                  <div className="bg-gradient-to-r from-gray-100 to-gray-200 px-4 py-3 border-b flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                    <h3 className="text-sm font-semibold text-gray-700">{assignmentsLabel} ({assignmentsForDisplay.length})</h3>
-                    <div className="flex items-center gap-2 text-xs text-gray-600">
-                      <span>Ver:</span>
-                      <select
-                        className="rounded-md border px-2 py-1 text-xs bg-white"
-                        value={assignmentsMode}
-                        onChange={(e) => setAssignmentsMode(e.target.value as 'active' | 'history')}
-                      >
-                        <option value="active">Asignaciones activas</option>
-                        <option value="history">Historial de asignaciones</option>
-                      </select>
-                    </div>
-                  </div>
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-xs">
-                      <thead className="bg-blue-600 text-white">
-                        <tr>
-                          <th className="px-3 py-2 text-left">Persona</th>
-                          <th className="px-3 py-2 text-left">Equipo</th>
-                          <th className="px-3 py-2 text-left">Sucursal</th>
-                          <th className="px-3 py-2 text-left">F. Asignación</th>
-                          {assignmentsMode === 'history' && <th className="px-3 py-2 text-left">F. Devolución</th>}
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {assignmentsForDisplay.length === 0 ? (
-                          <tr>
-                            <td colSpan={assignmentsMode === 'history' ? 5 : 4} className="px-3 py-4 text-center text-muted-foreground">No hay asignaciones para mostrar.</td>
-                          </tr>
-                        ) : (
-                          assignmentsForDisplay.slice(0, 6).map((a, idx) => (
-                            <tr key={a.id || idx} className={idx % 2 === 0 ? 'bg-gray-50' : 'bg-white'}>
-                              <td className="px-3 py-2 border-t font-medium">{`${a.person?.firstName || ''} ${a.person?.lastName || ''}`.trim() || '-'}</td>
-                              <td className="px-3 py-2 border-t">{a.asset?.assetCode || a.asset?.code || a.assetId || '-'}</td>
-                              <td className="px-3 py-2 border-t">{a.branch?.name || a.branchName || '-'}</td>
-                              <td className="px-3 py-2 border-t">{formatDateShort(a.assignmentDate)}</td>
-                              {assignmentsMode === 'history' && (
-                                <td className="px-3 py-2 border-t">{formatDateShort(a.returnDate)}</td>
-                              )}
-                            </tr>
-                          ))
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                  {assignmentsForDisplay.length > 6 && (
-                    <div className="bg-gray-50 px-4 py-3 border-t text-center text-xs text-gray-600">... y {assignmentsForDisplay.length - 6} asignaciones más</div>
-                  )}
-                </div>
-              </div>
-
-              <div className="border-t px-6 py-4 bg-gray-50 rounded-b-lg flex justify-end gap-3">
-                <Button variant="outline" onClick={() => setPreviewOpen(false)}>Cancelar</Button>
-                <Button className="gap-2 bg-blue-600 hover:bg-blue-700 text-white" onClick={() => { downloadReport(); setPreviewOpen(false); }}>
-                  <Download className="h-4 w-4" />
-                  Descargar PDF
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
+        {/* Se eliminó la previsualización; descarga directa del PDF */}
       </div>
 
       {/* Modal Generar Acta */}

@@ -9,7 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { Download, Printer } from "lucide-react";
+import { Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuth } from "@/context/AuthContext";
@@ -30,6 +30,18 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     if (open) {
       setObservations("");
       console.log("Usuario en GenerateActaModal:", user);
+      if (user?.devices) {
+        console.log("Dispositivos:", user.devices);
+        user.devices.forEach((d: any, idx: number) => {
+          console.log(`Device ${idx}:`, {
+            code: d.code,
+            type: d.assetType,
+            attributesJson: d.attributesJson,
+            attributes: d.attributes,
+            allKeys: Object.keys(d),
+          });
+        });
+      }
     }
   }, [open, user]);
 
@@ -45,6 +57,70 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     month: "long",
     day: "numeric",
   });
+
+  const formatDateShort = (value?: string) => {
+    if (!value) return "-";
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return "-";
+    const day = `${d.getDate()}`.padStart(2, "0");
+    const month = `${d.getMonth() + 1}`.padStart(2, "0");
+    const year = d.getFullYear();
+    return `${day}/${month}/${year}`;
+  };
+
+  const resolveField = (obj: any, keys: string[], yesNo = false, skipSerialNumber = false) => {
+    const tryVal = (v: any) => {
+      if (v === undefined || v === null) return undefined;
+      if (typeof v === 'object') return JSON.stringify(v);
+      const s = String(v).trim();
+      if (!s) return undefined;
+      if (yesNo) {
+        const low = s.toLowerCase();
+        if (v === true || low === 'si' || low === 'sí' || low === 'true' || low === 'yes') return 'Sí';
+        if (v === false || low === 'no' || low === 'false') return 'No';
+        return s;
+      }
+      return s;
+    };
+
+    // 1) revisar en attributesJson primero (más importante)
+    const attrs = obj?.attributesJson || obj?.attributes || {};
+    console.log(`[resolveField] Looking for ${keys.join(', ')} in attrs:`, attrs);
+    for (const k of keys) {
+      const val = tryVal(attrs?.[k]);
+      if (val !== undefined) {
+        console.debug(`Found ${k} in attributesJson:`, val);
+        return val;
+      }
+    }
+    
+    // 2) revisar en el objeto plano (pero evitar serialNumber para IMEI si se indica)
+    for (const k of keys) {
+      if (skipSerialNumber && k === 'serialNumber') continue;
+      const val = tryVal(obj?.[k]);
+      if (val !== undefined) {
+        console.debug(`Found ${k} in object:`, val);
+        return val;
+      }
+    }
+    
+    // 3) casos anidados comunes (storage.capacity)
+    const storage = attrs?.storage || obj?.storage;
+    if (storage && keys.some((k) => ['storage', 'almacenamiento', 'disk', 'ssd', 'hdd'].includes(k))) {
+      const capacity = storage.capacity ?? storage.size ?? storage.total;
+      const type = storage.type ?? storage.kind;
+      const capStr = capacity !== undefined ? String(capacity) : undefined;
+      const typeStr = type !== undefined ? String(type) : undefined;
+      if (capStr || typeStr) {
+        const result = [typeStr, capStr].filter(Boolean).join(' ');
+        console.debug(`Found storage nested:`, result);
+        return result;
+      }
+    }
+    
+    console.debug(`Not found: ${keys.join(', ')} - returning "-"`);
+    return '-';
+  };
 
   const handleGeneratePDF = () => {
     if (!observations.trim()) {
@@ -64,8 +140,28 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     // Función para agregar encabezado en cada página
     const addHeader = () => {
       const logoWidth = 100;
-      const logoHeight = 20;
+      const logoHeight = 16;
       doc.addImage(logoUrl, "PNG", (pageWidth - logoWidth) / 2, 8, logoWidth, logoHeight);
+    };
+
+    const addFooterToAllPages = () => {
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        const footerText = `QUITO – QUITO SUR – GUAYAQUIL – CUENCA – MANTA – MACHALA – AMBATO - STO. DOMINGO – LOJA – IBARRA - EXPRESS SANGOLQUI – CARAPUNGO – PORTOVIEJO\nwww.recursos-tecnologicos.com\nTeléfono: PBX 593 – 02 5133453`;
+        const splitFooter = doc.splitTextToSize(footerText, 180);
+        doc.text(splitFooter, pageWidth / 2, pageHeight - 15, { align: "center" });
+
+        doc.setTextColor(200, 200, 200);
+        doc.setFont("helvetica", "italic");
+        doc.text(`Generado por: ${generatedBy}`, 15, pageHeight - 8);
+        doc.setTextColor(0, 0, 0);
+
+        doc.setFontSize(7);
+        doc.text(`${i}/${totalPages}`, pageWidth - 15, pageHeight - 8, { align: "right" });
+      }
     };
 
     // ===== PÁGINA 1: Encabezado, tabla y observaciones =====
@@ -90,7 +186,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     const splitIntro = doc.splitTextToSize(introText, 180);
     doc.text(splitIntro, 15, 58);
 
-    // Tabla de equipos
+    // Tabla de equipos (más compacta)
     const equipmentData = user.devices
       ? user.devices.map((d: any, idx: number) => [
           String(idx + 1),
@@ -103,40 +199,195 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       : [];
 
     const tableStartY = 75;
-    autoTable(doc, {
-      head: [["#", "Código", "Tipo", "Marca", "Modelo", "Serial"]],
-      body: equipmentData,
-      startY: tableStartY,
-      margin: 15,
-      styles: {
-        font: "helvetica",
-        fontSize: 9,
-        cellPadding: 3,
-        halign: "center",
-      },
-      headStyles: {
-        fillColor: [41, 128, 185],
-        textColor: 255,
-        fontStyle: "bold",
-      },
-      alternateRowStyles: {
-        fillColor: [245, 245, 245],
-      },
-    });
 
-    // Observaciones
-    let finalY = (doc as any).lastAutoTable.finalY || 150;
+    let currentY = 75;
+
+    // Cuadros de detalles por dispositivo (AQUI, ANTES DE OBSERVACIONES)
+    const drawDeviceDetailBox = (d: any, idx: number) => {
+      const typeLabel = d.assetType || d.type || "-";
+      const detailLineHeight = 3.5;
+      const baseLines = [
+        `Tipo: ${typeLabel}`,
+        `Marca: ${d.brand || "-"}`,
+        `Modelo: ${d.model || "-"}`,
+        `Serial: ${d.serialNumber || "-"}`,
+      ];
+
+      const isLaptop = /laptop|notebook|ultrabook/i.test(typeLabel);
+      const isSmartphone = /smartphone|cellphone|phone|celular/i.test(typeLabel);
+      const isDesktop = /desktop|pc|computadora/i.test(typeLabel);
+      const isIPPhone = /ip-phone|ipphone|teléfono ip|telefono ip/i.test(typeLabel);
+      const isPrinter = /printer|impresora/i.test(typeLabel);
+      const laptopLines = isLaptop
+        ? [
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])}`,
+            `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "ssd", "hdd", "disk"])}`,
+            `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Maletín: ${resolveField(d, ["hasBag", "bagIncluded", "bag", "maletin"], true)}`,
+            `Mouse: ${resolveField(d, ["hasMouse", "mouse"], true)}`,
+            `Mouse Pad: ${resolveField(d, ["hasMousePad", "mousePad"], true)}`,
+            `Teclado: ${resolveField(d, ["hasKeyboard", "keyboard"], true)}`,
+            `Soporte: ${resolveField(d, ["hasStand", "stand", "soporte"], true)}`,
+            `Adaptador de Red: ${resolveField(d, ["hasNetworkAdapter", "networkAdapter"], true)}`,
+            `Adaptador de Memoria: ${resolveField(d, ["hasMemoryAdapter", "memoryAdapter"], true)}`,
+            `Pantalla(s) Externa(s): ${resolveField(d, ["hasScreen", "screen", "pantalla"], true)}`,
+            ...(resolveField(d, ["hasScreen", "screen"], true) === 'Sí' ? [`Cantidad de Pantallas: ${resolveField(d, ["screenCount", "screens"])}`] : []),
+            `HUB: ${resolveField(d, ["hasHub", "hub"], true)}`,
+          ]
+        : [];
+
+      const phoneLines = isSmartphone
+        ? [
+            `Procesador: ${resolveField(d, ["cpu", "processor", "chip"])}`,
+            `RAM (GB): ${resolveField(d, ["ram", "memory"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento"])}`,
+            `IMEI: ${resolveField(d, ["imei", "imei1"], false, true)}`,
+            `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
+            `Funda/Case: ${resolveField(d, ["hasCase", "case", "hasBag", "bagIncluded"], true)}`,
+            `Mica/Protector: ${resolveField(d, ["hasScreenProtector", "screenProtector", "mica"], true)}`,
+          ]
+        : [];
+
+      const desktopLines = isDesktop
+        ? [
+            `Mouse: ${resolveField(d, ["hasMouse", "mouse"], true)}`,
+            `Teclado: ${resolveField(d, ["hasKeyboard", "keyboard"], true)}`,
+            `Mouse Pad: ${resolveField(d, ["hasMousePad", "mousePad"], true)}`,
+            `Tarjeta WiFi: ${resolveField(d, ["hasWifiCard", "wifiCard"], true)}`,
+            `Adaptador de Memoria: ${resolveField(d, ["hasMemoryAdapter", "memoryAdapter"], true)}`,
+            `Pantalla(s): ${resolveField(d, ["hasScreen", "screen"], true)}`,
+            ...(resolveField(d, ["hasScreen", "screen"], true) === 'Sí' ? [`Cantidad de Pantallas: ${resolveField(d, ["screenCount", "screens"])}`] : []),
+            `HUB: ${resolveField(d, ["hasHub", "hub"], true)}`,
+            `Cable de Poder: ${resolveField(d, ["hasPowerCable", "powerCable"], true)}`,
+          ]
+        : [];
+
+      const ipPhoneLines = isIPPhone
+        ? [
+            `Número: ${resolveField(d, ["phoneNumber", "number", "extension"])}`,
+            `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
+          ]
+        : [];
+
+      const printerLines = isPrinter
+        ? [
+            `Tipo: ${resolveField(d, ["printerType", "tipo"])}`,
+            `Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+            `IP: ${resolveField(d, ["ipAddress", "ip"])}`,
+            `Escáner: ${resolveField(d, ["hasScanner", "scanner"], true)}`,
+            `Imprime a Color: ${resolveField(d, ["colorPrinting", "color"], true)}`,
+            `Cable de Poder: ${resolveField(d, ["hasPowerCable", "powerCable"], true)}`,
+            `Cable USB: ${resolveField(d, ["hasUSBCable", "usbCable"], true)}`,
+          ]
+        : [];
+
+      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines];
+      
+      // Filtrar solo las líneas que tienen datos (no vacías ni "No")
+      const filteredLines = allLines.filter(line => {
+        // Eliminar líneas que terminan en ": -" o que son ": No"
+        if (line.includes(': -')) return false;
+        if (line.endsWith(': No')) return false;
+        return true;
+      });
+      
+      // Si no hay atributos específicos (solo quedan las baseLines), mostrar mensaje
+      let displayLines = filteredLines;
+      if (filteredLines.length <= 5) {
+        displayLines = [
+          ...baseLines.filter(l => !l.includes(': -')),
+          `[Sin atributos específicos registrados]`
+        ];
+      }
+      
+      // Dividir en dos columnas para mejor presentación
+      const itemsPerCol = Math.ceil(displayLines.length / 2);
+      const leftCol = displayLines.slice(0, itemsPerCol);
+      const rightCol = displayLines.slice(itemsPerCol);
+      
+      const maxRows = Math.max(leftCol.length, rightCol.length);
+      const boxHeight = 11 + maxRows * detailLineHeight + 5;
+      
+      if (currentY + boxHeight > pageHeight - 50) {
+        doc.addPage();
+        addHeader();
+        currentY = 40;
+      }
+      
+      // Caja con fondo y bordes mejorados
+      doc.setFillColor(248, 250, 252);
+      doc.rect(12, currentY, pageWidth - 24, boxHeight, 'F');
+      
+      // Borde principal azul más grueso
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(1.2);
+      doc.rect(12, currentY, pageWidth - 24, boxHeight);
+      
+      // Título con fondo azul más oscuro
+      doc.setFillColor(31, 110, 170);
+      doc.rect(12, currentY, pageWidth - 24, 10, 'F');
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(255, 255, 255);
+      const titleText = `DISPOSITIVO #${idx + 1} — ${d.code || "SIN-CODIGO"} | ${typeLabel.toUpperCase()}`;
+      doc.text(titleText, 16, currentY + 6.5);
+      
+      // Línea separadora debajo del título
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(0.5);
+      doc.line(12, currentY + 10, pageWidth - 12, currentY + 10);
+      
+      // Contenido en dos columnas
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(40, 40, 40);
+      
+      const colWidth = (pageWidth - 48) / 2;
+      const midPageX = 12 + colWidth + 12;
+      let ly = currentY + 13;
+      
+      for (let i = 0; i < maxRows; i++) {
+        // Columna izquierda
+        if (leftCol[i]) {
+          const wrapped = doc.splitTextToSize(leftCol[i], colWidth - 2);
+          doc.text(wrapped, 16, ly);
+        }
+        // Línea separadora vertical
+        doc.setDrawColor(200, 200, 200);
+        doc.setLineWidth(0.3);
+        doc.line(midPageX - 6, currentY + 10, midPageX - 6, ly + 2);
+        
+        // Columna derecha
+        if (rightCol[i]) {
+          const wrapped = doc.splitTextToSize(rightCol[i], colWidth - 2);
+          doc.text(wrapped, midPageX, ly);
+        }
+        ly += detailLineHeight;
+      }
+      
+      currentY += boxHeight + 6;
+    };
+
+    (user.devices || []).forEach((d: any, idx: number) => drawDeviceDetailBox(d, idx));
+
+    // Observaciones después de los cuadros
+    if (currentY > pageHeight - 60) {
+      doc.addPage();
+      addHeader();
+      currentY = 40;
+    }
+    
+    currentY += 2;
     doc.setFontSize(10);
     doc.setFont("helvetica", "bold");
-    doc.text("Observaciones:", 15, finalY + 8);
-
+    doc.text("Observaciones:", 15, currentY);
+    
     doc.setFontSize(9);
     doc.setFont("helvetica", "normal");
     const splitObs = doc.splitTextToSize(observations, 180);
-    doc.text(splitObs, 15, finalY + 14);
-
-    // Calcular posición después de observaciones
-    let currentY = finalY + 14 + (splitObs.length * 4.5) + 10;
+    doc.text(splitObs, 15, currentY + 5);
+    currentY += splitObs.length * 4 + 6;
 
     // Solo agregar nueva página si no hay suficiente espacio para el siguiente contenido
     if (currentY > pageHeight - 60) {
@@ -173,12 +424,12 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       if (section.title) {
         doc.setFont("helvetica", "bold");
         doc.text(section.title, 15, currentY);
-        currentY += 6;
+        currentY += 4;
       }
       doc.setFont("helvetica", "normal");
       const splitText = doc.splitTextToSize(section.content, 180);
       doc.text(splitText, 15, currentY);
-      currentY += splitText.length * 4.5 + 5;
+      currentY += splitText.length * 4 + 3;
     });
 
     // Lista de mal uso
@@ -200,7 +451,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       }
       const splitItem = doc.splitTextToSize(item, 170);
       doc.text(splitItem, 20, currentY);
-      currentY += splitItem.length * 4.5 + 4;
+      currentY += splitItem.length * 4 + 2;
     });
 
     // Resto del texto
@@ -214,7 +465,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     const roboText = `En caso de robo del equipo, el/la/los/las colaboradores deberá presentar la denuncia correspondiente ante las autoridades competentes.`;
     const splitRobo = doc.splitTextToSize(roboText, 180);
     doc.text(splitRobo, 15, currentY);
-    currentY += splitRobo.length * 4.5 + 7;
+    currentY += splitRobo.length * 4 + 4;
 
     // Viñetas de costos
     const costItems = [
@@ -231,7 +482,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       }
       const splitItem = doc.splitTextToSize(item, 170);
       doc.text(splitItem, 20, currentY);
-      currentY += splitItem.length * 4.5 + 5;
+      currentY += splitItem.length * 4 + 3;
     });
 
     if (currentY > pageHeight - 60) {
@@ -253,7 +504,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       }
       const splitText = doc.splitTextToSize(text, 180);
       doc.text(splitText, 15, currentY);
-      currentY += splitText.length * 4.5 + 7;
+      currentY += splitText.length * 4 + 4;
     });
 
     // ===== PÁGINA FINAL: Logo, ACEPTACION EXPRESA y firmas =====
@@ -265,16 +516,16 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       currentY += 10;
     }
 
-    // Título ACEPTACION EXPRESA (más pequeño)
-    doc.setFontSize(9);
+    // Título ACEPTACION EXPRESA - Tamaño mediano en negrita
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.text("ACEPTACION EXPRESA:", 15, currentY);
+    doc.text("ACEPTACION EXPRESA", 15, currentY);
     currentY += 8;
 
     // Texto de aceptación
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const acceptanceText = `Yo, __________________, portador(a) de la cédula de identidad No. __________________, declaro haber recibido a conformidad los equipos tecnológicos detallados anteriormente. Me comprometo a hacer uso adecuado de los mismos, conforme a las políticas y directrices establecidas por la empresa, y acepto expresamente que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos, o en su defecto, de mi liquidación final en caso de terminación de la relación laboral.`;
+    const acceptanceText = `Yo, ___________________________________________, portador(a) de la cédula de identidad No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados anteriormente. Me comprometo a hacer uso adecuado de los mismos, conforme a las políticas y directrices establecidas por la empresa, y acepto expresamente que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos, o en su defecto, de mi liquidación final en caso de terminación de la relación laboral.`;
     
     const splitAcceptance = doc.splitTextToSize(acceptanceText, 180);
     doc.text(splitAcceptance, 15, currentY);
@@ -316,14 +567,18 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     doc.setFont("helvetica", "bold");
     doc.text("Entregado por:", rightColX, currentY);
     
-    // Nombre fijo
+    // Nombre dinámico del usuario que generó el reporte
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
-    doc.text("MORETA PAEZ GALO ANIBAL", rightColX, lineY1 - 2);
+    const generatedUserName = currentUser?.firstName && currentUser?.lastName 
+      ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
+      : "ADMINISTRADOR";
+    const generatedUserCI = currentUser?.nationalId || "N/A";
+    doc.text(generatedUserName, rightColX, lineY1 - 2);
     doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 4);
     
-    // C.I. fijo
-    doc.text("C.I.: 1723563480", rightColX, lineY2);
+    // C.I. del usuario que generó el reporte
+    doc.text(`C.I.: ${generatedUserCI}`, rightColX, lineY2);
     
     // Línea para Firma (vacía)
     doc.text("Firma: ", rightColX, lineY3);
@@ -332,249 +587,10 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     // Fecha actual (se llena automáticamente)
     doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
 
-    // Pie de página con información de contacto
-    doc.setFontSize(7);
-    doc.setTextColor(150, 150, 150);
-    const footerText = `QUITO – QUITO SUR – GUAYAQUIL – CUENCA – MANTA – MACHALA – AMBATO - STO. DOMINGO – LOJA – IBARRA - EXPRESS SANGOLQUI – CARAPUNGO – PORTOVIEJO
-www.recursos-tecnologicos.com
-Teléfono: PBX 593 – 02 5133453`;
-    const splitFooter = doc.splitTextToSize(footerText, 180);
-    doc.text(splitFooter, pageWidth / 2, pageHeight - 15, { align: "center" });
-
-    // Watermark "Generado por" al pie
-    doc.setFontSize(7);
-    doc.setTextColor(200, 200, 200);
-    doc.setFont("helvetica", "italic");
-    doc.text(`Generado por: ${generatedBy}`, 15, pageHeight - 8);
-    doc.setTextColor(0, 0, 0);
+    // Pie de página en todas las páginas
+    addFooterToAllPages();
 
     doc.save(`Acta_${user.userName?.replace(/\s+/g, "_")}_${today.getFullYear()}.pdf`);
-  };
-
-  const handlePrint = () => {
-    if (!observations.trim()) {
-      toast({
-        title: "Error",
-        description: "Las observaciones son obligatorias",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const printWindow = window.open("", "", "width=1000,height=800");
-    if (!printWindow) return;
-
-    const equipmentRows = (user.devices || [])
-      .map(
-        (d: any, idx: number) => `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${d.code || "SIN-CODIGO"}</td>
-          <td>${d.assetType || d.type || "-"}</td>
-          <td>${d.brand || "-"}</td>
-          <td>${d.model || "-"}</td>
-          <td>${d.serialNumber || "-"}</td>
-        </tr>
-      `
-      )
-      .join("");
-
-    printWindow.document.write(`
-      <!DOCTYPE html>
-      <html>
-        <head>
-          <meta charset="UTF-8">
-          <title>Acta de Entrega</title>
-          <style>
-            * { margin: 0; padding: 0; }
-            body { font-family: Arial, sans-serif; line-height: 1.5; color: #333; padding: 20px; }
-            .page { page-break-after: always; margin-bottom: 40px; }
-            .page:last-child { page-break-after: avoid; }
-            
-            /* Header común para todas las páginas */
-            .page-header { text-align: center; margin-bottom: 25px; }
-            .page-header img { width: 150px; height: auto; margin: 0 auto; display: block; }
-            
-            /* Página 1 específica */
-            .page1-header { display: flex; justify-content: flex-end; align-items: flex-start; margin-bottom: 15px; }
-            .page1-header .date { text-align: right; font-size: 11px; }
-            
-            .title { font-size: 14px; font-weight: bold; text-align: center; margin: 20px 0; }
-            .intro { font-size: 10px; text-align: justify; margin: 20px 0; line-height: 1.6; }
-            
-            table { width: 100%; border-collapse: collapse; margin: 20px 0; font-size: 10px; }
-            th, td { border: 1px solid #999; padding: 8px; text-align: center; }
-            th { background-color: #2980b9; color: white; font-weight: bold; }
-            tr:nth-child(even) { background-color: #f5f5f5; }
-            
-            .observations { margin: 20px 0; }
-            .observations-title { font-weight: bold; font-size: 10px; margin-bottom: 5px; }
-            .observations-text { font-size: 10px; }
-            
-            /* Contenido general */
-            .content { font-size: 9px; line-height: 1.6; text-align: justify; margin-top: 6px; }
-            .content p { margin: 10px 0; }
-            
-            .item-list { margin-left: 20px; }
-            .item-list p { margin: 5px 0; }
-            
-            .bullet-list { margin-left: 20px; }
-            .bullet-list p { margin: 8px 0; }
-            
-            /* Última página */
-            .page-final-header { text-align: center; margin-bottom: 20px; }
-            
-            .acceptance { margin: 20px 0; }
-            .acceptance-title { font-weight: bold; font-size: 9px; margin-bottom: 10px; }
-            .acceptance-text { font-size: 9px; text-align: justify; line-height: 1.6; margin-bottom: 20px; }
-            
-            .signatures-container { display: flex; justify-content: space-between; margin-top: 30px; gap: 20px; }
-            .signature-column { flex: 1; }
-            .signature-column h4 { font-weight: bold; font-size: 9px; margin-bottom: 15px; }
-            .signature-field { margin-bottom: 13px; }
-            .signature-field label { font-size: 8px; display: block; margin-bottom: 2px; }
-            .signature-field .line { border-bottom: 1px solid #000; padding-bottom: 2px; min-height: 12px; font-size: 8px; }
-            .signature-field .sublabel { font-size: 8px; color: #666; margin-top: 2px; }
-            
-            .footer { font-size: 7px; color: #999; text-align: center; margin-top: 30px; line-height: 1.4; }
-            
-            .watermark { font-size: 7px; color: #ccc; font-style: italic; margin-top: 20px; }
-            
-            @media print {
-              .page { page-break-after: always; }
-              button { display: none; }
-            }
-          </style>
-        </head>
-        <body>
-          <!-- PÁGINA 1 -->
-          <div class="page">
-            <div class="page-header">
-              <img src="/images/techinformeencabezado.png" alt="Logo">
-            </div>
-            
-            <div class="page1-header">
-              <div class="date"><strong>Quito, ${formattedDate}</strong></div>
-            </div>
-            
-            <div class="title">ACTA DE ENTREGA DE EQUIPOS TECNOLÓGICOS</div>
-            
-            <div class="intro">
-              En la ciudad de QUITO se llevó a cabo la entrega formal de los equipos tecnológicos pertenecientes a la empresa TechResources a <strong>${user.userName || "Desconocido"}</strong> con CI: <strong>${user.nationalId || "No especificado"}</strong>.
-            </div>
-            
-            <table>
-              <thead>
-                <tr>
-                  <th>#</th>
-                  <th>Código</th>
-                  <th>Tipo</th>
-                  <th>Marca</th>
-                  <th>Modelo</th>
-                  <th>Serial</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${equipmentRows}
-              </tbody>
-            </table>
-            
-            <div class="observations">
-              <div class="observations-title">Observaciones:</div>
-              <div class="observations-text">${observations || "Ninguna"}</div>
-            </div>
-          </div>
-          
-          <!-- PÁGINA 2+ -->
-          <div class="page">
-            <div class="content">
-              <p>El receptor de los equipos tecnológicos (en adelante, el/la/los/las colaboradores) es responsable de su uso adecuado y del mantenimiento en condiciones óptimas, conforme a las instrucciones y políticas establecidas por la empresa.</p>
-              
-              <p>Será responsabilidad de el/la/los/las colaboradores reportar de manera inmediata cualquier daño, falla, pérdida o incidente que afecte el funcionamiento del equipo, mediante correo electrónico dirigido al Departamento de Tecnología a la dirección dep-sistemas@recursos-tecnologicos.com.</p>
-              
-              <p>Se considera mal uso del equipo cualquier conducta que cause daño intencional, pérdida o deterioro en su funcionamiento. A título ejemplificativo, se considera mal uso:</p>
-              
-              <div class="item-list">
-                <p>a) La manipulación indebida de componentes internos.</p>
-                <p>b) La instalación o utilización de software no autorizado.</p>
-                <p>c) El uso del equipo en condiciones ambientales inadecuadas (temperatura, humedad, etc.).</p>
-                <p>d) El derrame de líquidos sobre el equipo.</p>
-                <p>e) El uso de fuerza excesiva sobre teclados, pantallas o conexiones.</p>
-                <p>f) Los golpes, caídas o impactos accidentales atribuibles a descuido del Usuario.</p>
-                <p>g) La modificación física del dispositivo sin la debida autorización técnica por parte del Departamento de Tecnología.</p>
-              </div>
-              
-              <p style="margin-top: 15px;">En caso de robo del equipo, el/la/los/las colaboradores deberá presentar la denuncia correspondiente ante las autoridades competentes.</p>
-              
-              <div class="bullet-list">
-                <p>• Si la denuncia es presentada y el procesador del equipo tiene una vigencia de hasta cinco (5) años en el mercado, el costo de reposición será asumido en un cincuenta por ciento (50%) por el Usuario y un cincuenta por ciento (50%) por la empresa.</p>
-                <p>• Si el procesador del equipo tiene una vigencia superior a cinco (5) años, la empresa asumirá el cien por ciento (100%) del costo de reposición presentando la denuncia respectiva.</p>
-                <p>• Si el Usuario no presenta la denuncia, asumirá el cien por ciento (100%) del costo del equipo, independientemente de su antigüedad.</p>
-              </div>
-              
-              <p style="margin-top: 15px;">El costo de reposición se calculará en función del valor comercial actual de un equipo de características equivalentes al entregado.</p>
-              
-              <p>Cualquier valor derivado de la reposición o reparación de equipos, en los casos antes descritos, será descontado automáticamente del rol de pagos de el/la/los/las colaboradores. En caso de terminación de la relación laboral, por cualquier causa, dichos valores serán deducidos del monto correspondiente a la liquidación final.</p>
-            </div>
-          </div>
-          
-          <!-- PÁGINA FINAL -->
-          <div class="page">
-            <div class="acceptance">
-              <div class="acceptance-title">ACEPTACION EXPRESA:</div>
-              <div class="acceptance-text">
-                Yo, __________________, portador(a) de la cédula de identidad No. __________________, declaro haber recibido a conformidad los equipos tecnológicos detallados anteriormente. Me comprometo a hacer uso adecuado de los mismos, conforme a las políticas y directrices establecidas por la empresa, y acepto expresamente que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos, o en su defecto, de mi liquidación final en caso de terminación de la relación laboral.
-              </div>
-              
-              <div class="signatures-container">
-                <div class="signature-column">
-                  <h4>Aceptado por:</h4>
-                  <div class="signature-field">
-                    <div class="line"></div>
-                    <div class="sublabel">Nombre completo del colaborador</div>
-                  </div>
-                  <div class="signature-field">
-                    <label>C.I.: ____________________</label>
-                  </div>
-                  <div class="signature-field">
-                    <label>Firma: ____________________</label>
-                  </div>
-                  <div class="signature-field">
-                    <label>Fecha: ____ / ____ / _______</label>
-                  </div>
-                </div>
-                
-                <div class="signature-column">
-                  <h4>Entregado por:</h4>
-                  <div class="signature-field">
-                    <div class="line">MORETA PAEZ GALO ANIBAL</div>
-                    <div class="sublabel">Nombre completo del responsable de entrega</div>
-                  </div>
-                  <div class="signature-field">
-                    <label>C.I.: 1723563480</label>
-                  </div>
-                  <div class="signature-field">
-                    <label>Firma: ____________________</label>
-                  </div>
-                  <div class="signature-field">
-                    <label>Fecha: ${today.toLocaleDateString("es-ES")}</label>
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div class="footer">
-              QUITO – QUITO SUR – GUAYAQUIL – CUENCA – MANTA – MACHALA – AMBATO - STO. DOMINGO – LOJA – IBARRA - EXPRESS SANGOLQUI – CARAPUNGO – PORTOVIEJO<br>
-              www.recursos-tecnologicos.com<br>
-              Teléfono: PBX 593 – 02 5133453
-            </div>
-            
-            <div class="watermark">Generado por: ${generatedBy}</div>
-          </div>
-        </body>
-      </html>
-    `);
-    printWindow.document.close();
   };
 
   return (
@@ -680,14 +696,6 @@ Teléfono: PBX 593 – 02 5133453`;
           <div className="flex gap-2 justify-end pt-4">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
-            </Button>
-            <Button
-              variant="outline"
-              onClick={handlePrint}
-              className="gap-2"
-            >
-              <Printer className="h-4 w-4" />
-              Vista Previa / Imprimir
             </Button>
             <Button onClick={handleGeneratePDF} className="gap-2">
               <Download className="h-4 w-4" />

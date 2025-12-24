@@ -47,6 +47,9 @@ const mapBackendToFrontend = (b: any): Assignment & { asset?: any; person?: any;
       status: b.asset.status,
       assignedPersonId: b.asset.assignedPersonId,
       branchId: b.asset.branchId,
+      serialNumber: b.asset.serialNumber,
+      purchaseDate: b.asset.purchaseDate,
+      attributesJson: b.asset.attributesJson || {},
     } : undefined,
     person: b.person ? {
       id: String(b.person.id),

@@ -1,6 +1,29 @@
 // src/api/devices.ts
 import { API_URL } from '@/lib/config';
 import apiFetch from '@/lib/fetchClient';
+
+export const assetsApi = {
+  /**
+   * Get assets assigned to the current user
+   */
+  async getUserAssets(): Promise<Device[]> {
+    const response = await apiFetch(`${API_URL}/assets/user/assigned`, {
+      method: "GET",
+    });
+    return response.json();
+  },
+
+  /**
+   * Get all unique asset types available
+   */
+  async getAssetTypes(): Promise<string[]> {
+    const response = await apiFetch(`${API_URL}/assets/types`, {
+      method: "GET",
+    });
+    return response.json();
+  },
+};
+
 export type DeviceStatus = 'available' | 'assigned' | 'maintenance' | 'decommissioned';
 
 export interface Device {
