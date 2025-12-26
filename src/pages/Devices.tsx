@@ -34,6 +34,7 @@ import {
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
 import * as catalogsApi from '@/api/catalogs';
+import { loansApi } from '@/api/loans';
 import { sortByString, sortPeopleByName, sortBranchesByName } from '@/lib/sort';
 import { extractArray } from '@/lib/extractData';
 import { useSort } from '@/lib/useSort';
@@ -100,6 +101,7 @@ function DevicesPage() {
   const [devices, setDevices] = useState<Device[]>([]);
   const [people, setPeople] = useState<Person[]>([]);
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
+  const [loans, setLoans] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState<number>(1);
   const [limit, setLimit] = useState<number>(10);
@@ -111,6 +113,33 @@ function DevicesPage() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [previewOpen, setPreviewOpen] = useState(false);
+
+  // Helper para detectar si un equipo tiene préstamo activo
+  const hasActiveLoan = (assetId: number) => {
+    return loans.some(l => l.assetId === assetId && !l.returnDate);
+  };
+
+  // Helper para obtener el estado actual (asignado vs préstamo)
+  const getStatus = (device: Device) => {
+    if (device.status === 'assigned' && hasActiveLoan(device.id)) {
+      return 'loan';
+    }
+    return device.status;
+  };
+
+  // Actualizar el mapa de etiquetas
+  const getStatusLabel = (device: Device) => {
+    const status = getStatus(device);
+    if (status === 'loan') return 'Préstamo';
+    return statusLabelMap[status as keyof typeof statusLabelMap] || status;
+  };
+
+  // Actualizar el mapa de variantes
+  const getStatusVariant = (device: Device) => {
+    const status = getStatus(device);
+    if (status === 'loan') return 'secondary' as const;
+    return statusVariantMap[status as keyof typeof statusVariantMap] || 'default' as const;
+  };
 
   useEffect(() => {
     loadData();
@@ -137,7 +166,7 @@ function DevicesPage() {
   const loadData = async () => {
     setLoading(true);
     try {
-      // Hacemos las 3 llamadas en paralelo pero tolerantes a fallos: si una falla
+      // Hacemos las llamadas en paralelo pero tolerantes a fallos: si una falla
       // no bloqueamos las demás. Así por ejemplo si /people falla (role missing)
       // seguimos mostrando dispositivos y sucursales.
       const results = await Promise.allSettled([
@@ -145,9 +174,10 @@ function DevicesPage() {
         devicesApi.getAll(searchTerm || undefined, page, limit),
         peopleApi.getAll(),
         catalogsApi.getBranches(),
+        loansApi.getAll(),
       ]);
 
-      const [devicesRes, peopleRes, branchesRes] = results;
+      const [devicesRes, peopleRes, branchesRes, loansRes] = results;
 
       if (devicesRes.status === 'fulfilled') {
         // devicesRes.value may be paginated ({ data, total, ... }) or an array
@@ -196,6 +226,13 @@ function DevicesPage() {
           variant: 'destructive',
         });
         setBranches([]);
+      }
+
+      if (loansRes.status === 'fulfilled') {
+        const loansList = extractArray<any>(loansRes.value);
+        setLoans(loansList);
+      } else {
+        setLoans([]);
       }
     } catch (error) {
       console.error('❌ Error cargando datos:', error);
@@ -466,8 +503,8 @@ function DevicesPage() {
 
                       <TableCell className="text-sm">{device.serialNumber || '-'}</TableCell>
                       <TableCell>
-                        <Badge variant={statusVariantMap[device.status]}>
-                          {statusLabelMap[device.status]}
+                        <Badge variant={getStatusVariant(device)}>
+                          {getStatusLabel(device)}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>

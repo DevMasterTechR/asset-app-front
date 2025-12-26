@@ -5,6 +5,14 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+  DropdownMenuLabel,
+} from '@/components/ui/dropdown-menu';
+import {
   LayoutDashboard,
   Laptop,
   Users,
@@ -19,6 +27,9 @@ import {
   Key,
   ShieldCheck,
   FileText,
+  ChevronDown,
+  PowerOff,
+  Boxes,
 } from 'lucide-react';
 
 import { useToast } from '@/hooks/use-toast';
@@ -34,16 +45,42 @@ interface NavItem {
   icon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
-const navItems: NavItem[] = [
-  { title: 'Dashboard', href: '/', icon: LayoutDashboard },
-  { title: 'Dispositivos', href: '/devices', icon: Laptop },
-  { title: 'Personas', href: '/people', icon: Users },
-  { title: 'Asignaciones', href: '/assignments', icon: ClipboardList },
-  { title: 'Solicitudes', href: '/admin/requests', icon: FileText },
-  { title: 'Catálogos', href: '/catalogs', icon: FolderTree },
-  { title: 'Consumibles', href: '/consumables', icon: Package },
-  { title: 'Credenciales', href: '/credentials', icon: Key },
-  { title: 'Seguridad', href: '/security', icon: ShieldCheck },
+interface NavCategory {
+  label: string;
+  items: NavItem[];
+}
+
+const navCategories: NavCategory[] = [
+  {
+    label: 'Principal',
+    items: [
+      { title: 'Dashboard', href: '/', icon: LayoutDashboard },
+    ],
+  },
+  {
+    label: 'Inventario',
+    items: [
+      { title: 'Dispositivos', href: '/devices', icon: Laptop },
+      { title: 'Personas', href: '/people', icon: Users },
+      { title: 'Consumibles', href: '/consumables', icon: Package },
+      { title: 'Seguridad', href: '/security', icon: ShieldCheck },
+    ],
+  },
+  {
+    label: 'Operaciones',
+    items: [
+      { title: 'Asignaciones', href: '/assignments', icon: ClipboardList },
+      { title: 'Préstamos', href: '/loans', icon: Boxes },
+      { title: 'Solicitudes', href: '/admin/requests', icon: FileText },
+    ],
+  },
+  {
+    label: 'Administración',
+    items: [
+      { title: 'Catálogos', href: '/catalogs', icon: FolderTree },
+      { title: 'Credenciales', href: '/credentials', icon: Key },
+    ],
+  },
 ];
 
 export default function Layout({ children }: LayoutProps) {
@@ -62,6 +99,49 @@ export default function Layout({ children }: LayoutProps) {
       return false;
     }
   });
+
+  const [expandedCategories, setExpandedCategories] = useState<Set<string>>(() => {
+    try {
+      const saved = localStorage.getItem('nav:expanded');
+      if (saved) {
+        return new Set(JSON.parse(saved));
+      }
+    } catch (e) {}
+    return new Set();
+  });
+
+  const toggleCategory = (categoryLabel: string) => {
+    setExpandedCategories(prev => {
+      const next = new Set(prev);
+      if (next.has(categoryLabel)) {
+        next.delete(categoryLabel);
+      } else {
+        next.add(categoryLabel);
+      }
+      try {
+        localStorage.setItem('nav:expanded', JSON.stringify([...next]));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  // Auto-expand category containing current route
+  useEffect(() => {
+    const currentPath = location.pathname;
+    for (const category of navCategories) {
+      const hasActiveItem = category.items.some(item => item.href === currentPath);
+      if (hasActiveItem && !expandedCategories.has(category.label)) {
+        setExpandedCategories(prev => {
+          const next = new Set(prev);
+          next.add(category.label);
+          try {
+            localStorage.setItem('nav:expanded', JSON.stringify([...next]));
+          } catch (e) {}
+          return next;
+        });
+      }
+    }
+  }, [location.pathname]);
 
   // Persist sidebar collapsed state
   useEffect(() => {
@@ -246,25 +326,93 @@ export default function Layout({ children }: LayoutProps) {
       </div>
 
       {/* Navigation */}
-      <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon = item.icon;
-          const isActive = location.pathname === item.href;
+      <nav className="flex-1 p-4 space-y-1 overflow-y-auto">
+        {navCategories.map((category) => {
+          const isExpanded = expandedCategories.has(category.label);
+          const isSingleItem = category.items.length === 1;
           
+          // Principal category (Dashboard) - always expanded, no collapsing
+          if (category.label === 'Principal') {
+            return (
+              <div key={category.label}>
+                {category.items.map((item) => {
+                  const Icon = item.icon;
+                  const isActive = location.pathname === item.href;
+                  
+                  return (
+                    <Link
+                      key={item.href}
+                      to={item.href}
+                      onClick={() => setIsOpen(false)}
+                      className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
+                        isActive
+                          ? 'bg-primary text-primary-foreground'
+                          : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Icon className="h-5 w-5 flex-shrink-0" />
+                      {!sidebarCollapsed && <span className="font-medium">{item.title}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            );
+          }
+
+          // Other categories - collapsible
           return (
-            <Link
-              key={item.href}
-              to={item.href}
-              onClick={() => setIsOpen(false)}
-              className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-muted text-muted-foreground hover:text-foreground'
-              }`}
-            >
-              <Icon className="h-5 w-5" />
-              {!sidebarCollapsed && <span className="font-medium">{item.title}</span>}
-            </Link>
+            <div key={category.label}>
+              <button
+                onClick={() => !sidebarCollapsed && toggleCategory(category.label)}
+                className={`w-full flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+                  sidebarCollapsed
+                    ? 'justify-center hover:bg-muted'
+                    : 'justify-between hover:bg-muted text-muted-foreground hover:text-foreground'
+                }`}
+                disabled={sidebarCollapsed}
+                title={sidebarCollapsed ? category.label : ''}
+              >
+                {!sidebarCollapsed && (
+                  <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                    {category.label}
+                  </p>
+                )}
+                {sidebarCollapsed ? (
+                  <div className="w-2 h-2 rounded-full bg-muted-foreground/50" />
+                ) : (
+                  <ChevronDown
+                    className={`h-4 w-4 transition-transform duration-200 flex-shrink-0 ${
+                      isExpanded ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
+              </button>
+              
+              {isExpanded && !sidebarCollapsed && (
+                <div className="space-y-1 mt-1">
+                  {category.items.map((item) => {
+                    const Icon = item.icon;
+                    const isActive = location.pathname === item.href;
+                    
+                    return (
+                      <Link
+                        key={item.href}
+                        to={item.href}
+                        onClick={() => setIsOpen(false)}
+                        className={`flex items-center gap-3 px-3 py-2 rounded-lg ml-2 transition-colors ${
+                          isActive
+                            ? 'bg-primary text-primary-foreground'
+                            : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        <Icon className="h-4 w-4 flex-shrink-0" />
+                        <span className="text-sm font-medium">{item.title}</span>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           );
         })}
       </nav>
@@ -272,27 +420,25 @@ export default function Layout({ children }: LayoutProps) {
       {/* Logout Button - mobile inside nav */}
       <div className="p-4 border-t md:hidden">
         <Button
-          variant="outline"
-          className="w-full justify-start"
+          variant="destructive"
+          className="w-full justify-start gap-2 font-medium"
           onClick={handleLogout}
         >
-          <LogOut className="mr-3 h-5 w-5" />
+          <PowerOff className="h-4 w-4" />
           Cerrar Sesión
         </Button>
       </div>
 
-      {/* Desktop: positioned logout inside sidebar (absolute at bottom) */}
-      <div className="hidden md:block">
-        <div className="absolute bottom-16 left-0">
-          <button
-            onClick={handleLogout}
-            className="group flex items-center gap-2 p-2 rounded-md hover:bg-muted transition-colors"
-            aria-label="Cerrar sesión"
-          >
-            <LogOut className="h-5 w-5 text-destructive" />
-            <span className="ml-1 text-sm text-destructive opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">Cerrar sesión</span>
-          </button>
-        </div>
+      {/* Desktop: positioned logout inside sidebar */}
+      <div className="hidden md:block p-4 border-t">
+        <Button
+          variant="destructive"
+          className={`w-full gap-2 font-medium ${sidebarCollapsed ? 'px-2' : 'justify-start'}`}
+          onClick={handleLogout}
+        >
+          <PowerOff className="h-4 w-4 flex-shrink-0" />
+          {!sidebarCollapsed && <span>Cerrar Sesión</span>}
+        </Button>
       </div>
     </div>
   );

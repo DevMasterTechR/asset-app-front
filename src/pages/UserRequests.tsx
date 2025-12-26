@@ -51,6 +51,8 @@ const UserRequests = () => {
   const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending');
   const [openDialog, setOpenDialog] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<RequestItem | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -141,9 +143,24 @@ const UserRequests = () => {
       loadData();
     } catch (error) {
       console.error('Error enviando solicitud:', error);
+      
+      let errorMessage = 'No se pudo enviar la solicitud';
+      
+      // Intentar obtener el mensaje de error del servidor
+      if (error instanceof Error) {
+        try {
+          const errorData = JSON.parse(error.message);
+          if (errorData.message) {
+            errorMessage = errorData.message;
+          }
+        } catch {
+          errorMessage = error.message || errorMessage;
+        }
+      }
+      
       toast({
         title: 'Error',
-        description: 'No se pudo enviar la solicitud',
+        description: errorMessage,
         variant: 'destructive',
       });
     } finally {
@@ -176,9 +193,9 @@ const UserRequests = () => {
       'rechazada': 'bg-red-100 text-red-800',
     };
     const labels: Record<string, string> = {
-      'pendiente_rrhh': 'Pend. RRHH',
-      'rrhh_rechazada': 'Rechazada RRHH',
-      'pendiente_admin': 'Pend. Admin',
+      'pendiente_rrhh': 'Pendiente',
+      'rrhh_rechazada': 'Rechazada',
+      'pendiente_admin': 'Pendiente',
       'aceptada': 'Aceptada',
       'rechazada': 'Rechazada',
     };
@@ -187,6 +204,86 @@ const UserRequests = () => {
         {labels[status] || status}
       </span>
     );
+  };
+
+  const getRejectReason = (req: RequestItem | null) => {
+    if (!req) return '';
+    if (req.status === 'rrhh_rechazada') return req.hrReason || 'Rechazada por RRHH.';
+    if (req.status === 'rechazada') return req.adminReason || 'Rechazada por Sistemas.';
+    return req.adminReason || req.hrReason || '';
+  };
+
+  const isRejected = selectedRequest?.status === 'rrhh_rechazada' || selectedRequest?.status === 'rechazada';
+
+  const getTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      equipment_replacement: 'Reemplazo de equipo',
+      consumables: 'Consumibles',
+      equipment_request: 'Solicitud de equipo',
+      new_employee: 'Nuevo trabajador',
+    };
+    return map[type] || type;
+  };
+
+  const renderPayloadReadable = (type: string, payload: any) => {
+    if (!payload) return <div className="text-muted-foreground">Sin datos</div>;
+
+    const Item = ({ label, value }: { label: string; value: any }) => (
+      <div className="flex gap-1 text-sm">
+        <span className="text-muted-foreground">{label}:</span>
+        <span className="font-medium break-words">{value || 'N/A'}</span>
+      </div>
+    );
+
+    switch (type) {
+      case 'equipment_replacement':
+        return (
+          <div className="space-y-1">
+            <Item label="Equipo" value={payload.assetId} />
+            <Item label="Razón" value={payload.reason} />
+          </div>
+        );
+      case 'consumables':
+        return (
+          <div className="space-y-1">
+            <Item label="Consumible" value={payload.consumible} />
+            <Item label="Razón" value={payload.reason} />
+          </div>
+        );
+      case 'equipment_request':
+        return (
+          <div className="space-y-1">
+            <Item label="Persona" value={payload.personId} />
+            <Item label="Sucursal" value={payload.branchId} />
+            <Item label="Departamento" value={payload.departmentId} />
+            <Item label="Equipos solicitados" value={payload.equipmentNeeded} />
+          </div>
+        );
+      case 'new_employee':
+        return (
+          <div className="space-y-1">
+            <Item label="Nombre" value={payload.firstName} />
+            <Item label="Apellido" value={payload.lastName} />
+            <Item label="Cédula" value={payload.nationalId} />
+            <Item label="Teléfono" value={payload.phone} />
+            <Item label="Cargo" value={payload.position} />
+            <Item label="Sucursal" value={payload.branchId} />
+            <Item label="Área" value={payload.departmentId} />
+            <Item label="Notas" value={payload.notes} />
+          </div>
+        );
+      default: {
+        const entries = Object.entries(payload || {});
+        if (!entries.length) return <div className="text-muted-foreground">Sin datos</div>;
+        return (
+          <div className="space-y-1 text-sm">
+            {entries.map(([k, v]) => (
+              <Item key={k} label={k} value={typeof v === 'object' ? JSON.stringify(v) : String(v)} />
+            ))}
+          </div>
+        );
+      }
+    }
   };
 
   return (
@@ -356,16 +453,29 @@ const UserRequests = () => {
                           <th className="text-left p-3 font-medium">Tipo</th>
                           <th className="text-left p-3 font-medium">Estado</th>
                           <th className="text-left p-3 font-medium">Creada</th>
+                          <th className="text-left p-3 font-medium">Acción</th>
                         </tr>
                       </thead>
                       <tbody>
                         {displayedRequests.map((r) => (
                           <tr key={r.id} className="border-b hover:bg-muted/30">
                             <td className="p-3 font-mono text-sm">{r.code}</td>
-                            <td className="p-3 text-sm">{r.type}</td>
+                            <td className="p-3 text-sm">{getTypeLabel(r.type)}</td>
                             <td className="p-3">{getStatusBadge(r.status)}</td>
                             <td className="p-3 text-sm">
                               {new Date(r.createdAt).toLocaleDateString()}
+                            </td>
+                            <td className="p-3">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedRequest(r);
+                                  setDetailsOpen(true);
+                                }}
+                              >
+                                Ver más
+                              </Button>
                             </td>
                           </tr>
                         ))}
@@ -398,6 +508,55 @@ const UserRequests = () => {
             )}
           </TabsContent>
         </Tabs>
+
+        <Dialog
+          open={detailsOpen}
+          onOpenChange={(open) => {
+            setDetailsOpen(open);
+            if (!open) setSelectedRequest(null);
+          }}
+        >
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Detalle de solicitud</DialogTitle>
+              <DialogDescription>Resumen y motivo</DialogDescription>
+            </DialogHeader>
+            {selectedRequest && (
+              <div className="space-y-3 text-sm">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <div className="text-muted-foreground">Código</div>
+                    <div className="font-medium">{selectedRequest.code}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Estado</div>
+                    <div className="font-medium">{getStatusBadge(selectedRequest.status)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Tipo</div>
+                    <div className="font-medium">{getTypeLabel(selectedRequest.type)}</div>
+                  </div>
+                  <div>
+                    <div className="text-muted-foreground">Creada</div>
+                    <div className="font-medium">{new Date(selectedRequest.createdAt).toLocaleDateString()}</div>
+                  </div>
+                </div>
+
+                {isRejected && (
+                  <div>
+                    <div className="text-muted-foreground">Razón de rechazo</div>
+                    <div className="font-medium whitespace-pre-line">{getRejectReason(selectedRequest)}</div>
+                  </div>
+                )}
+
+                <div>
+                  <div className="text-muted-foreground mb-1">Contenido</div>
+                  {renderPayloadReadable(selectedRequest.type, selectedRequest.payload)}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </div>
     </UserLayout>
   );

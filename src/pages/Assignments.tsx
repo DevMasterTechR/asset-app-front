@@ -38,6 +38,7 @@ import { useToast } from "@/hooks/use-toast";
 import Pagination, { DEFAULT_PAGE_SIZE } from '@/components/Pagination';
 import PreviewAssignmentsReportModal from '@/reports/PreviewAssignmentsReportModal';
 import { Progress } from "@/components/ui/progress";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -190,6 +191,25 @@ export default function Assignments() {
       });
       throw error;
     }
+  };
+
+  // Abrir detalle enriqueciendo datos del activo incluso si no está en la lista de disponibles
+  const openDetails = async (a: any) => {
+    let device = (a as any).asset;
+    if (!device && a.assetId) {
+      try {
+        device = await devicesApi.getById(parseInt(a.assetId));
+      } catch {}
+    }
+    const details = {
+      ...a,
+      assetCode: a.assetCode || device?.assetCode || device?.code || '-',
+      brand: a.brand || device?.brand || '-',
+      model: a.model || device?.model || '-',
+      type: a.type || device?.category || device?.type || '-',
+    };
+    setDetailsAssignment(details);
+    setDetailsOpen(true);
   };
 
   const handleUpdate = async (data: CreateAssignmentDto) => {
@@ -380,6 +400,8 @@ export default function Assignments() {
 
   // Estado para previsualización del reporte
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [detailsAssignment, setDetailsAssignment] = useState<any | null>(null);
 
   const openPreview = () => {
     setPreviewOpen(true);
@@ -494,6 +516,7 @@ export default function Assignments() {
                       <TableCell><Badge variant={conditionVariantMap[assignment.deliveryCondition]}>{conditionLabelMap[assignment.deliveryCondition]}</Badge></TableCell>
                       <TableCell className="text-right">
                         <div className="flex gap-2 justify-end">
+                          <Button variant="outline" size="sm" onClick={() => { openDetails(assignment); }}>Ver más</Button>
                           <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditModal(assignment)}>
                             <Pencil className="h-4 w-4" />
                           </Button>
@@ -537,6 +560,7 @@ export default function Assignments() {
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Asignación {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Devolución {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead>Condición Devolución</TableHead>
+                  <TableHead>Acción</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -567,6 +591,9 @@ export default function Assignments() {
                       <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
                       <TableCell className="text-sm">{assignment.returnDate ? format(new Date(assignment.returnDate), 'PPpp', { locale: es }) : '-'}</TableCell>
                       <TableCell>{assignment.returnCondition ? <Badge variant={conditionVariantMap[assignment.returnCondition]}>{conditionLabelMap[assignment.returnCondition]}</Badge> : <span className="text-sm text-muted-foreground">-</span>}</TableCell>
+                      <TableCell>
+                        <Button variant="outline" size="sm" onClick={() => { openDetails(assignment); }}>Ver más</Button>
+                      </TableCell>
                     </TableRow>
                   )
                   })
@@ -596,6 +623,96 @@ export default function Assignments() {
           )}
         </div>
       </Layout>
+
+      {/* Modal Detalle de Asignación (Administrador) */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Detalle de asignación</DialogTitle>
+            <DialogDescription>Información completa del equipo asignado.</DialogDescription>
+          </DialogHeader>
+          {detailsAssignment && (
+            <div className="space-y-3 text-sm">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <div className="text-muted-foreground">Código</div>
+                  <div className="font-medium">{(detailsAssignment as any).assetCode || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Serial</div>
+                  <div className="font-medium">{(detailsAssignment as any).serialNumber || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Tipo</div>
+                  <div className="font-medium">{(detailsAssignment as any).type || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Marca</div>
+                  <div className="font-medium">{(detailsAssignment as any).brand || '-'}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Modelo</div>
+                  <div className="font-medium">{(detailsAssignment as any).model || '-'}</div>
+                </div>
+                {viewMode !== 'history' && (
+                  <div>
+                    <div className="text-muted-foreground">Estado</div>
+                    <div className="font-medium">{(() => {
+                      const map: Record<string,string> = { assigned: 'Asignado', available: 'Disponible', maintenance: 'Mantenimiento', decommissioned: 'Baja' };
+                      const key = String((detailsAssignment as any).status || '').toLowerCase();
+                      return map[key] || ((detailsAssignment as any).status || '-');
+                    })()}</div>
+                  </div>
+                )}
+                <div>
+                  <div className="text-muted-foreground">Fecha Asignación</div>
+                  <div className="font-medium">{(detailsAssignment as any).assignmentDate ? new Date((detailsAssignment as any).assignmentDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'}) : '-'}</div>
+                </div>
+                {(detailsAssignment as any).returnDate && (
+                  <div>
+                    <div className="text-muted-foreground">Fecha Devolución</div>
+                    <div className="font-medium">{new Date((detailsAssignment as any).returnDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'})}</div>
+                  </div>
+                )}
+              </div>
+              <div>
+                <div className="text-muted-foreground">Condición de Entrega</div>
+                <div className="font-medium whitespace-pre-wrap">{(() => {
+                  const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                  const key = String((detailsAssignment as any).deliveryCondition || '').toLowerCase();
+                  return map[key] || (detailsAssignment as any).deliveryCondition || '-';
+                })()}</div>
+              </div>
+              {(detailsAssignment as any).returnDate && (
+                <div>
+                  <div className="text-muted-foreground">Notas de Entrega</div>
+                  <div className="font-medium whitespace-pre-wrap">{(detailsAssignment as any).deliveryNotes || '-'}</div>
+                </div>
+              )}
+              {(detailsAssignment as any).returnDate && (
+                <>
+                  {(detailsAssignment as any).returnCondition && (
+                    <div>
+                      <div className="text-muted-foreground">Condición de Devolución</div>
+                      <div className="font-medium whitespace-pre-wrap">{(() => {
+                        const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                        const key = String((detailsAssignment as any).returnCondition || '').toLowerCase();
+                        return map[key] || (detailsAssignment as any).returnCondition;
+                      })()}</div>
+                    </div>
+                  )}
+                  {(detailsAssignment as any).returnNotes && String((detailsAssignment as any).returnNotes).trim() !== '' && (
+                    <div>
+                      <div className="text-muted-foreground">Notas de Devolución</div>
+                      <div className="font-medium whitespace-pre-wrap">{(detailsAssignment as any).returnNotes}</div>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <AssignmentFormModal
         open={modalOpen}

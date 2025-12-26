@@ -8,6 +8,7 @@ import Pagination from "@/components/Pagination";
 import { devicesApi } from "@/api/devices";
 import * as consumablesApi from '@/api/consumables';
 import { assignmentsApi } from "@/api/assignments";
+import { loansApi } from "@/api/loans";
 import { peopleApi } from "@/api/people";
 import { credentialsApi, type Credential } from "@/api/credentials";
 import { extractArray } from "@/lib/extractData";
@@ -48,6 +49,7 @@ const Index = () => {
   const [assignmentsMode, setAssignmentsMode] = useState<'active' | 'history'>('active');
   const [actaModalOpen, setActaModalOpen] = useState(false);
   const [selectedUserForActa, setSelectedUserForActa] = useState<any>(null);
+  const [loans, setLoans] = useState<any[]>([]);
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -79,11 +81,12 @@ const Index = () => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [devicesRes, assignmentsRes, peopleRes, credentialsRes] = await Promise.all([
+      const [devicesRes, assignmentsRes, peopleRes, credentialsRes, loansRes] = await Promise.all([
         devicesApi.getAll(),
         assignmentsApi.getAll(),
         peopleApi.getAll(),
         credentialsApi.getAll(),
+        loansApi.getAll(),
       ]);
 
       const devicesList = extractArray<any>(devicesRes) || [];
@@ -150,6 +153,8 @@ const Index = () => {
       const peopleList = extractArray<any>(peopleRes) || [];
       setPeople(peopleList || []);
       setCredentials(credentialsRes || []);
+      const loansList = extractArray<any>(loansRes) || [];
+      setLoans(loansList || []);
 
       console.log("PeopleList completo:", peopleList);
       if (peopleList.length > 0) {
@@ -192,9 +197,19 @@ const Index = () => {
 
       const combined = [...devicesForTable, ...consumablesForTable];
 
+      // Helper para detectar si un equipo tiene préstamo activo
+      const hasActiveLoan = (assetId: number) => {
+        return loansList.some((l: any) => l.assetId === assetId && !l.returnDate);
+      };
+
       // Compute stats including consumables
       const total = combined.length;
-      const assigned = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('assign')).length;
+      // Para "assigned": incluir equipos asignados O en préstamo activo
+      const assigned = combined.filter((d) => {
+        const isAssigned = (d.status || '').toString().toLowerCase().includes('assign');
+        const isOnLoan = hasActiveLoan(d.id);
+        return isAssigned || isOnLoan;
+      }).length;
       const available = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('available') || (d.status || '') === '').length;
       const maintenance = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('mainten')).length;
       const decommissioned = combined.filter((d) => (d.status || '').toString().toLowerCase().includes('decomm')).length;

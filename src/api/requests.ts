@@ -1,6 +1,6 @@
 import apiFetch from '@/lib/fetchClient';
 
-export type RequestType = 'equipment_request' | 'equipment_replacement' | 'consumables';
+export type RequestType = 'equipment_request' | 'equipment_replacement' | 'consumables' | 'new_employee';
 export type RequestStatus = 'pendiente_rrhh' | 'rrhh_rechazada' | 'pendiente_admin' | 'aceptada' | 'rechazada';
 
 export interface RequestItem {
@@ -14,6 +14,8 @@ export interface RequestItem {
   adminReason?: string | null;
   hrReviewerId?: number | null;
   adminReviewerId?: number | null;
+  hrReviewer?: { firstName: string; lastName: string } | null;
+  adminReviewer?: { firstName: string; lastName: string } | null;
   hrSeenAt?: string | null;
   createdAt: string;
   updatedAt: string;

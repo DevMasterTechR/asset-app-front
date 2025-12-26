@@ -15,6 +15,8 @@ const AdminRequests = () => {
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<RequestItem[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [creationDateFilter, setCreationDateFilter] = useState('');
+  const [responseDateFilter, setResponseDateFilter] = useState('');
   const [page, setPage] = useState(1);
   const [limit, setLimit] = useState(10);
   const [viewMode, setViewMode] = useState<'pending' | 'history'>('pending');
@@ -40,14 +42,15 @@ const AdminRequests = () => {
   const filtered = requests.filter((r) => {
     // Para Admin:
     // - Pendientes: solo pendiente_admin
-    // - Historial: solo aceptada o rechazada (decisiones finales del admin)
+    // - Historial: todas las solicitudes (sin filtro de estado)
     const isPending = r.status === 'pendiente_admin';
-    const isHistory = r.status === 'aceptada' || r.status === 'rechazada';
-    const matchesView = viewMode === 'pending' ? isPending : isHistory;
+    const matchesView = viewMode === 'pending' ? isPending : !isPending;
     
     const search = searchTerm.toLowerCase();
     const matches = search === '' || r.code.toLowerCase().includes(search) || (r.payload && JSON.stringify(r.payload).toLowerCase().includes(search));
-    return matchesView && matches;
+    const matchesCreationDate = !creationDateFilter || new Date(r.createdAt).toISOString().slice(0,10) === creationDateFilter;
+    const matchesResponseDate = viewMode !== 'history' || !responseDateFilter || (r.updatedAt && new Date(r.updatedAt).toISOString().slice(0,10) === responseDateFilter);
+    return matchesView && matches && matchesCreationDate && matchesResponseDate;
   });
 
   const displayed = filtered.slice((page - 1) * limit, page * limit);
@@ -62,13 +65,23 @@ const AdminRequests = () => {
       rechazada: 'bg-red-100 text-red-800',
     };
     const labels: Record<string,string> = {
-      pendiente_rrhh: 'Pend. RRHH',
+      pendiente_rrhh: 'Pendiente RRHH',
       rrhh_rechazada: 'Rechazada RRHH',
-      pendiente_admin: 'Pend. Admin',
+      pendiente_admin: 'Pendiente Sistemas',
       aceptada: 'Aceptada',
-      rechazada: 'Rechazada Admin',
+      rechazada: 'Rechazada Sistemas',
     };
     return <span className={`px-3 py-1 rounded-full text-xs font-medium ${styles[status]}`}>{labels[status]}</span>;
+  };
+
+  const getTypeLabel = (type: string) => {
+    const map: Record<string, string> = {
+      equipment_replacement: 'Reemplazo de equipo',
+      consumables: 'Consumibles',
+      equipment_request: 'Solicitud de equipo',
+      new_employee: 'Nuevo trabajador',
+    };
+    return map[type] || type;
   };
 
   const handleAccept = async (req: RequestItem) => {
@@ -100,56 +113,61 @@ const AdminRequests = () => {
   const renderPayloadDetails = (type: string, payload: any) => {
     if (!payload) return <div className="text-muted-foreground">Sin datos</div>;
 
+    const Item = ({ label, value }: { label: string; value: any }) => (
+      <div className="flex gap-1 text-sm">
+        <span className="text-muted-foreground">{label}:</span>
+        <span className="font-medium break-words">{value || 'N/A'}</span>
+      </div>
+    );
+
     switch (type) {
       case 'equipment_replacement':
         return (
-          <div className="space-y-2">
-            <div>
-              <span className="text-muted-foreground">Asset ID:</span>{' '}
-              <span className="font-medium">{payload.assetId || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Razón:</span>{' '}
-              <span className="font-medium">{payload.reason || 'N/A'}</span>
-            </div>
+          <div className="space-y-1">
+            <Item label="Equipo" value={payload.assetId} />
+            <Item label="Razón" value={payload.reason} />
           </div>
         );
       case 'consumables':
         return (
-          <div className="space-y-2">
-            <div>
-              <span className="text-muted-foreground">Consumible:</span>{' '}
-              <span className="font-medium">{payload.consumible || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Razón:</span>{' '}
-              <span className="font-medium">{payload.reason || 'N/A'}</span>
-            </div>
+          <div className="space-y-1">
+            <Item label="Consumible" value={payload.consumible} />
+            <Item label="Razón" value={payload.reason} />
           </div>
         );
       case 'equipment_request':
         return (
-          <div className="space-y-2">
-            <div>
-              <span className="text-muted-foreground">Person ID:</span>{' '}
-              <span className="font-medium">{payload.personId || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Sucursal ID:</span>{' '}
-              <span className="font-medium">{payload.branchId || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Departamento ID:</span>{' '}
-              <span className="font-medium">{payload.departmentId || 'N/A'}</span>
-            </div>
-            <div>
-              <span className="text-muted-foreground">Equipos necesitados:</span>{' '}
-              <span className="font-medium">{payload.equipmentNeeded || 'N/A'}</span>
-            </div>
+          <div className="space-y-1">
+            <Item label="Persona" value={payload.personId} />
+            <Item label="Sucursal" value={payload.branchId} />
+            <Item label="Departamento" value={payload.departmentId} />
+            <Item label="Equipos solicitados" value={payload.equipmentNeeded} />
           </div>
         );
-      default:
-        return <pre className="text-xs bg-muted/30 p-2 rounded overflow-auto max-h-40">{JSON.stringify(payload, null, 2)}</pre>;
+      case 'new_employee':
+        return (
+          <div className="space-y-1">
+            <Item label="Nombre" value={payload.firstName} />
+            <Item label="Apellido" value={payload.lastName} />
+            <Item label="Cédula" value={payload.nationalId} />
+            <Item label="Teléfono" value={payload.phone} />
+            <Item label="Cargo" value={payload.position} />
+            <Item label="Sucursal" value={payload.branchId} />
+            <Item label="Área" value={payload.departmentId} />
+            <Item label="Notas" value={payload.notes} />
+          </div>
+        );
+      default: {
+        const entries = Object.entries(payload || {});
+        if (!entries.length) return <div className="text-muted-foreground">Sin datos</div>;
+        return (
+          <div className="space-y-1 text-sm">
+            {entries.map(([k, v]) => (
+              <Item key={k} label={k} value={typeof v === 'object' ? JSON.stringify(v) : String(v)} />
+            ))}
+          </div>
+        );
+      }
     }
   };
   return (
@@ -157,7 +175,7 @@ const AdminRequests = () => {
       <div className="p-6 md:pl-0 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Solicitudes (Admin)</h1>
+            <h1 className="text-3xl font-bold">Solicitudes (Sistemas)</h1>
             <p className="text-muted-foreground mt-1">Revisión final y decisión</p>
           </div>
           <Button onClick={loadData} variant="outline" className="gap-2">
@@ -168,13 +186,25 @@ const AdminRequests = () => {
 
         <Tabs value={viewMode} onValueChange={(v) => { setViewMode(v as any); setPage(1); }}>
           <TabsList>
-            <TabsTrigger value="pending">Pendientes Admin</TabsTrigger>
+            <TabsTrigger value="pending">Pendientes Sistemas</TabsTrigger>
             <TabsTrigger value="history">Historial</TabsTrigger>
           </TabsList>
           <TabsContent value={viewMode} className="space-y-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input value={searchTerm} onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }} placeholder="Buscar por código o contenido" className="pl-10" />
+            </div>
+            <div className="flex flex-wrap gap-4 mt-3">
+              <div className="space-y-1">
+                <div className="text-xs text-muted-foreground">Fecha de creación</div>
+                <Input type="date" value={creationDateFilter} onChange={(e) => { setCreationDateFilter(e.target.value); setPage(1); }} />
+              </div>
+              {viewMode === 'history' && (
+                <div className="space-y-1">
+                  <div className="text-xs text-muted-foreground">Fecha de respuesta</div>
+                  <Input type="date" value={responseDateFilter} onChange={(e) => { setResponseDateFilter(e.target.value); setPage(1); }} />
+                </div>
+              )}
             </div>
 
             {loading ? (
@@ -190,6 +220,10 @@ const AdminRequests = () => {
                         <tr className="border-b">
                           <th className="text-left p-3 font-medium">Código</th>
                           <th className="text-left p-3 font-medium">Tipo</th>
+                          <th className="text-left p-3 font-medium">Creación</th>
+                          {viewMode === 'history' && (
+                            <th className="text-left p-3 font-medium">Respuesta</th>
+                          )}
                           <th className="text-left p-3 font-medium">Estado</th>
                           <th className="text-left p-3 font-medium">Acción</th>
                         </tr>
@@ -198,7 +232,11 @@ const AdminRequests = () => {
                         {displayed.map((r) => (
                           <tr key={r.id} className="border-b hover:bg-muted/30">
                             <td className="p-3 font-mono text-sm">{r.code}</td>
-                            <td className="p-3">{r.type}</td>
+                            <td className="p-3">{getTypeLabel(r.type)}</td>
+                            <td className="p-3">{new Date(r.createdAt).toLocaleDateString('es-ES')}</td>
+                            {viewMode === 'history' && (
+                              <td className="p-3">{new Date(r.updatedAt).toLocaleDateString('es-ES')}</td>
+                            )}
                             <td className="p-3">{getStatusBadge(r.status)}</td>
                             <td className="p-3">
                               <Button variant="outline" size="sm" onClick={() => { setSelected(r); setDetailsOpen(true); }}>Ver más</Button>
@@ -237,18 +275,54 @@ const AdminRequests = () => {
                 </div>
                 <div>
                   <div className="text-muted-foreground">Tipo</div>
-                  <div className="font-medium">{selected.type}</div>
+                  <div className="font-medium">{getTypeLabel(selected.type)}</div>
                 </div>
+                <div>
+                  <div className="text-muted-foreground">Fecha de creación</div>
+                  <div className="font-medium">{new Date(selected.createdAt).toLocaleDateString('es-ES')}</div>
+                </div>
+                {viewMode === 'history' && (
+                  <div>
+                    <div className="text-muted-foreground">Fecha de respuesta</div>
+                    <div className="font-medium">{new Date(selected.updatedAt).toLocaleDateString('es-ES')}</div>
+                  </div>
+                )}
                 <div className="col-span-2">
                   <div className="text-muted-foreground mb-2">Contenido</div>
                   {renderPayloadDetails(selected.type, selected.payload)}
                 </div>
+                {viewMode === 'history' && (selected.hrReason || selected.adminReason) && (
+                  <div className="col-span-2 space-y-2">
+                    <div>
+                      <div className="text-muted-foreground">Razón de rechazo</div>
+                      <div className="text-destructive bg-destructive/10 p-2 rounded-md">
+                        {selected.hrReason || selected.adminReason}
+                      </div>
+                    </div>
+                    {((selected.hrReason && selected.hrReviewer) || (selected.adminReason && selected.adminReviewer)) && (
+                      <div>
+                        <div className="text-muted-foreground">Rechazado por</div>
+                        <div className="font-medium">
+                          {selected.adminReason && selected.adminReviewer 
+                            ? `${selected.adminReviewer.firstName} ${selected.adminReviewer.lastName}`
+                            : selected.hrReviewer 
+                            ? `${selected.hrReviewer.firstName} ${selected.hrReviewer.lastName}`
+                            : 'No disponible'}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-              <div className="flex items-center gap-2">
-                <Button onClick={() => handleAccept(selected)} className="flex-1">Aceptar</Button>
-                <Button variant="destructive" onClick={() => handleReject(selected)} className="flex-1">Rechazar</Button>
-              </div>
-              <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Razón de rechazo (obligatoria para rechazar)" />
+              {viewMode === 'pending' && (
+                <>
+                  <div className="flex items-center gap-2">
+                    <Button onClick={() => handleAccept(selected)} className="flex-1">Aceptar</Button>
+                    <Button variant="destructive" onClick={() => handleReject(selected)} className="flex-1">Rechazar</Button>
+                  </div>
+                  <Textarea value={rejectReason} onChange={(e) => setRejectReason(e.target.value)} placeholder="Razón de rechazo (obligatoria para rechazar)" />
+                </>
+              )}
             </div>
           )}
         </DialogContent>

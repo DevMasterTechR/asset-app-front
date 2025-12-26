@@ -10,6 +10,7 @@ import Auth from "./pages/Auth";
 import Devices from "./pages/Devices";
 import People from "./pages/People";
 import Assignments from "./pages/Assignments";
+import Loans from "./pages/Loans";
 import Catalogs from "./pages/Catalogs";
 import Consumables from "./pages/Consumables";
 import NotFound from "./pages/NotFound";
@@ -83,6 +84,11 @@ const App = () => (
             <Route path="/assignments" element={
               <PrivateRoute allowedRoles={adminRoles}>
                 <Assignments />
+              </PrivateRoute>
+            } />
+            <Route path="/loans" element={
+              <PrivateRoute allowedRoles={adminRoles}>
+                <Loans />
               </PrivateRoute>
             } />
             <Route path="/catalogs" element={

@@ -186,6 +186,9 @@ const UserDashboard = () => {
                           {viewMode === 'active' && (
                             <th className="text-left p-3 font-medium">Acción</th>
                           )}
+                          {viewMode === 'history' && (
+                            <th className="text-left p-3 font-medium">Acción</th>
+                          )}
                         </tr>
                       </thead>
                       <tbody>
@@ -217,6 +220,17 @@ const UserDashboard = () => {
                               </td>
                             )}
                             {viewMode === 'active' && (
+                              <td className="p-3">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => { setSelectedAssignment(a); setDetailsOpen(true); }}
+                                >
+                                  Ver más
+                                </Button>
+                              </td>
+                            )}
+                            {viewMode === 'history' && (
                               <td className="p-3">
                                 <Button
                                   variant="outline"
@@ -296,33 +310,66 @@ const UserDashboard = () => {
                 </div>
                 <div>
                   <div className="text-muted-foreground">Estado</div>
-                  <div className="font-medium">{selectedAssignment.status || '-'}</div>
+                  <div className="font-medium">{(() => {
+                    const map: Record<string,string> = {
+                      assigned: 'Asignado',
+                      available: 'Disponible',
+                      maintenance: 'Mantenimiento',
+                      decommissioned: 'Baja',
+                    };
+                    const key = String(selectedAssignment.status || '').toLowerCase();
+                    return map[key] || (selectedAssignment.status || '-');
+                  })()}</div>
+                </div>
+                <div>
+                  <div className="text-muted-foreground">Estado de asignación</div>
+                  <div className="font-medium">{selectedAssignment.returnDate ? 'Devuelto' : 'Entregado'}</div>
                 </div>
                 <div>
                   <div className="text-muted-foreground">Fecha Asignación</div>
                   <div className="font-medium">{selectedAssignment.assignmentDate ? new Date(selectedAssignment.assignmentDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'}) : '-'}</div>
                 </div>
-                <div>
-                  <div className="text-muted-foreground">Fecha Devolución</div>
-                  <div className="font-medium">{selectedAssignment.returnDate ? new Date(selectedAssignment.returnDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'}) : '-'}</div>
-                </div>
+                {selectedAssignment.returnDate && (
+                  <div>
+                    <div className="text-muted-foreground">Fecha Devolución</div>
+                    <div className="font-medium">{new Date(selectedAssignment.returnDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'})}</div>
+                  </div>
+                )}
               </div>
               <div>
                 <div className="text-muted-foreground">Condición de Entrega</div>
-                <div className="font-medium whitespace-pre-wrap">{selectedAssignment.deliveryCondition || '-'}</div>
+                <div className="font-medium whitespace-pre-wrap">{(() => {
+                  const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                  const key = String(selectedAssignment.deliveryCondition || '').toLowerCase();
+                  return map[key] || selectedAssignment.deliveryCondition || '-';
+                })()}</div>
               </div>
-              <div>
-                <div className="text-muted-foreground">Notas de Entrega</div>
-                <div className="font-medium whitespace-pre-wrap">{selectedAssignment.deliveryNotes || '-'}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Condición de Devolución</div>
-                <div className="font-medium whitespace-pre-wrap">{selectedAssignment.returnCondition || '-'}</div>
-              </div>
-              <div>
-                <div className="text-muted-foreground">Notas de Devolución</div>
-                <div className="font-medium whitespace-pre-wrap">{selectedAssignment.returnNotes || '-'}</div>
-              </div>
+              {selectedAssignment.returnDate && (
+                <div>
+                  <div className="text-muted-foreground">Notas de Entrega</div>
+                  <div className="font-medium whitespace-pre-wrap">{selectedAssignment.deliveryNotes || '-'}</div>
+                </div>
+              )}
+              {selectedAssignment.returnDate && (
+                <>
+                  {selectedAssignment.returnCondition && (
+                    <div>
+                      <div className="text-muted-foreground">Condición de Devolución</div>
+                      <div className="font-medium whitespace-pre-wrap">{(() => {
+                        const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                        const key = String(selectedAssignment.returnCondition || '').toLowerCase();
+                        return map[key] || selectedAssignment.returnCondition;
+                      })()}</div>
+                    </div>
+                  )}
+                  {selectedAssignment.returnNotes && String(selectedAssignment.returnNotes).trim() !== '' && (
+                    <div>
+                      <div className="text-muted-foreground">Notas de Devolución</div>
+                      <div className="font-medium whitespace-pre-wrap">{selectedAssignment.returnNotes}</div>
+                    </div>
+                  )}
+                </>
+              )}
             </div>
           )}
         </DialogContent>
