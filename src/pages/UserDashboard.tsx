@@ -79,7 +79,7 @@ const UserDashboard = () => {
           returnCondition: a.returnCondition,
           deliveryNotes: a.deliveryNotes,
           returnNotes: a.returnNotes,
-          status: device?.status || '',
+          status: device?.status === 'loaned' ? 'Prestado' : device?.status || '',
         };
       });
 

@@ -75,6 +75,9 @@ export default function DeviceFormModal({
   fixedType,
 }: DeviceFormModalProps) {
   const [loading, setLoading] = useState(false);
+  // Estado para mostrar el modal secundario y tipo de accesorio
+  const [showAccessoryModal, setShowAccessoryModal] = useState(false);
+  const [accessoryType, setAccessoryType] = useState<string | null>(null);
   const [formData, setFormData] = useState<CreateDeviceDto>({
     assetCode: '',
     assetType: fixedType || 'laptop',
@@ -306,77 +309,293 @@ export default function DeviceFormModal({
                 placeholder="512GB SSD"
               />
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasCharger"
-                checked={Boolean(getAttrValue('hasCharger'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasCharger', checked === true)}
-              />
-              <Label htmlFor="hasCharger" className="cursor-pointer">¿Tiene cargador?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasCharger"
+                  checked={Boolean(getAttrValue('hasCharger'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasCharger', checked === true)}
+                />
+                <Label htmlFor="hasCharger" className="cursor-pointer">¿Tiene cargador?</Label>
+              </div>
+              {getAttrValue('hasCharger') === true && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasChargerRadio"
+                      value="yes"
+                      checked={getAttrValue('hasChargerRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasChargerRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasChargerRadio"
+                      value="no"
+                      checked={getAttrValue('hasChargerRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasChargerRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasBag"
-                checked={Boolean(getAttrValue('hasBag'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasBag', checked === true)}
-              />
-              <Label htmlFor="hasBag" className="cursor-pointer">¿Tiene maletín/bolso?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasBag"
+                  checked={Boolean(getAttrValue('hasBag'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasBag', checked === true)}
+                />
+                <Label htmlFor="hasBag" className="cursor-pointer">¿Tiene maletín/bolso?</Label>
+              </div>
+              {getAttrValue('hasBag') === true && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasBagRadio"
+                      value="yes"
+                      checked={getAttrValue('hasBagRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasBagRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasBagRadio"
+                      value="no"
+                      checked={getAttrValue('hasBagRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasBagRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasMouse"
-                checked={Boolean(getAttrValue('hasMouse'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasMouse', checked === true)}
-              />
-              <Label htmlFor="hasMouse" className="cursor-pointer">¿Tiene mouse?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasMouse"
+                  checked={Boolean(getAttrValue('hasMouse'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasMouse', checked === true)}
+                />
+                <Label htmlFor="hasMouse" className="cursor-pointer">¿Tiene mouse?</Label>
+              </div>
+              {getAttrValue('hasMouse') === true && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasMouseRadio"
+                      value="yes"
+                      checked={getAttrValue('hasMouseRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasMouseRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasMouseRadio"
+                      value="no"
+                      checked={getAttrValue('hasMouseRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasMouseRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasMousePad"
-                checked={Boolean(getAttrValue('hasMousePad'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasMousePad', checked === true)}
-              />
-              <Label htmlFor="hasMousePad" className="cursor-pointer">¿Tiene mouse pad?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasMousePad"
+                  checked={Boolean(getAttrValue('hasMousePad'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasMousePad', checked === true)}
+                />
+                <Label htmlFor="hasMousePad" className="cursor-pointer">¿Tiene mouse pad?</Label>
+              </div>
+              {getAttrValue('hasMousePad') === true && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasMousePadRadio"
+                      value="yes"
+                      checked={getAttrValue('hasMousePadRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasMousePadRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasMousePadRadio"
+                      value="no"
+                      checked={getAttrValue('hasMousePadRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasMousePadRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasKeyboard"
-                checked={Boolean(getAttrValue('hasKeyboard'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasKeyboard', checked === true)}
-              />
-              <Label htmlFor="hasKeyboard" className="cursor-pointer">¿Tiene teclado?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasKeyboard"
+                  checked={Boolean(getAttrValue('hasKeyboard'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasKeyboard', checked === true)}
+                />
+                <Label htmlFor="hasKeyboard" className="cursor-pointer">¿Tiene teclado?</Label>
+              </div>
+              {getAttrValue('hasKeyboard') === true && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasKeyboardRadio"
+                      value="yes"
+                      checked={getAttrValue('hasKeyboardRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasKeyboardRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasKeyboardRadio"
+                      value="no"
+                      checked={getAttrValue('hasKeyboardRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasKeyboardRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasStand"
-                checked={Boolean(getAttrValue('hasStand'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasStand', checked === true)}
-              />
-              <Label htmlFor="hasStand" className="cursor-pointer">¿Tiene soporte?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasStand"
+                  checked={Boolean(getAttrValue('hasStand'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasStand', checked === true)}
+                />
+                <Label htmlFor="hasStand" className="cursor-pointer">¿Tiene soporte?</Label>
+              </div>
+              {getAttrValue('hasStand') === true && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasStandRadio"
+                      value="yes"
+                      checked={getAttrValue('hasStandRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasStandRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasStandRadio"
+                      value="no"
+                      checked={getAttrValue('hasStandRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasStandRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasNetworkAdapter"
-                checked={Boolean(getAttrValue('hasNetworkAdapter'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasNetworkAdapter', checked === true)}
-              />
-              <Label htmlFor="hasNetworkAdapter" className="cursor-pointer">¿Tiene adaptador de red?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasNetworkAdapter"
+                  checked={Boolean(getAttrValue('hasNetworkAdapter'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasNetworkAdapter', checked === true)}
+                />
+                <Label htmlFor="hasNetworkAdapter" className="cursor-pointer">¿Tiene adaptador de red?</Label>
+              </div>
+              {getAttrValue('hasNetworkAdapter') !== undefined && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasNetworkAdapterRadio"
+                      value="yes"
+                      checked={getAttrValue('hasNetworkAdapterRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasNetworkAdapterRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasNetworkAdapterRadio"
+                      value="no"
+                      checked={getAttrValue('hasNetworkAdapterRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasNetworkAdapterRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasMemoryAdapter"
-                checked={Boolean(getAttrValue('hasMemoryAdapter'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasMemoryAdapter', checked === true)}
-              />
-              <Label htmlFor="hasMemoryAdapter" className="cursor-pointer">¿Tiene adaptador de memoria?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasMemoryAdapter"
+                  checked={Boolean(getAttrValue('hasMemoryAdapter'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasMemoryAdapter', checked === true)}
+                />
+                <Label htmlFor="hasMemoryAdapter" className="cursor-pointer">¿Tiene adaptador de memoria?</Label>
+              </div>
+              {getAttrValue('hasMemoryAdapter') !== undefined && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasMemoryAdapterRadio"
+                      value="yes"
+                      checked={getAttrValue('hasMemoryAdapterRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasMemoryAdapterRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasMemoryAdapterRadio"
+                      value="no"
+                      checked={getAttrValue('hasMemoryAdapterRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasMemoryAdapterRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasScreen"
-                checked={Boolean(getAttrValue('hasScreen'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasScreen', checked === true)}
-              />
-              <Label htmlFor="hasScreen" className="cursor-pointer">¿Tiene pantalla(s) externa(s)?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasScreen"
+                  checked={Boolean(getAttrValue('hasScreen'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasScreen', checked === true)}
+                />
+                <Label htmlFor="hasScreen" className="cursor-pointer">¿Tiene pantalla(s) externa(s)?</Label>
+              </div>
+              {getAttrValue('hasScreen') !== undefined && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasScreenRadio"
+                      value="yes"
+                      checked={getAttrValue('hasScreenRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasScreenRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasScreenRadio"
+                      value="no"
+                      checked={getAttrValue('hasScreenRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasScreenRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
             {getAttrValue('hasScreen') && (
               <div className="space-y-2 ml-6">
@@ -390,13 +609,37 @@ export default function DeviceFormModal({
                 />
               </div>
             )}
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="hasHub"
-                checked={Boolean(getAttrValue('hasHub'))}
-                onCheckedChange={(checked) => handleAttributeChange('hasHub', checked === true)}
-              />
-              <Label htmlFor="hasHub" className="cursor-pointer">¿Tiene HUB?</Label>
+            <div className="flex flex-col md:flex-row md:items-center md:space-x-2 space-y-1 md:space-y-0">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasHub"
+                  checked={Boolean(getAttrValue('hasHub'))}
+                  onCheckedChange={(checked) => handleAttributeChange('hasHub', checked === true)}
+                />
+                <Label htmlFor="hasHub" className="cursor-pointer">¿Tiene HUB?</Label>
+              </div>
+              {getAttrValue('hasHub') !== undefined && (
+                <div className="flex items-center space-x-4 ml-6">
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasHubRadio"
+                      value="yes"
+                      checked={getAttrValue('hasHubRadio') === 'yes'}
+                      onChange={() => handleAttributeChange('hasHubRadio', 'yes')}
+                    /> Sí
+                  </label>
+                  <label>
+                    <input
+                      type="radio"
+                      name="hasHubRadio"
+                      value="no"
+                      checked={getAttrValue('hasHubRadio') === 'no'}
+                      onChange={() => handleAttributeChange('hasHubRadio', 'no')}
+                    /> No
+                  </label>
+                </div>
+              )}
             </div>
           </>
         );

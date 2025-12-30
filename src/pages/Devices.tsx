@@ -43,9 +43,22 @@ import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import PreviewDevicesReportModal from '@/reports/PreviewDevicesReportModal';
 import { Person } from '@/data/mockDataExtended';
 
+// Calcula la diferencia en días entre dos fechas
+const diffDays = (from: string, to: string) => {
+  try {
+    const d1 = new Date(from);
+    const d2 = new Date(to);
+    const diff = Math.ceil((d2.getTime() - d1.getTime()) / (1000 * 60 * 60 * 24));
+    return diff;
+  } catch {
+    return 0;
+  }
+};
+
 const statusVariantMap = {
   available: 'success' as const,
   assigned: 'default' as const,
+  loaned: 'secondary' as const,
   maintenance: 'warning' as const,
   decommissioned: 'destructive' as const,
 };
@@ -53,6 +66,7 @@ const statusVariantMap = {
 const statusLabelMap = {
   available: 'Disponible',
   assigned: 'Asignado',
+  loaned: 'Prestado',
   maintenance: 'Mantenimiento',
   decommissioned: 'Dado de baja',
 };
@@ -113,6 +127,8 @@ function DevicesPage() {
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [previewOpen, setPreviewOpen] = useState(false);
+  // Estado para mostrar alerta de préstamo próximo a caducar
+  const [loanAlert, setLoanAlert] = useState<string | null>(null);
 
   // Helper para detectar si un equipo tiene préstamo activo
   const hasActiveLoan = (assetId: number) => {
@@ -121,8 +137,8 @@ function DevicesPage() {
 
   // Helper para obtener el estado actual (asignado vs préstamo)
   const getStatus = (device: Device) => {
-    if (device.status === 'assigned' && hasActiveLoan(device.id)) {
-      return 'loan';
+    if (device.status === 'loaned') {
+      return 'loaned';
     }
     return device.status;
   };
@@ -130,18 +146,31 @@ function DevicesPage() {
   // Actualizar el mapa de etiquetas
   const getStatusLabel = (device: Device) => {
     const status = getStatus(device);
-    if (status === 'loan') return 'Préstamo';
     return statusLabelMap[status as keyof typeof statusLabelMap] || status;
   };
 
   // Actualizar el mapa de variantes
   const getStatusVariant = (device: Device) => {
     const status = getStatus(device);
-    if (status === 'loan') return 'secondary' as const;
     return statusVariantMap[status as keyof typeof statusVariantMap] || 'default' as const;
   };
 
   useEffect(() => {
+        // Verificar si hay algún dispositivo con préstamo próximo a caducar
+        const now = new Date();
+        const alertDevice = devices.find(device => {
+          if (device.status === 'loaned' && device.deliveryDate && device.loanDays) {
+            const endDate = new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000);
+            const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+            return daysLeft === 1;
+          }
+          return false;
+        });
+        if (alertDevice) {
+          setLoanAlert(`Equipo ${alertDevice.assetCode} próximo a caducar días de préstamo`);
+        } else {
+          setLoanAlert(null);
+        }
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [page, limit, searchTerm]);
@@ -399,6 +428,11 @@ function DevicesPage() {
 
   return (
     <Layout>
+      {loanAlert && (
+        <div className="mb-4 p-4 bg-rose-100 border border-rose-300 rounded-lg flex items-center justify-center animate-pulse">
+          <span className="text-rose-700 font-bold text-lg">{loanAlert}</span>
+        </div>
+      )}
       <div className="p-6 md:pl-0 space-y-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
           <div>
@@ -503,9 +537,31 @@ function DevicesPage() {
 
                       <TableCell className="text-sm">{device.serialNumber || '-'}</TableCell>
                       <TableCell>
-                        <Badge variant={getStatusVariant(device)}>
-                          {getStatusLabel(device)}
-                        </Badge>
+                        {device.status === 'loaned' && device.deliveryDate && device.loanDays && (() => {
+                          const endDate = new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000);
+                          const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                          if (daysLeft === 1) {
+                            return (
+                              <Badge className="bg-rose-600 text-white animate-pulse">
+                                Prestado
+                              </Badge>
+                            );
+                          }
+                          return (
+                            <Badge variant={getStatusVariant(device)}>
+                              {getStatusLabel(device)}
+                            </Badge>
+                          );
+                        })()}
+                        {/* Días de préstamo y restantes */}
+                        {device.status === 'loaned' && device.deliveryDate && device.loanDays && (
+                          <div className="mt-1 text-xs text-muted-foreground">
+                            Días préstamo: <span className="font-semibold">{device.loanDays}</span><br />
+                            Días restantes: <span className={diffDays(new Date().toISOString(), new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000).toISOString()) <= 1 ? 'text-rose-600 font-bold' : 'font-semibold'}>
+                              {diffDays(new Date().toISOString(), new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000).toISOString())}
+                            </span>
+                          </div>
+                        )}
                       </TableCell>
                       <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
                       <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>

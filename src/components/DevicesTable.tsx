@@ -55,7 +55,10 @@ const getStatusBadge = (status?: string) => {
   let label = "Desconocido";
   let className = "bg-muted text-muted-foreground";
 
-  if (normalized.includes("available") || normalized.includes("disponibl")) {
+  if (normalized.includes("loaned") || normalized.includes("prestado") || normalized === "loan") {
+    label = "Prestado";
+    className = "bg-secondary text-secondary-foreground";
+  } else if (normalized.includes("available") || normalized.includes("disponibl")) {
     label = "Disponible";
     className = "bg-success text-success-foreground";
   } else if (normalized.includes("assigned") || normalized.includes("asign")) {
