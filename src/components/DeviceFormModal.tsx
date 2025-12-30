@@ -41,6 +41,13 @@ const deviceTypes = [
   { value: 'tablet', label: 'Tablet' },
   { value: 'monitor', label: 'Monitor' },
   { value: 'mouse', label: 'Mouse' },
+  { value: 'mousepad', label: 'Mousepad' },
+  { value: 'maletin', label: 'Maletín/Bolso' },
+  { value: 'soporte', label: 'Soporte' },
+  { value: 'pantalla', label: 'Pantalla' },
+  { value: 'hub', label: 'HUB' },
+  { value: 'adaptador-memoria', label: 'Adaptador Memoria' },
+  { value: 'adaptador-red', label: 'Adaptador Red' },
   { value: 'keyboard', label: 'Teclado' },
   { value: 'server', label: 'Servidor' },
   { value: 'printer', label: 'Impresora' },
@@ -872,6 +879,22 @@ export default function DeviceFormModal({
         );
 
       case 'mouse':
+      case 'pantalla':
+      case 'hub':
+      case 'adaptador-memoria':
+      case 'adaptador-red':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={(e) => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, Blanco, Azul..."
+              />
+            </div>
+          </>
+        );
       case 'keyboard':
         return (
           <>
@@ -1043,6 +1066,105 @@ export default function DeviceFormModal({
                 onCheckedChange={(checked) => handleAttributeChange('hasCharger', checked === true)}
               />
               <Label htmlFor="hasCharger" className="cursor-pointer">¿Tiene cargador/adaptador?</Label>
+            </div>
+          </>
+        );
+
+      case 'mousepad':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tamaño</Label>
+              <select
+                className="w-full border rounded px-2 py-1"
+                value={String(getAttrValue('size') || '')}
+                onChange={e => handleAttributeChange('size', e.target.value)}
+              >
+                <option value="">Selecciona tamaño</option>
+                <option value="grande">Grande</option>
+                <option value="mediano">Mediano</option>
+                <option value="pequeno">Pequeño</option>
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={e => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, Azul, etc."
+              />
+            </div>
+          </>
+        );
+      case 'maletin':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={e => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, Azul, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Marca</Label>
+              <Input
+                value={String(getAttrValue('brand') || '')}
+                onChange={e => handleAttributeChange('brand', e.target.value)}
+                placeholder="Targus, HP, etc."
+                disabled={Boolean(getAttrValue('noBrand'))}
+              />
+              <div className="flex items-center space-x-2 mt-1">
+                <Checkbox
+                  id="noBrand"
+                  checked={Boolean(getAttrValue('noBrand'))}
+                  onCheckedChange={checked => handleAttributeChange('noBrand', checked === true)}
+                />
+                <Label htmlFor="noBrand" className="cursor-pointer">No tiene marca</Label>
+              </div>
+            </div>
+          </>
+        );
+      case 'soporte':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={e => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, Gris, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Material</Label>
+              <Input
+                value={String(getAttrValue('material') || '')}
+                onChange={e => handleAttributeChange('material', e.target.value)}
+                placeholder="Metal, Plástico, etc."
+              />
+            </div>
+          </>
+        );
+      case 'cargador':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Voltaje</Label>
+              <Input
+                value={String(getAttrValue('voltaje') || '')}
+                onChange={e => handleAttributeChange('voltaje', e.target.value)}
+                placeholder="Ej: 19V, 5V, etc."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Marca</Label>
+              <Input
+                value={String(getAttrValue('marca') || '')}
+                onChange={e => handleAttributeChange('marca', e.target.value)}
+                placeholder="Ej: HP, Lenovo, etc."
+              />
             </div>
           </>
         );
