@@ -198,9 +198,9 @@ const Index = () => {
       const combined = [...devicesForTable, ...consumablesForTable];
 
       // Helper para detectar si un equipo tiene préstamo activo
-      const hasActiveLoan = (assetId: number) => {
-        return loansList.some((l: any) => l.assetId === assetId && !l.returnDate);
-      };
+      const hasActiveLoan = (assetId: any) => {
+  return loansList.some((l: any) => String(l.assetId) === String(assetId) && !l.returnDate);
+};
 
       // Compute stats including consumables
       const total = combined.length;
