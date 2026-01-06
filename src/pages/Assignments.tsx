@@ -179,6 +179,115 @@ export default function Assignments() {
           // noop
         }
       }
+
+
+      // --- Lógica para asignar todos los periféricos solicitados ---
+      if (result.asset && result.asset.attributesJson) {
+        const {
+          selectedMouseId,
+          hasKeyboard, selectedKeyboardId,
+          hasMonitor, selectedMonitorId,
+          hasMousePad, selectedMousePadId,
+          hasStand, selectedStandId,
+          hasHub, selectedHubId,
+          hasMemoryAdapter, selectedMemoryAdapterId,
+          hasNetworkAdapter, selectedNetworkAdapterId
+        } = result.asset.attributesJson;
+        const perifAssignments = [];
+        // Mouse
+        if (selectedMouseId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedMouseId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Teclado
+        if (hasKeyboard && selectedKeyboardId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedKeyboardId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Monitor
+        if (hasMonitor && selectedMonitorId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedMonitorId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Mousepad
+        if (hasMousePad && selectedMousePadId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedMousePadId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Soporte
+        if (hasStand && selectedStandId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedStandId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // HUB
+        if (hasHub && selectedHubId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedHubId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Adaptador Memoria
+        if (hasMemoryAdapter && selectedMemoryAdapterId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedMemoryAdapterId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Adaptador Red
+        if (hasNetworkAdapter && selectedNetworkAdapterId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedNetworkAdapterId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        if (perifAssignments.length > 0) {
+          await Promise.all(perifAssignments);
+        }
+      }
+      // --- Fin lógica periféricos ---
+
       toast({
         title: "Éxito",
         description: "Asignación creada correctamente"
@@ -274,6 +383,44 @@ export default function Assignments() {
           // noop
         }
       }
+
+      // --- Lógica para devolver periféricos asociados ---
+      // Buscar la asignación original para obtener el assetId y sus atributos
+      const assignmentObj = assignments.find(a => String(a.id) === String(assignmentToReturn));
+      let assetObj = null;
+      if (assignmentObj) {
+        try {
+          assetObj = await devicesApi.getById(Number(assignmentObj.assetId));
+        } catch {}
+      }
+      if (assetObj && assetObj.attributesJson) {
+        const {
+          selectedMouseId,
+          hasKeyboard, selectedKeyboardId,
+          hasMonitor, selectedMonitorId,
+          hasMousePad, selectedMousePadId,
+          hasStand, selectedStandId,
+          hasHub, selectedHubId,
+          hasMemoryAdapter, selectedMemoryAdapterId,
+          hasNetworkAdapter, selectedNetworkAdapterId
+        } = assetObj.attributesJson;
+        // Buscar todas las asignaciones activas de la persona para estos periféricos (en todas las asignaciones, no solo las disponibles)
+        const perifIds = [
+          selectedMouseId,
+          selectedKeyboardId,
+          selectedMonitorId,
+          selectedMousePadId,
+          selectedStandId,
+          selectedHubId,
+          selectedMemoryAdapterId,
+          selectedNetworkAdapterId
+        ].filter(Boolean);
+        const personId = assignmentObj?.personId;
+        // Buscar asignaciones activas de estos periféricos para la misma persona (en todas las asignaciones)
+        const activeAssignments = assignments.filter(a => perifIds.includes(a.assetId) && a.personId === personId && !a.returnDate);
+        await Promise.all(activeAssignments.map(a => assignmentsApi.registerReturn(a.id, returnCondition, '[Auto] Devolución junto con laptop.')));
+      }
+      // --- Fin lógica devolución periféricos ---
 
       toast({
         title: "Éxito",
