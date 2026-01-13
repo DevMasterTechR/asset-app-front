@@ -45,6 +45,7 @@ async function reloadAvailableAccessories() {
     window.__availableMemoryAdapters = all.filter(d => d.assetType === 'adaptador-memoria' && d.status === 'available' && !d.assignedPersonId);
     window.__availableNetworkAdapters = all.filter(d => d.assetType === 'adaptador-red' && d.status === 'available' && !d.assignedPersonId);
     window.__availableHubs = all.filter(d => d.assetType === 'hub' && d.status === 'available' && !d.assignedPersonId);
+    window.__availableMousepads = all.filter(d => d.assetType === 'mousepad' && d.status === 'available' && !d.assignedPersonId);
   } catch (e) {
     console.error('Error cargando accesorios:', e);
   }
@@ -387,6 +388,7 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasMemoryAdapter', '¿Tiene adaptador de memoria?', 'hasMemoryAdapterRadio', 'selectedMemoryAdapterId', 'adaptador-memoria', window.__availableMemoryAdapters ?? [])}
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
+              {renderAccessoryBlock('hasMousePad', '¿Tiene mousepad?', 'hasMousePadRadio', 'selectedMousePadId', 'mousepad', window.__availableMousepads ?? [])}
           </>
         );
 
