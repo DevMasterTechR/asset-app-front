@@ -230,7 +230,7 @@ export default function DeviceFormModal({
       }
 
       const cleanData: CreateDeviceDto = {
-        assetCode: formData.assetType,
+        assetCode: formData.assetCode,
         assetType: formData.assetType,
         brand: formData.brand || undefined,
         model: formData.model || undefined,
@@ -390,6 +390,121 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
             {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
+          </>
+        );
+
+      case 'smartphone':
+      case 'tablet':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tamaño de pantalla (pulgadas)</Label>
+              <Input type="number" value={Number(getAttrValue('screenSize')) || ''} onChange={e => handleAttributeChange('screenSize', e.target.value ? Number(e.target.value) : 0)} placeholder="6.1" />
+            </div>
+            <div className="space-y-2">
+              <Label>Procesador</Label>
+              <Input value={String(getAttrValue('cpu') || '')} onChange={e => handleAttributeChange('cpu', e.target.value)} placeholder="A14 Bionic" />
+            </div>
+            <div className="space-y-2">
+              <Label>RAM (GB)</Label>
+              <Input type="number" value={Number(getAttrValue('ram')) || ''} onChange={e => handleAttributeChange('ram', e.target.value ? Number(e.target.value) : 0)} placeholder="4" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="hasMicas" checked={Boolean(getAttrValue('hasMicas'))} onCheckedChange={c => handleAttributeChange('hasMicas', c === true)} />
+              <Label htmlFor="hasMicas">¿Tiene micas?</Label>
+            </div>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="hasChip" checked={Boolean(getAttrValue('hasChip'))} onCheckedChange={c => handleAttributeChange('hasChip', c === true)} />
+                <Label htmlFor="hasChip">¿Tiene chip?</Label>
+              </div>
+              {getAttrValue('hasChip') && (
+                <div className="ml-8 space-y-2">
+                  <Label>Operadora</Label>
+                  <Input value={String(getAttrValue('operator') || '')} onChange={e => handleAttributeChange('operator', e.target.value)} placeholder="Movistar, Claro..." />
+                  <Label>Número del chip</Label>
+                  <Input value={String(getAttrValue('chipNumber') || '')} onChange={e => handleAttributeChange('chipNumber', e.target.value)} placeholder="+593..." />
+                </div>
+              )}
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="hasCase" checked={Boolean(getAttrValue('hasCase'))} onCheckedChange={c => handleAttributeChange('hasCase', c === true)} />
+              <Label htmlFor="hasCase">¿Tiene estuche?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="hasCharger" checked={Boolean(getAttrValue('hasCharger'))} onCheckedChange={c => handleAttributeChange('hasCharger', c === true)} />
+              <Label htmlFor="hasCharger">¿Tiene cargador?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="hasChargingCable" checked={Boolean(getAttrValue('hasChargingCable'))} onCheckedChange={c => handleAttributeChange('hasChargingCable', c === true)} />
+              <Label htmlFor="hasChargingCable">¿Tiene cable de carga?</Label>
+            </div>
+          </>
+        );
+
+      case 'ip-phone':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Extensión</Label>
+              <Input value={String(getAttrValue('extension') || '')} onChange={e => handleAttributeChange('extension', e.target.value)} placeholder="101" />
+            </div>
+            <div className="space-y-2">
+              <Label>Número</Label>
+              <Input value={String(getAttrValue('phoneNumber') || '')} onChange={e => handleAttributeChange('phoneNumber', e.target.value)} placeholder="+593..." />
+            </div>
+          </>
+        );
+
+      case 'printer':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tipo de impresora</Label>
+              <SearchableSelect
+                value={String(getAttrValue('printerType') || 'none')}
+                onValueChange={value => handleAttributeChange('printerType', value === 'none' ? '' : value)}
+                placeholder="Selecciona tipo"
+                options={[
+                  { label: 'Ninguno', value: 'none' },
+                  { label: 'Láser', value: 'laser' },
+                  { label: 'Inyección de tinta', value: 'inkjet' },
+                  { label: 'Matricial', value: 'dot-matrix' },
+                  { label: 'Térmica', value: 'thermal' },
+                ]}
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="isColor" checked={Boolean(getAttrValue('isColor'))} onCheckedChange={c => handleAttributeChange('isColor', c === true)} />
+              <Label htmlFor="isColor">¿Imprime en color?</Label>
+            </div>
+            <div className="space-y-2">
+              <Label>Conectividad</Label>
+              <SearchableSelect
+                value={String(getAttrValue('connectivity') || 'none')}
+                onValueChange={value => handleAttributeChange('connectivity', value === 'none' ? '' : value)}
+                placeholder="Selecciona conectividad"
+                options={[
+                  { label: 'Ninguno', value: 'none' },
+                  { label: 'USB', value: 'usb' },
+                  { label: 'WiFi', value: 'wifi' },
+                  { label: 'Ethernet', value: 'ethernet' },
+                  { label: 'Bluetooth', value: 'bluetooth' },
+                ]}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Velocidad de impresión (ppm)</Label>
+              <Input type="number" value={Number(getAttrValue('printSpeed')) || ''} onChange={e => handleAttributeChange('printSpeed', e.target.value ? Number(e.target.value) : 0)} placeholder="20" />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="hasScanner" checked={Boolean(getAttrValue('hasScanner'))} onCheckedChange={c => handleAttributeChange('hasScanner', c === true)} />
+              <Label htmlFor="hasScanner">¿Tiene escáner?</Label>
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox id="hasFax" checked={Boolean(getAttrValue('hasFax'))} onCheckedChange={c => handleAttributeChange('hasFax', c === true)} />
+              <Label htmlFor="hasFax">¿Tiene fax?</Label>
+            </div>
           </>
         );
 
