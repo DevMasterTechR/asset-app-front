@@ -230,7 +230,7 @@ export default function DeviceFormModal({
       }
 
       const cleanData: CreateDeviceDto = {
-        assetCode: formData.assetCode,
+        assetCode: formData.assetType,
         assetType: formData.assetType,
         brand: formData.brand || undefined,
         model: formData.model || undefined,
@@ -490,6 +490,28 @@ export default function DeviceFormModal({
           </>
         );
 
+      case 'mousepad':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Marca</Label>
+              <Input
+                value={String(getAttrValue('brand') || '')}
+                onChange={e => handleAttributeChange('brand', e.target.value)}
+                placeholder="Razer, Logitech, HyperX..."
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={e => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, RGB, Gris, etc."
+              />
+            </div>
+          </>
+        );
+
       case 'soporte':
         return (
           <>
@@ -724,6 +746,7 @@ export default function DeviceFormModal({
               'adaptador-memoria': 'selectedMemoryAdapterId',
               'adaptador-red': 'selectedNetworkAdapterId',
               hub: 'selectedHubId',
+              mousepad: 'selectedMousepadId',
             };
             const key = map[pendingNewAccessory || ''];
             if (key) handleAttributeChange(key, created.id);
