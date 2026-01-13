@@ -31,6 +31,7 @@ declare global {
     __availableMemoryAdapters?: Array<any>;
     __availableNetworkAdapters?: Array<any>;
     __availableHubs?: Array<any>;
+    __availableMousepads?: Array<any>;
   }
 }
 
