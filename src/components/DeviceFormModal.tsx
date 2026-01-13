@@ -389,7 +389,7 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasMemoryAdapter', '¿Tiene adaptador de memoria?', 'hasMemoryAdapterRadio', 'selectedMemoryAdapterId', 'adaptador-memoria', window.__availableMemoryAdapters ?? [])}
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
-              {renderAccessoryBlock('hasMousePad', '¿Tiene mousepad?', 'hasMousePadRadio', 'selectedMousePadId', 'mousepad', window.__availableMousepads ?? [])}
+            {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
           </>
         );
 
