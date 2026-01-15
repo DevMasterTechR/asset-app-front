@@ -25,16 +25,16 @@ function isHrRole(role: string | { name?: string } | null | undefined) {
 export default function Auth() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { login, user } = useAuth();
+  const { login, user, loading } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (user && location.pathname === '/auth') {
-      navigate('/dashboard');
+    if (!loading && user && location.pathname === '/auth') {
+      navigate('/dashboard', { replace: true });
     }
-  }, [user, navigate]);
+  }, [user, loading, navigate, location.pathname]);
 
   const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -67,6 +67,14 @@ export default function Auth() {
       setIsLoading(false);
     }
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">

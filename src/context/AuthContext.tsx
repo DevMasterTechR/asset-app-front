@@ -51,6 +51,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         sessionStorage.removeItem('auth_token');
         sessionStorage.removeItem('session:keepalive');
       } catch (e) {}
+      navigate('/auth'); // Agregado: redirigir al login después de logout manual
     }
   };
 
@@ -104,3 +105,23 @@ export function useAuth() {
   }
   return context;
 }
+
+import React from 'react';
+
+type LayoutContextType = {
+  sidebarCollapsed: boolean;
+  setSidebarCollapsed: (value: boolean) => void;
+};
+
+export const LayoutContext = React.createContext<LayoutContextType>({
+  sidebarCollapsed: false,
+  setSidebarCollapsed: () => {},
+});
+
+export function useLayoutContext() {
+  const ctx = React.useContext(LayoutContext);
+  if (!ctx) throw new Error('useLayoutContext must be used within LayoutContext.Provider');
+  return ctx;
+}
+
+export default LayoutContext;
