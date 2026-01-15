@@ -31,8 +31,8 @@ export default function Auth() {
   useEffect(() => {
     if (user) {
       if (isAdminRole(user.role as any)) {
-        // Administrador → / (Index)
-        navigate('/');
+        // Administrador → /dashboard
+        navigate('/dashboard');
       } else if (isHrRole(user.role as any)) {
         navigate('/human-resources');
       } else {
@@ -56,7 +56,7 @@ export default function Auth() {
         title: '¡Bienvenido!',
         description: 'Has iniciado sesión correctamente.',
       });
-      navigate('/');
+      navigate('/dashboard');
     } catch (error: unknown) {
       let message = 'Credenciales incorrectas. Por favor, intenta de nuevo.';
 

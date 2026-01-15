@@ -36,12 +36,12 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
-            {/* Pública */}
-            <Route path="/auth" element={<Auth />} /> 
+            {/* Login en la raíz */}
+            <Route path="/" element={<Auth />} />
 
             {/* Protegidas */}
             {/* Dashboard: diferenciado por rol */}
-            <Route path="/" element={
+            <Route path="/dashboard" element={
               <PrivateRoute allowedRoles={adminRoles}>
                 <Index />
               </PrivateRoute>
