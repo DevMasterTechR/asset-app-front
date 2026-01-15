@@ -394,7 +394,37 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
             {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
             {renderAccessoryBlock('hasCharger', '¿Tiene cargador?', 'hasChargerRadio', 'selectedChargerId', 'cargador', window.__availableChargers ?? [])}
-            {renderAccessoryBlock('hasChargingCable', '¿Tiene cable de carga?', 'hasChargingCableRadio', 'selectedChargingCableId', 'cable-carga', window.__availableChargingCables ?? [])}
+            {/* Cable de carga separado y con botón para agregar nuevo */}
+            <div className="space-y-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="hasChargingCable"
+                  checked={Boolean(getAttrValue('hasChargingCable'))}
+                  onCheckedChange={checked => handleAttributeChange('hasChargingCable', checked === true)}
+                />
+                <Label htmlFor="hasChargingCable" className="cursor-pointer font-medium">¿Tiene cable de carga?</Label>
+              </div>
+              {getAttrValue('hasChargingCable') && (
+                <div className="ml-8 flex flex-col gap-4">
+                  <Label>Selecciona cable de carga</Label>
+                  <SearchableSelect
+                    value={getAttrValue('selectedChargingCableId') ? String(getAttrValue('selectedChargingCableId')) : ''}
+                    onValueChange={value => handleAttributeChange('selectedChargingCableId', value)}
+                    placeholder="Buscar cable..."
+                    options={window.__availableChargingCables?.map(item => ({
+                      label: `${item.assetCode ?? item.id} - ${item.brand ?? ''} ${item.model ?? ''}`.trim(),
+                      value: String(item.id),
+                    })) ?? []}
+                  />
+                  <Button type="button" onClick={() => {
+                    handleAttributeChange('pendingNewAccessory', 'cable-carga');
+                    setShowAccessoryModal(true);
+                  }} size="sm">Añadir nuevo cable</Button>
+                  <Label>Color del cable</Label>
+                  <Input value={String(getAttrValue('chargingCableColor') || '')} onChange={e => handleAttributeChange('chargingCableColor', e.target.value)} placeholder="Negro, Blanco..." />
+                </div>
+              )}
+            </div>
           </>
         );
 
