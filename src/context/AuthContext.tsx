@@ -19,6 +19,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
+  const navigate = useNavigate();
+
   useEffect(() => {
     //Verificar sesión al cargar la app
     const checkSession = async () => {
@@ -52,8 +54,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (e) {}
     }
   };
-
-  const navigate = useNavigate();
 
   // Redirigir al login cuando se cierre sesión desde el contexto (auto-logout o logout programático)
   const logoutAndRedirect = async () => {
