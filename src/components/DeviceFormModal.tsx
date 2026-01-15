@@ -31,6 +31,8 @@ declare global {
     __availableNetworkAdapters?: Array<any>;
     __availableHubs?: Array<any>;
     __availableMousepads?: Array<any>;
+    __availableChargers?: Array<any>;
+    __availableChargingCables?: Array<any>;
   }
 }
 
@@ -430,13 +432,53 @@ export default function DeviceFormModal({
               <Checkbox id="hasCase" checked={Boolean(getAttrValue('hasCase'))} onCheckedChange={c => handleAttributeChange('hasCase', c === true)} />
               <Label htmlFor="hasCase">¿Tiene estuche?</Label>
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="hasCharger" checked={Boolean(getAttrValue('hasCharger'))} onCheckedChange={c => handleAttributeChange('hasCharger', c === true)} />
-              <Label htmlFor="hasCharger">¿Tiene cargador?</Label>
+            {/* Cargador */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="hasCharger" checked={Boolean(getAttrValue('hasCharger'))} onCheckedChange={c => handleAttributeChange('hasCharger', c === true)} />
+                <Label htmlFor="hasCharger">¿Tiene cargador?</Label>
+              </div>
+              {getAttrValue('hasCharger') && (
+                <div className="ml-8 space-y-2">
+                  <Label>Selecciona cargador</Label>
+                  <SearchableSelect
+                    value={String(getAttrValue('chargerId') || '')}
+                    onValueChange={value => handleAttributeChange('chargerId', value)}
+                    placeholder="Buscar cargador..."
+                    options={window.__availableChargers?.map(item => ({
+                      label: `${item.assetCode ?? item.id} - ${item.brand ?? ''} ${item.model ?? ''}`.trim(),
+                      value: String(item.id),
+                    })) ?? []}
+                  />
+                  <Button type="button" onClick={() => handleAttributeChange('addNewCharger', true)} size="sm">Añadir nuevo cargador</Button>
+                  <Label>Color del cargador</Label>
+                  <Input value={String(getAttrValue('chargerColor') || '')} onChange={e => handleAttributeChange('chargerColor', e.target.value)} placeholder="Negro, Blanco..." />
+                </div>
+              )}
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="hasChargingCable" checked={Boolean(getAttrValue('hasChargingCable'))} onCheckedChange={c => handleAttributeChange('hasChargingCable', c === true)} />
-              <Label htmlFor="hasChargingCable">¿Tiene cable de carga?</Label>
+            {/* Cable de carga */}
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox id="hasChargingCable" checked={Boolean(getAttrValue('hasChargingCable'))} onCheckedChange={c => handleAttributeChange('hasChargingCable', c === true)} />
+                <Label htmlFor="hasChargingCable">¿Tiene cable de carga?</Label>
+              </div>
+              {getAttrValue('hasChargingCable') && (
+                <div className="ml-8 space-y-2">
+                  <Label>Selecciona cable de carga</Label>
+                  <SearchableSelect
+                    value={String(getAttrValue('chargingCableId') || '')}
+                    onValueChange={value => handleAttributeChange('chargingCableId', value)}
+                    placeholder="Buscar cable..."
+                    options={window.__availableChargingCables?.map(item => ({
+                      label: `${item.assetCode ?? item.id} - ${item.brand ?? ''} ${item.model ?? ''}`.trim(),
+                      value: String(item.id),
+                    })) ?? []}
+                  />
+                  <Button type="button" onClick={() => handleAttributeChange('addNewChargingCable', true)} size="sm">Añadir nuevo cable</Button>
+                  <Label>Color del cable</Label>
+                  <Input value={String(getAttrValue('chargingCableColor') || '')} onChange={e => handleAttributeChange('chargingCableColor', e.target.value)} placeholder="Negro, Blanco..." />
+                </div>
+              )}
             </div>
           </>
         );
