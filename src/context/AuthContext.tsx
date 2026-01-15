@@ -22,13 +22,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
 
   useEffect(() => {
-    //Verificar sesión al cargar la app
+    // Verificar sesión al cargar la app, pero NO redirigir automáticamente
     const checkSession = async () => {
       try {
         const currentUser = await authApi.verifyAuth();
         if (currentUser) {
           setUser(currentUser);
-          navigate('/');
         }
       } catch (error) {
         console.error('Error verificando sesión:', error);
@@ -37,7 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     };
     checkSession();
-  }, [navigate]);
+  }, []);
 
   const logout = async () => {
     try {
