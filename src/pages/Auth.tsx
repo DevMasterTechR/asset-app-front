@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
@@ -23,13 +24,14 @@ function isHrRole(role: string | { name?: string } | null | undefined) {
 
 export default function Auth() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login, user } = useAuth();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (user) {
+    if (user && location.pathname === '/auth') {
       navigate('/dashboard');
     }
   }, [user, navigate]);
