@@ -376,10 +376,7 @@ export default function DeviceFormModal({
               <Label>Almacenamiento</Label>
               <Input value={String(getAttrValue('storage') || '')} onChange={e => handleAttributeChange('storage', e.target.value)} placeholder="512GB SSD" />
             </div>
-            <div className="flex items-center space-x-2">
-              <Checkbox id="hasCharger" checked={Boolean(getAttrValue('hasCharger'))} onCheckedChange={c => handleAttributeChange('hasCharger', c === true)} />
-              <Label htmlFor="hasCharger">¿Tiene cargador?</Label>
-            </div>
+            {/* ...eliminar el checkbox de cargador al inicio... */}
             <div className="flex items-center space-x-2">
               <Checkbox id="hasBag" checked={Boolean(getAttrValue('hasBag'))} onCheckedChange={c => handleAttributeChange('hasBag', c === true)} />
               <Label htmlFor="hasBag">¿Tiene maletín/bolso?</Label>
