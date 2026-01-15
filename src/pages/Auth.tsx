@@ -30,15 +30,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (user) {
-      if (isAdminRole(user.role as any)) {
-        // Administrador → /dashboard
-        navigate('/dashboard');
-      } else if (isHrRole(user.role as any)) {
-        navigate('/human-resources');
-      } else {
-        // Usuario normal → /user-dashboard
-        navigate('/user-dashboard');
-      }
+      navigate('/');
     }
   }, [user, navigate]);
 
