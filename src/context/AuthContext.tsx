@@ -39,21 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = async () => {
-    try {
-      await authApi.logout();
-    } catch (error) {
-      console.error('Error en logout:', error);
-    } finally {
-      // Limpiar usuario de contexto
-      setUser(null);
-      try { 
-        localStorage.setItem('session:logout', String(Date.now())); 
-        sessionStorage.removeItem('auth_token');
-        sessionStorage.removeItem('session:keepalive');
-      } catch (e) {}
-      navigate('/auth'); // Agregado: redirigir al login después de logout manual
-    }
-  };
+  // Intenta llamar al backend (opcional, solo para limpiar cookies si usas HTTP-only)
+  try {
+    await authApi.logout();  // si falla con 401, no importa
+  } catch (error) {
+    console.warn('Logout backend falló (normal si token ya expiró)', error);
+  } finally {
+    // SIEMPRE limpia el cliente y redirige
+    setUser(null);
+    sessionStorage.removeItem('auth_token');
+    sessionStorage.removeItem('session:keepalive');
+    localStorage.setItem('session:logout', String(Date.now()));
+    navigate('/auth', { replace: true });
+  }
+};
 
   // Redirigir al login cuando se cierre sesión desde el contexto (auto-logout o logout programático)
   const logoutAndRedirect = async () => {
