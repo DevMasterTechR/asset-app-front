@@ -48,6 +48,8 @@ async function reloadAvailableAccessories() {
     window.__availableNetworkAdapters = all.filter(d => d.assetType === 'adaptador-red' && d.status === 'available' && !d.assignedPersonId);
     window.__availableHubs = all.filter(d => d.assetType === 'hub' && d.status === 'available' && !d.assignedPersonId);
     window.__availableMousepads = all.filter(d => d.assetType === 'mousepad' && d.status === 'available' && !d.assignedPersonId);
+    window.__availableChargers = all.filter(d => d.assetType === 'cargador' && d.status === 'available' && !d.assignedPersonId);
+    window.__availableChargingCables = all.filter(d => d.assetType === 'cable-carga' && d.status === 'available' && !d.assignedPersonId);
   } catch (e) {
     console.error('Error cargando accesorios:', e);
   }
@@ -391,6 +393,8 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
             {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
+            {renderAccessoryBlock('hasCharger', '¿Tiene cargador?', 'hasChargerRadio', 'selectedChargerId', 'cargador', window.__availableChargers ?? [])}
+            {renderAccessoryBlock('hasChargingCable', '¿Tiene cable de carga?', 'hasChargingCableRadio', 'selectedChargingCableId', 'cable-carga', window.__availableChargingCables ?? [])}
           </>
         );
 
@@ -903,6 +907,8 @@ export default function DeviceFormModal({
               'adaptador-red': 'selectedNetworkAdapterId',
               hub: 'selectedHubId',
               mousepad: 'selectedMousepadId',
+              cargador: 'selectedChargerId',
+              'cable-carga': 'selectedChargingCableId',
             };
             const key = map[pendingNewAccessory || ''];
             if (key) handleAttributeChange(key, created.id);
