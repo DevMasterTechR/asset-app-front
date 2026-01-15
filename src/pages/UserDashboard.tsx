@@ -19,6 +19,12 @@ import {
 
 const UserDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!user) {
+      navigate('/auth');
+    }
+  }, [user, navigate]);
   const [searchTerm, setSearchTerm] = useState("");
   const [myAssignments, setMyAssignments] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
