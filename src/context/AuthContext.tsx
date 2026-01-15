@@ -26,6 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = await authApi.verifyAuth();
         if (currentUser) {
           setUser(currentUser);
+          navigate('/');
         }
       } catch (error) {
         console.error('Error verificando sesión:', error);
@@ -33,9 +34,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setLoading(false);
       }
     };
-    
     checkSession();
-  }, []);
+  }, [navigate]);
 
   const logout = async () => {
     try {
