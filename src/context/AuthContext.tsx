@@ -86,7 +86,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(currentUser);
       return currentUser;
     } else if (response.user) {
-      // Fallback si /auth/me falla
       setUser(response.user);
       return response.user;
     }
