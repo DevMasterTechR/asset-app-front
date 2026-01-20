@@ -80,7 +80,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const response = await authApi.login({ username, password });
 
     // Después del login, siempre obtener datos completos del usuario desde /auth/me
-    // (esto asegura que tengamos firstName, lastName, etc.)
     const currentUser = await authApi.verifyAuth();
     if (currentUser) {
       setUser(currentUser);
