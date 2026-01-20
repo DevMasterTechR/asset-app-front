@@ -9,17 +9,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { Laptop, User, Lock, Eye, EyeOff } from 'lucide-react';
 
-const adminRoles = ['Admin', 'Administrador', 'admin'];
-const hrRoles = ['Recursos Humanos', 'Human Resources', 'RRHH'];
+const ADMIN_ROLES = ['admin', 'administrador', 'Admin'] as const;
+const HR_ROLES = ['recursos humanos', 'human resources', 'rrhh', 'RRHH'] as const;
 
-function isAdminRole(role: string | { name?: string } | null | undefined) {
-  const value = typeof role === 'string' ? role : role?.name;
-  return value ? adminRoles.some((r) => r.toLowerCase() === value.toLowerCase()) : false;
+function normalizeRole(role: string | { name?: string } | null | undefined): string | null {
+  if (!role) return null;
+  const value = typeof role === 'string' ? role : role.name;
+  return value ? value.trim().toLowerCase() : null;
 }
 
-function isHrRole(role: string | { name?: string } | null | undefined) {
-  const value = typeof role === 'string' ? role : role?.name;
-  return value ? hrRoles.some((r) => r.toLowerCase() === value.toLowerCase()) : false;
+function isAdmin(normalizedRole: string | null): boolean {
+  return normalizedRole ? ADMIN_ROLES.some(r => r === normalizedRole) : false;
+}
+
+function isHR(normalizedRole: string | null): boolean {
+  return normalizedRole ? HR_ROLES.some(r => r === normalizedRole) : false;
 }
 
 export default function Auth() {
@@ -31,8 +35,16 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (!loading && user && location.pathname === '/auth') {
+    if (loading || !user || location.pathname !== '/auth') return;
+
+    const normalized = normalizeRole(user.role);
+    
+    if (isAdmin(normalized)) {
       navigate('/dashboard', { replace: true });
+    } else if (isHR(normalized)) {
+      navigate('/human-resources', { replace: true });
+    } else {
+      navigate('/user-dashboard', { replace: true });
     }
   }, [user, loading, navigate, location.pathname]);
 
@@ -46,11 +58,12 @@ export default function Auth() {
 
     try {
       await login(username, password);
+      
       toast({
         title: '¡Bienvenido!',
         description: 'Has iniciado sesión correctamente.',
       });
-      navigate('/dashboard');
+
     } catch (error: unknown) {
       let message = 'Credenciales incorrectas. Por favor, intenta de nuevo.';
 
