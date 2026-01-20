@@ -36,8 +36,9 @@ const App = () => (
           <Toaster />
           <Sonner />
           <Routes>
-            {/* Login en la raíz */}
+            {/* Login en la raíz y en /auth */}
             <Route path="/" element={<Auth />} />
+            <Route path="/auth" element={<Auth />} />
 
             {/* Protegidas */}
             {/* Dashboard: diferenciado por rol */}

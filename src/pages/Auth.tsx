@@ -38,7 +38,7 @@ export default function Auth() {
     if (loading || !user || location.pathname !== '/auth') return;
 
     const normalized = normalizeRole(user.role);
-    
+
     if (isAdmin(normalized)) {
       navigate('/dashboard', { replace: true });
     } else if (isHR(normalized)) {
@@ -57,14 +57,14 @@ export default function Auth() {
     const password = formData.get('password') as string;
 
     try {
-      await login(username, password);
+      // login ahora retorna el usuario autenticado
+      const loggedInUser = await login(username, password);
       toast({
         title: '¡Bienvenido!',
         description: 'Has iniciado sesión correctamente.',
       });
-      // Redirigir según el rol después del login
-      // user se actualiza por el contexto, pero para redirigir inmediato lo obtenemos de useAuth
-      const normalized = normalizeRole(user?.role);
+      // Redirigir según el rol usando el usuario retornado (no el estado que aún no se actualiza)
+      const normalized = normalizeRole(loggedInUser.role);
       if (isAdmin(normalized)) {
         navigate('/dashboard', { replace: true });
       } else if (isHR(normalized)) {

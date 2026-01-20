@@ -8,7 +8,7 @@ import { useToast } from '@/hooks/use-toast';
 interface AuthContextType {
   user: AuthUser | null;
   loading: boolean;
-  login: (username: string, password: string) => Promise<void>;
+  login: (username: string, password: string) => Promise<AuthUser>;
   logout: () => Promise<void>;
 }
 
@@ -39,20 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const logout = async () => {
-  // Intenta llamar al backend (opcional, solo para limpiar cookies si usas HTTP-only)
-  try {
-    await authApi.logout();  // si falla con 401, no importa
-  } catch (error) {
-    console.warn('Logout backend falló (normal si token ya expiró)', error);
-  } finally {
-    // SIEMPRE limpia el cliente y redirige
-    setUser(null);
-    sessionStorage.removeItem('auth_token');
-    sessionStorage.removeItem('session:keepalive');
-    localStorage.setItem('session:logout', String(Date.now()));
-    navigate('/auth', { replace: true });
-  }
-};
+    // Intenta llamar al backend (opcional, solo para limpiar cookies si usas HTTP-only)
+    try {
+      await authApi.logout();  // si falla con 401, no importa
+    } catch (error) {
+      console.warn('Logout backend falló (normal si token ya expiró)', error);
+    } finally {
+      // SIEMPRE limpia el cliente y redirige
+      setUser(null);
+      sessionStorage.removeItem('auth_token');
+      sessionStorage.removeItem('session:keepalive');
+      localStorage.setItem('session:logout', String(Date.now()));
+      navigate('/auth', { replace: true });
+    }
+  };
 
   // Redirigir al login cuando se cierre sesión desde el contexto (auto-logout o logout programático)
   const logoutAndRedirect = async () => {
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // dejar 2 segundos para que el usuario lea el mensaje
       setTimeout(() => {
-        try { navigate('/auth'); } catch (e) {}
+        try { navigate('/auth'); } catch (e) { }
       }, 2000);
     } catch (e) {
       // ignorar si navigate no está disponible
@@ -76,18 +76,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // DESACTIVADO: No cerrar sesión automáticamente. El usuario solo puede cerrar sesión manualmente.
   // useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
 
-  const login = async (username: string, password: string) => {
+  const login = async (username: string, password: string): Promise<AuthUser> => {
     const response = await authApi.login({ username, password });
-    
+
     // Después del login, siempre obtener datos completos del usuario desde /auth/me
     // (esto asegura que tengamos firstName, lastName, etc.)
     const currentUser = await authApi.verifyAuth();
     if (currentUser) {
       setUser(currentUser);
+      return currentUser;
     } else if (response.user) {
       // Fallback si /auth/me falla
       setUser(response.user);
+      return response.user;
     }
+    throw new Error('No se pudo obtener el usuario después del login');
   };
 
   return (
@@ -114,7 +117,7 @@ type LayoutContextType = {
 
 export const LayoutContext = React.createContext<LayoutContextType>({
   sidebarCollapsed: false,
-  setSidebarCollapsed: () => {},
+  setSidebarCollapsed: () => { },
 });
 
 export function useLayoutContext() {
