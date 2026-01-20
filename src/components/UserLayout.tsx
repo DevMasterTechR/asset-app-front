@@ -50,7 +50,7 @@ export default function UserLayout({ children }: LayoutProps) {
   useEffect(() => {
     try {
       localStorage.setItem('sidebar:collapsed', sidebarCollapsed ? 'true' : 'false');
-    } catch (e) {}
+    } catch (e) { }
   }, [sidebarCollapsed]);
 
   const [isMobileView, setIsMobileView] = useState(() => {
@@ -72,12 +72,12 @@ export default function UserLayout({ children }: LayoutProps) {
   const handleLogout = async () => {
     try {
       await logout();
-      try { localStorage.setItem('session:logout', String(Date.now())); } catch (e) {}
+      try { localStorage.setItem('session:logout', String(Date.now())); } catch (e) { }
       toast({
         title: 'Sesión cerrada',
         description: 'Has cerrado sesión correctamente.',
       });
-      navigate('/auth');
+      navigate('/');
     } catch (error) {
       toast({
         title: 'Error',
@@ -106,7 +106,7 @@ export default function UserLayout({ children }: LayoutProps) {
     try {
       await authApi.keepAlive();
       setSessionCountdown(null);
-      try { localStorage.setItem('session:keepalive', String(Date.now())); localStorage.removeItem('session:warning'); } catch (e) {}
+      try { localStorage.setItem('session:keepalive', String(Date.now())); localStorage.removeItem('session:warning'); } catch (e) { }
       toast({ title: 'Sesión extendida', description: 'Se ha mantenido la sesión activa.' });
     } catch (e) {
       toast({ title: 'Error', description: 'No se pudo extender la sesión', variant: 'destructive' });
@@ -132,18 +132,17 @@ export default function UserLayout({ children }: LayoutProps) {
         {/* Sidebar Desktop */}
         {!isMobileView && (
           <aside
-            className={`${
-              sidebarCollapsed ? 'w-20' : 'w-64'
-            } border-r bg-card transition-all duration-300 flex flex-col overflow-hidden`}
+            className={`${sidebarCollapsed ? 'w-20' : 'w-64'
+              } border-r bg-card transition-all duration-300 flex flex-col overflow-hidden`}
           >
             {/* Header - Logo with collapse button */}
             <div className="border-b">
               {!sidebarCollapsed ? (
                 <div className="p-4 flex items-center justify-between">
                   <div className="flex items-center gap-2 flex-1 min-w-0">
-                    <img 
-                      src="/images/techlogo.png" 
-                      alt="Activos TI" 
+                    <img
+                      src="/images/techlogo.png"
+                      alt="Activos TI"
                       className="h-8 w-8 object-contain flex-shrink-0"
                     />
                     <div className="min-w-0">
@@ -162,9 +161,9 @@ export default function UserLayout({ children }: LayoutProps) {
                 </div>
               ) : (
                 <div className="p-4 flex flex-col items-center gap-2">
-                  <img 
-                    src="/images/techlogo.png" 
-                    alt="Activos TI" 
+                  <img
+                    src="/images/techlogo.png"
+                    alt="Activos TI"
                     className="h-8 w-8 object-contain flex-shrink-0"
                   />
                   <Button
@@ -189,8 +188,8 @@ export default function UserLayout({ children }: LayoutProps) {
             ) : (
               <div className="p-4 border-b flex items-center justify-center">
                 <div className="font-bold">
-                {getUserInitials()}
-              </div>
+                  {getUserInitials()}
+                </div>
 
               </div>
             )}
@@ -204,11 +203,10 @@ export default function UserLayout({ children }: LayoutProps) {
                   <Link
                     key={item.href}
                     to={item.href}
-                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                      isActive
+                    className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
                         ? 'bg-primary text-primary-foreground'
                         : 'hover:bg-accent text-foreground'
-                    }`}
+                      }`}
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {!sidebarCollapsed && <span className="text-sm font-medium">{item.title}</span>}
@@ -219,9 +217,9 @@ export default function UserLayout({ children }: LayoutProps) {
 
             {/* Logout Button */}
             <div className="border-t p-4">
-              <Button 
-                variant="destructive" 
-                size="sm" 
+              <Button
+                variant="destructive"
+                size="sm"
                 className="w-full gap-2 justify-center"
                 onClick={handleLogout}
               >
@@ -257,11 +255,10 @@ export default function UserLayout({ children }: LayoutProps) {
                             key={item.href}
                             to={item.href}
                             onClick={() => setIsOpen(false)}
-                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${
-                              isActive
+                            className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-colors ${isActive
                                 ? 'bg-primary text-primary-foreground'
                                 : 'hover:bg-accent'
-                            }`}
+                              }`}
                           >
                             <Icon className="h-5 w-5" />
                             <span>{item.title}</span>

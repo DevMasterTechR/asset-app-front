@@ -23,7 +23,7 @@ const UserDashboard = () => {
   const navigate = useNavigate();
   useEffect(() => {
     if (!user) {
-      navigate('/auth');
+      navigate('/');
     }
   }, [user, navigate]);
   const [searchTerm, setSearchTerm] = useState("");
@@ -68,7 +68,7 @@ const UserDashboard = () => {
     try {
       const myAssignmentsRes = await assignmentsApi.getMyAssignments();
       const userAssignments = extractArray<any>(myAssignmentsRes) || [];
-      
+
       // Mapear asignaciones con información del dispositivo
       const myAssignmentsData = userAssignments.map((a: any) => {
         const device = a.asset;
@@ -170,8 +170,8 @@ const UserDashboard = () => {
               </div>
             ) : displayedAssignments.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">
-                {viewMode === 'active' 
-                  ? 'No tienes equipos asignados actualmente.' 
+                {viewMode === 'active'
+                  ? 'No tienes equipos asignados actualmente.'
                   : 'No hay historial de asignaciones.'}
               </div>
             ) : (
@@ -207,22 +207,22 @@ const UserDashboard = () => {
                             <td className="p-3">{a.model || '-'}</td>
                             <td className="p-3 font-mono text-xs">{a.serialNumber || '-'}</td>
                             <td className="p-3">
-                              {a.assignmentDate 
+                              {a.assignmentDate
                                 ? new Date(a.assignmentDate).toLocaleDateString('es-ES', {
-                                    year: 'numeric',
-                                    month: '2-digit',
-                                    day: '2-digit'
-                                  })
+                                  year: 'numeric',
+                                  month: '2-digit',
+                                  day: '2-digit'
+                                })
                                 : '-'}
                             </td>
                             {viewMode === 'history' && (
                               <td className="p-3">
-                                {a.returnDate 
+                                {a.returnDate
                                   ? new Date(a.returnDate).toLocaleDateString('es-ES', {
-                                      year: 'numeric',
-                                      month: '2-digit',
-                                      day: '2-digit'
-                                    })
+                                    year: 'numeric',
+                                    month: '2-digit',
+                                    day: '2-digit'
+                                  })
                                   : '-'}
                               </td>
                             )}
@@ -265,7 +265,7 @@ const UserDashboard = () => {
                         onPageChange={setPage}
                         limit={limit}
                         onLimitChange={(l) => { setLimit(l); setPage(1); }}
-                        limits={[5,10,15,20]}
+                        limits={[5, 10, 15, 20]}
                       />
                     </div>
                   </div>
@@ -318,7 +318,7 @@ const UserDashboard = () => {
                 <div>
                   <div className="text-muted-foreground">Estado</div>
                   <div className="font-medium">{(() => {
-                    const map: Record<string,string> = {
+                    const map: Record<string, string> = {
                       assigned: 'Asignado',
                       available: 'Disponible',
                       maintenance: 'Mantenimiento',
@@ -334,19 +334,19 @@ const UserDashboard = () => {
                 </div>
                 <div>
                   <div className="text-muted-foreground">Fecha Asignación</div>
-                  <div className="font-medium">{selectedAssignment.assignmentDate ? new Date(selectedAssignment.assignmentDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'}) : '-'}</div>
+                  <div className="font-medium">{selectedAssignment.assignmentDate ? new Date(selectedAssignment.assignmentDate).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}</div>
                 </div>
                 {selectedAssignment.returnDate && (
                   <div>
                     <div className="text-muted-foreground">Fecha Devolución</div>
-                    <div className="font-medium">{new Date(selectedAssignment.returnDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'})}</div>
+                    <div className="font-medium">{new Date(selectedAssignment.returnDate).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
                   </div>
                 )}
               </div>
               <div>
                 <div className="text-muted-foreground">Condición de Entrega</div>
                 <div className="font-medium whitespace-pre-wrap">{(() => {
-                  const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                  const map: Record<string, string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
                   const key = String(selectedAssignment.deliveryCondition || '').toLowerCase();
                   return map[key] || selectedAssignment.deliveryCondition || '-';
                 })()}</div>
@@ -363,7 +363,7 @@ const UserDashboard = () => {
                     <div>
                       <div className="text-muted-foreground">Condición de Devolución</div>
                       <div className="font-medium whitespace-pre-wrap">{(() => {
-                        const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                        const map: Record<string, string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
                         const key = String(selectedAssignment.returnCondition || '').toLowerCase();
                         return map[key] || selectedAssignment.returnCondition;
                       })()}</div>
