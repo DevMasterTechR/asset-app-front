@@ -58,12 +58,20 @@ export default function Auth() {
 
     try {
       await login(username, password);
-      
       toast({
         title: '¡Bienvenido!',
         description: 'Has iniciado sesión correctamente.',
       });
-
+      // Redirigir según el rol después del login
+      // user se actualiza por el contexto, pero para redirigir inmediato lo obtenemos de useAuth
+      const normalized = normalizeRole(user?.role);
+      if (isAdmin(normalized)) {
+        navigate('/dashboard', { replace: true });
+      } else if (isHR(normalized)) {
+        navigate('/human-resources', { replace: true });
+      } else {
+        navigate('/user-dashboard', { replace: true });
+      }
     } catch (error: unknown) {
       let message = 'Credenciales incorrectas. Por favor, intenta de nuevo.';
 
