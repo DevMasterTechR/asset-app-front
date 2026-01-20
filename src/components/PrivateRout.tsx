@@ -15,7 +15,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
   }
 
   if (!user) {
-    return <Navigate to="/auth" replace />;
+    return <Navigate to="/" replace />;
   }
 
   const userRole = typeof user.role === 'string' ? user.role : user.role?.name;
@@ -24,7 +24,7 @@ export function PrivateRoute({ children, allowedRoles }: PrivateRouteProps) {
 
   if (!isAllowed) {
     // Redirige al login mostrando una ruta segura; evita montar el contenido protegido
-    return <Navigate to="/auth" replace state={{ reason: 'forbidden' }} />;
+    return <Navigate to="/" replace state={{ reason: 'forbidden' }} />;
   }
 
   return <>{children}</>;

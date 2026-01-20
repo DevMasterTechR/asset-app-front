@@ -50,7 +50,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       sessionStorage.removeItem('auth_token');
       sessionStorage.removeItem('session:keepalive');
       localStorage.setItem('session:logout', String(Date.now()));
-      navigate('/auth', { replace: true });
+      navigate('/', { replace: true });
     }
   };
 
@@ -66,7 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       // dejar 2 segundos para que el usuario lea el mensaje
       setTimeout(() => {
-        try { navigate('/auth'); } catch (e) { }
+        try { navigate('/'); } catch (e) { }
       }, 2000);
     } catch (e) {
       // ignorar si navigate no está disponible

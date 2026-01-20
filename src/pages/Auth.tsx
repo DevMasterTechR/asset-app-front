@@ -35,7 +35,7 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
 
   useEffect(() => {
-    if (loading || !user || location.pathname !== '/auth') return;
+    if (loading || !user || (location.pathname !== '/' && location.pathname !== '/auth')) return;
 
     const normalized = normalizeRole(user.role);
 
