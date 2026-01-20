@@ -32,17 +32,7 @@ export default function Auth() {
 
   useEffect(() => {
     if (!loading && user && location.pathname === '/auth') {
-      // Redirigir según el rol
-      const role = typeof user.role === 'string' ? user.role : user.role?.name;
-      const adminRoles = ['Admin', 'Administrador', 'admin'];
-      const hrRoles = ['Recursos Humanos', 'Human Resources', 'RRHH'];
-      if (role && adminRoles.some(r => r.toLowerCase() === role.toLowerCase())) {
-        navigate('/dashboard', { replace: true });
-      } else if (role && hrRoles.some(r => r.toLowerCase() === role.toLowerCase())) {
-        navigate('/human-resources', { replace: true });
-      } else {
-        navigate('/user-dashboard', { replace: true });
-      }
+      navigate('/dashboard', { replace: true });
     }
   }, [user, loading, navigate, location.pathname]);
 
@@ -60,6 +50,7 @@ export default function Auth() {
         title: '¡Bienvenido!',
         description: 'Has iniciado sesión correctamente.',
       });
+      navigate('/dashboard');
     } catch (error: unknown) {
       let message = 'Credenciales incorrectas. Por favor, intenta de nuevo.';
 
