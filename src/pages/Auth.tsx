@@ -60,7 +60,18 @@ export default function Auth() {
         title: '¡Bienvenido!',
         description: 'Has iniciado sesión correctamente.',
       });
-      navigate('/dashboard');
+      // Redirigir según el rol después del login
+      const user = typeof window !== 'undefined' ? JSON.parse(sessionStorage.getItem('auth_user') || 'null') : null;
+      const role = user && (typeof user.role === 'string' ? user.role : user.role?.name);
+      const adminRoles = ['Admin', 'Administrador', 'admin'];
+      const hrRoles = ['Recursos Humanos', 'Human Resources', 'RRHH'];
+      if (role && adminRoles.some(r => r.toLowerCase() === role.toLowerCase())) {
+        navigate('/dashboard');
+      } else if (role && hrRoles.some(r => r.toLowerCase() === role.toLowerCase())) {
+        navigate('/human-resources');
+      } else {
+        navigate('/user-dashboard');
+      }
     } catch (error: unknown) {
       let message = 'Credenciales incorrectas. Por favor, intenta de nuevo.';
 
