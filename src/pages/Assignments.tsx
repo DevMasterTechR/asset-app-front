@@ -84,8 +84,8 @@ function convertLocalToUTCISOString(localDateTime: string): string {
   if (hasTime) {
     // Formato: "2025-10-08T10:58"
     const [datePart, timePart] = localDateTime.split("T")
-    ;[year, month, day] = datePart.split("-").map(Number)
-    ;[hour, minute] = timePart.split(":").map(Number)
+      ;[year, month, day] = datePart.split("-").map(Number)
+      ;[hour, minute] = timePart.split(":").map(Number)
   } else {
     // Formato: "2025-10-08" (solo fecha, asumir medianoche)
     ;[year, month, day] = localDateTime.split("-").map(Number)
@@ -184,10 +184,11 @@ export default function Assignments() {
       // --- Lógica para asignar todos los periféricos solicitados ---
       if (result.asset && result.asset.attributesJson) {
         const {
-          selectedMouseId,
-          hasKeyboard, selectedKeyboardId,
+          hasMouse, selectedMouseId,
+          hasTeclado, selectedTecladoId,
           hasMonitor, selectedMonitorId,
-          hasMousePad, selectedMousePadId,
+          hasMousepad, selectedMousepadId,
+          hasCharger, selectedChargerId,
           hasStand, selectedStandId,
           hasHub, selectedHubId,
           hasMemoryAdapter, selectedMemoryAdapterId,
@@ -195,7 +196,7 @@ export default function Assignments() {
         } = result.asset.attributesJson;
         const perifAssignments = [];
         // Mouse
-        if (selectedMouseId) {
+        if (hasMouse && selectedMouseId) {
           perifAssignments.push(assignmentsApi.create({
             assetId: selectedMouseId,
             personId: converted.personId,
@@ -206,9 +207,9 @@ export default function Assignments() {
           }));
         }
         // Teclado
-        if (hasKeyboard && selectedKeyboardId) {
+        if (hasTeclado && selectedTecladoId) {
           perifAssignments.push(assignmentsApi.create({
-            assetId: selectedKeyboardId,
+            assetId: selectedTecladoId,
             personId: converted.personId,
             branchId: converted.branchId,
             assignmentDate: converted.assignmentDate,
@@ -228,9 +229,20 @@ export default function Assignments() {
           }));
         }
         // Mousepad
-        if (hasMousePad && selectedMousePadId) {
+        if (hasMousepad && selectedMousepadId) {
           perifAssignments.push(assignmentsApi.create({
-            assetId: selectedMousePadId,
+            assetId: selectedMousepadId,
+            personId: converted.personId,
+            branchId: converted.branchId,
+            assignmentDate: converted.assignmentDate,
+            deliveryCondition: converted.deliveryCondition,
+            deliveryNotes: 'Asignación automática junto con laptop',
+          }));
+        }
+        // Cargador
+        if (hasCharger && selectedChargerId) {
+          perifAssignments.push(assignmentsApi.create({
+            assetId: selectedChargerId,
             personId: converted.personId,
             branchId: converted.branchId,
             assignmentDate: converted.assignmentDate,
@@ -308,7 +320,7 @@ export default function Assignments() {
     if (!device && a.assetId) {
       try {
         device = await devicesApi.getById(parseInt(a.assetId));
-      } catch {}
+      } catch { }
     }
     const details = {
       ...a,
@@ -329,7 +341,7 @@ export default function Assignments() {
         assignmentDate: convertLocalToUTCISOString(data.assignmentDate)
       };
       await assignmentsApi.update(selectedAssignment.id, converted);
-      
+
       // Liberar el equipo anterior a disponible
       const previousAssetId = selectedAssignment.assetId;
       if (previousAssetId) {
@@ -340,7 +352,7 @@ export default function Assignments() {
           console.warn('No se pudo liberar el equipo anterior:', e);
         }
       }
-      
+
       await loadAssignments();
       toast({
         title: "Éxito",
@@ -391,7 +403,7 @@ export default function Assignments() {
       if (assignmentObj) {
         try {
           assetObj = await devicesApi.getById(Number(assignmentObj.assetId));
-        } catch {}
+        } catch { }
       }
       if (assetObj && assetObj.attributesJson) {
         const {
@@ -441,9 +453,9 @@ export default function Assignments() {
     try {
       // Obtener la asignación a eliminar para acceder al assetId
       const assignmentToRemove = assignments.find(a => a.id === assignmentToDelete);
-      
+
       await assignmentsApi.delete(assignmentToDelete);
-      
+
       // Liberar el equipo a disponible
       if (assignmentToRemove?.assetId) {
         try {
@@ -453,7 +465,7 @@ export default function Assignments() {
           console.warn('No se pudo liberar el equipo:', e);
         }
       }
-      
+
       await loadAssignments();
       toast({
         title: "Éxito",
@@ -622,65 +634,65 @@ export default function Assignments() {
           {viewMode === 'active' && (
             <div className="border rounded-lg bg-card p-4 space-y-4">
               <h2 className="text-lg font-semibold">Activos</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('asset')}>Activo {sort.key === 'asset' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Asignación {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead>Condición Entrega</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedActive.length === 0 ? (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div>
-                        <h3 className="text-lg font-semibold">No hay activos asignados</h3>
-                        <p className="text-sm text-muted-foreground">No se encontraron asignaciones activas</p>
-                      </div>
-                    </TableCell>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('asset')}>Activo {sort.key === 'asset' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Asignación {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead>Condición Entrega</TableHead>
+                    <TableHead className="text-right">Acciones</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedActive.map((assignment) => {
-                  const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
-                  const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
-                  const branch = branches.find(b => b.id === Number(assignment.branchId));
-                  const isOld = isOlderThanFiveYears((asset as any)?.purchaseDate || (asset as any)?.purchase_date);
-                  return (
-                    <TableRow key={assignment.id}>
-                      <TableCell>
-                        <div className={isOld ? oldAssetClass : ''}>
-                          <p className="font-medium">{asset?.assetCode ?? asset?.code}</p>
-                          <p className={`text-sm ${isOld ? 'text-red-600' : 'text-muted-foreground'}`}>{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
-                      <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
-                      <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
-                      <TableCell><Badge variant={conditionVariantMap[assignment.deliveryCondition]}>{conditionLabelMap[assignment.deliveryCondition]}</Badge></TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
-                          <Button variant="outline" size="sm" onClick={() => { openDetails(assignment); }}>Ver más</Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditModal(assignment)}>
-                            <Pencil className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600 hover:text-green-700" onClick={() => openReturnModal(assignment.id)}>
-                            <PackageCheck className="h-4 w-4" />
-                          </Button>
-                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(assignment.id)}>
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                </TableHeader>
+                <TableBody>
+                  {displayedActive.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
+                        <div>
+                          <h3 className="text-lg font-semibold">No hay activos asignados</h3>
+                          <p className="text-sm text-muted-foreground">No se encontraron asignaciones activas</p>
                         </div>
                       </TableCell>
                     </TableRow>
-                  )
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    paginatedActive.map((assignment) => {
+                      const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
+                      const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
+                      const branch = branches.find(b => b.id === Number(assignment.branchId));
+                      const isOld = isOlderThanFiveYears((asset as any)?.purchaseDate || (asset as any)?.purchase_date);
+                      return (
+                        <TableRow key={assignment.id}>
+                          <TableCell>
+                            <div className={isOld ? oldAssetClass : ''}>
+                              <p className="font-medium">{asset?.assetCode ?? asset?.code}</p>
+                              <p className={`text-sm ${isOld ? 'text-red-600' : 'text-muted-foreground'}`}>{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
+                          <TableCell><Badge variant={conditionVariantMap[assignment.deliveryCondition]}>{conditionLabelMap[assignment.deliveryCondition]}</Badge></TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex gap-2 justify-end">
+                              <Button variant="outline" size="sm" onClick={() => { openDetails(assignment); }}>Ver más</Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0" onClick={() => openEditModal(assignment)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-green-600 hover:text-green-700" onClick={() => openReturnModal(assignment.id)}>
+                                <PackageCheck className="h-4 w-4" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-8 w-8 p-0 text-destructive hover:text-destructive" onClick={() => openDeleteDialog(assignment.id)}>
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
           {/* Pagination for active */}
@@ -698,55 +710,55 @@ export default function Assignments() {
           {viewMode === 'history' && (
             <div className="border rounded-lg bg-card p-4 mt-6 space-y-4">
               <h2 className="text-lg font-semibold">Historial</h2>
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('asset')}>Activo {sort.key === 'asset' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Asignación {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Devolución {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead>Condición Devolución</TableHead>
-                  <TableHead>Acción</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {displayedHistory.length === 0 ? (
+              <Table>
+                <TableHeader>
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-8">
-                      <div>
-                        <h3 className="text-lg font-semibold">No hay historial actual</h3>
-                        <p className="text-sm text-muted-foreground">Aún no hay devoluciones registradas</p>
-                      </div>
-                    </TableCell>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('asset')}>Activo {sort.key === 'asset' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Asignación {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead className="cursor-pointer" onClick={() => sort.toggle('assignmentDate')}>Fecha Devolución {sort.key === 'assignmentDate' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead>Condición Devolución</TableHead>
+                    <TableHead>Acción</TableHead>
                   </TableRow>
-                ) : (
-                  paginatedHistory.map((assignment) => {
-                  const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
-                  const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
-                  const branch = branches.find(b => b.id === Number(assignment.branchId));
-                  return (
-                    <TableRow key={assignment.id}>
-                      <TableCell>
+                </TableHeader>
+                <TableBody>
+                  {displayedHistory.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={6} className="text-center py-8">
                         <div>
-                          <p className="font-medium">{asset?.assetCode ?? asset?.code}</p>
-                          <p className="text-sm text-muted-foreground">{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
+                          <h3 className="text-lg font-semibold">No hay historial actual</h3>
+                          <p className="text-sm text-muted-foreground">Aún no hay devoluciones registradas</p>
                         </div>
                       </TableCell>
-                      <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
-                      <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
-                      <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
-                      <TableCell className="text-sm">{assignment.returnDate ? format(new Date(assignment.returnDate), 'PPpp', { locale: es }) : '-'}</TableCell>
-                      <TableCell>{assignment.returnCondition ? <Badge variant={conditionVariantMap[assignment.returnCondition]}>{conditionLabelMap[assignment.returnCondition]}</Badge> : <span className="text-sm text-muted-foreground">-</span>}</TableCell>
-                      <TableCell>
-                        <Button variant="outline" size="sm" onClick={() => { openDetails(assignment); }}>Ver más</Button>
-                      </TableCell>
                     </TableRow>
-                  )
-                  })
-                )}
-              </TableBody>
-            </Table>
+                  ) : (
+                    paginatedHistory.map((assignment) => {
+                      const asset = (assignment as any).asset || assets.find(a => a.id === String(assignment.assetId));
+                      const person = (assignment as any).person || people.find(p => p.id === String(assignment.personId));
+                      const branch = branches.find(b => b.id === Number(assignment.branchId));
+                      return (
+                        <TableRow key={assignment.id}>
+                          <TableCell>
+                            <div>
+                              <p className="font-medium">{asset?.assetCode ?? asset?.code}</p>
+                              <p className="text-sm text-muted-foreground">{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
+                            </div>
+                          </TableCell>
+                          <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
+                          <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
+                          <TableCell className="text-sm">{assignment.returnDate ? format(new Date(assignment.returnDate), 'PPpp', { locale: es }) : '-'}</TableCell>
+                          <TableCell>{assignment.returnCondition ? <Badge variant={conditionVariantMap[assignment.returnCondition]}>{conditionLabelMap[assignment.returnCondition]}</Badge> : <span className="text-sm text-muted-foreground">-</span>}</TableCell>
+                          <TableCell>
+                            <Button variant="outline" size="sm" onClick={() => { openDetails(assignment); }}>Ver más</Button>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
+                  )}
+                </TableBody>
+              </Table>
             </div>
           )}
           {/* Pagination for history */}
@@ -805,7 +817,7 @@ export default function Assignments() {
                   <div>
                     <div className="text-muted-foreground">Estado</div>
                     <div className="font-medium">{(() => {
-                      const map: Record<string,string> = { assigned: 'Asignado', available: 'Disponible', maintenance: 'Mantenimiento', decommissioned: 'Baja' };
+                      const map: Record<string, string> = { assigned: 'Asignado', available: 'Disponible', maintenance: 'Mantenimiento', decommissioned: 'Baja' };
                       const key = String((detailsAssignment as any).status || '').toLowerCase();
                       return map[key] || ((detailsAssignment as any).status || '-');
                     })()}</div>
@@ -813,19 +825,19 @@ export default function Assignments() {
                 )}
                 <div>
                   <div className="text-muted-foreground">Fecha Asignación</div>
-                  <div className="font-medium">{(detailsAssignment as any).assignmentDate ? new Date((detailsAssignment as any).assignmentDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'}) : '-'}</div>
+                  <div className="font-medium">{(detailsAssignment as any).assignmentDate ? new Date((detailsAssignment as any).assignmentDate).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' }) : '-'}</div>
                 </div>
                 {(detailsAssignment as any).returnDate && (
                   <div>
                     <div className="text-muted-foreground">Fecha Devolución</div>
-                    <div className="font-medium">{new Date((detailsAssignment as any).returnDate).toLocaleDateString('es-ES', {year:'numeric', month:'2-digit', day:'2-digit'})}</div>
+                    <div className="font-medium">{new Date((detailsAssignment as any).returnDate).toLocaleDateString('es-ES', { year: 'numeric', month: '2-digit', day: '2-digit' })}</div>
                   </div>
                 )}
               </div>
               <div>
                 <div className="text-muted-foreground">Condición de Entrega</div>
                 <div className="font-medium whitespace-pre-wrap">{(() => {
-                  const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                  const map: Record<string, string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
                   const key = String((detailsAssignment as any).deliveryCondition || '').toLowerCase();
                   return map[key] || (detailsAssignment as any).deliveryCondition || '-';
                 })()}</div>
@@ -842,7 +854,7 @@ export default function Assignments() {
                     <div>
                       <div className="text-muted-foreground">Condición de Devolución</div>
                       <div className="font-medium whitespace-pre-wrap">{(() => {
-                        const map: Record<string,string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
+                        const map: Record<string, string> = { good: 'Bueno', fair: 'Regular', poor: 'Malo', excellent: 'Excelente', damaged: 'Dañado' };
                         const key = String((detailsAssignment as any).returnCondition || '').toLowerCase();
                         return map[key] || (detailsAssignment as any).returnCondition;
                       })()}</div>
