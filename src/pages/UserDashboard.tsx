@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import UserLayout from "@/components/UserLayout";
 import DevicesSummaryModal from '@/components/DevicesSummaryModal';
 import Pagination from "@/components/Pagination";
