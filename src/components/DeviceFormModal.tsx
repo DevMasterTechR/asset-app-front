@@ -32,7 +32,8 @@ declare global {
     __availableNetworkAdapters?: Array<any>;
     __availableHubs?: Array<any>;
     __availableMousepads?: Array<any>;
-    __availableChargers?: Array<any>;
+    __availableLaptopChargers?: Array<any>;
+    __availableCellChargers?: Array<any>;
     __availableChargingCables?: Array<any>;
   }
 }
@@ -49,7 +50,8 @@ async function reloadAvailableAccessories() {
     window.__availableNetworkAdapters = all.filter(d => d.assetType === 'adaptador-red' && d.status === 'available' && !d.assignedPersonId);
     window.__availableHubs = all.filter(d => d.assetType === 'hub' && d.status === 'available' && !d.assignedPersonId);
     window.__availableMousepads = all.filter(d => d.assetType === 'mousepad' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableChargers = all.filter(d => d.assetType === 'cargador' && d.status === 'available' && !d.assignedPersonId);
+    window.__availableLaptopChargers = all.filter(d => d.assetType === 'cargador-laptop' && d.status === 'available' && !d.assignedPersonId);
+    window.__availableCellChargers = all.filter(d => d.assetType === 'cargador-celular' && d.status === 'available' && !d.assignedPersonId);
     window.__availableChargingCables = all.filter(d => d.assetType === 'cable-carga' && d.status === 'available' && !d.assignedPersonId);
   } catch (e) {
     console.error('Error cargando accesorios:', e);
@@ -496,7 +498,7 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
             {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
-            {renderAccessoryBlock('hasCharger', '¿Tiene cargador?', 'hasChargerRadio', 'selectedChargerId', 'cargador-laptop', window.__availableChargers ?? [])}
+            {renderAccessoryBlock('hasLaptopCharger', '¿Tiene cargador?', 'hasLaptopChargerRadio', 'selectedLaptopChargerId', 'cargador-laptop', window.__availableLaptopChargers ?? [])}
           </>
         );
 
@@ -520,7 +522,7 @@ export default function DeviceFormModal({
               <Checkbox id="hasMicas" checked={Boolean(getAttrValue('hasMicas'))} onCheckedChange={c => handleAttributeChange('hasMicas', c === true)} />
               <Label htmlFor="hasMicas">¿Tiene mica?</Label>
             </div>
-            {renderAccessoryBlock('hasCharger', '¿Tiene cargador cel?', 'hasChargerRadio', 'selectedChargerId', 'cargador-celular', window.__availableChargers ?? [])}
+            {renderAccessoryBlock('hasCellCharger', '¿Tiene cargador cel?', 'hasCellChargerRadio', 'selectedCellChargerId', 'cargador-celular', window.__availableCellChargers ?? [])}
             {renderAccessoryBlock('hasChargingCable', '¿Tiene cable de cargador cel?', 'hasChargingCableRadio', 'selectedChargingCableId', 'cable-carga', window.__availableChargingCables ?? [])}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
