@@ -66,6 +66,7 @@ interface DeviceFormModalProps {
 }
 
 const deviceTypes = [
+  { value: 'seguridad', label: 'Dispositivo de Seguridad' },
   { value: 'laptop', label: 'Laptop' },
   { value: 'desktop', label: 'PC/Sobremesa' },
   { value: 'smartphone', label: 'Smartphone' },
@@ -78,7 +79,8 @@ const deviceTypes = [
   { value: 'adaptador-memoria', label: 'Adaptador Memoria' },
   { value: 'adaptador-red', label: 'Adaptador Red' },
   { value: 'teclado', label: 'Teclado' },
-  { value: 'cargador', label: 'Cargador Cel' },
+  { value: 'cargador-laptop', label: 'Cargador de Lapt' },
+  { value: 'cargador-celular', label: 'Cargador de Celular' },
   { value: 'cable-carga', label: 'Cable de Cargador Cel' },
   { value: 'server', label: 'Servidor' },
   { value: 'printer', label: 'Impresora' },
@@ -361,8 +363,27 @@ export default function DeviceFormModal({
   };
 
   const renderDynamicAttributes = () => {
-        // Cargador Celular independiente
-        if (formData.assetType === 'cargador') {
+        // Cargador de Laptop independiente
+        if (formData.assetType === 'cargador-laptop') {
+          return (
+            <>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Potencia (W)</Label>
+                <Input type="number" value={String(getAttrValue('wattage') || '')} onChange={e => handleAttributeChange('wattage', e.target.value)} placeholder="65" />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de conector</Label>
+                <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, Barrel..." />
+              </div>
+            </>
+          );
+        }
+        // Cargador de Celular independiente
+        if (formData.assetType === 'cargador-celular') {
           return (
             <>
               <div className="space-y-2">
@@ -400,6 +421,39 @@ export default function DeviceFormModal({
           );
         }
     switch (formData.assetType) {
+            case 'seguridad':
+              return (
+                <>
+                  <div className="space-y-2">
+                    <Label>Categoría</Label>
+                    <Input value={String(getAttrValue('categoria') || '')} onChange={e => handleAttributeChange('categoria', e.target.value)} placeholder="Ej: Cámara, Sensor, Alarma..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Cantidad</Label>
+                    <Input type="number" value={String(getAttrValue('cantidad') || '')} onChange={e => handleAttributeChange('cantidad', e.target.value)} placeholder="1" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Ubicación</Label>
+                    <Input value={String(getAttrValue('ubicacion') || '')} onChange={e => handleAttributeChange('ubicacion', e.target.value)} placeholder="Ej: Oficina, Bodega, Entrada..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Estado</Label>
+                    <Input value={String(getAttrValue('estado') || '')} onChange={e => handleAttributeChange('estado', e.target.value)} placeholder="Operativo, Dañado, En revisión..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Sucursal</Label>
+                    <Input value={String(getAttrValue('sucursal') || '')} onChange={e => handleAttributeChange('sucursal', e.target.value)} placeholder="Nombre de la sucursal" />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Imagen (link)</Label>
+                    <Input value={String(getAttrValue('imagen') || '')} onChange={e => handleAttributeChange('imagen', e.target.value)} placeholder="https://..." />
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Observación</Label>
+                    <Textarea value={String(getAttrValue('observacion') || '')} onChange={e => handleAttributeChange('observacion', e.target.value)} placeholder="Observaciones adicionales..." rows={2} />
+                  </div>
+                </>
+              );
       case 'laptop':
       case 'server':
         return (
@@ -430,7 +484,7 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
             {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
-            {renderAccessoryBlock('hasCharger', '¿Tiene cargador?', 'hasChargerRadio', 'selectedChargerId', 'cargador', window.__availableChargers ?? [])}
+            {renderAccessoryBlock('hasCharger', '¿Tiene cargador?', 'hasChargerRadio', 'selectedChargerId', 'cargador-laptop', window.__availableChargers ?? [])}
           </>
         );
 
@@ -454,7 +508,7 @@ export default function DeviceFormModal({
               <Checkbox id="hasMicas" checked={Boolean(getAttrValue('hasMicas'))} onCheckedChange={c => handleAttributeChange('hasMicas', c === true)} />
               <Label htmlFor="hasMicas">¿Tiene mica?</Label>
             </div>
-            {renderAccessoryBlock('hasCharger', '¿Tiene cargador cel?', 'hasChargerRadio', 'selectedChargerId', 'cargador', window.__availableChargers ?? [])}
+            {renderAccessoryBlock('hasCharger', '¿Tiene cargador cel?', 'hasChargerRadio', 'selectedChargerId', 'cargador-celular', window.__availableChargers ?? [])}
             {renderAccessoryBlock('hasChargingCable', '¿Tiene cable de cargador cel?', 'hasChargingCableRadio', 'selectedChargingCableId', 'cable-carga', window.__availableChargingCables ?? [])}
             <div className="space-y-2">
               <div className="flex items-center space-x-2">
