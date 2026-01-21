@@ -331,16 +331,14 @@ function DevicesPage() {
     },
   });
 
-  const displayedDevicesAll = [...sortedByUi].sort(
-    (a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate))
-  );
 
-  // Priorizar siempre 5+ años incluso cuando el backend devuelve página ya paginada
-  const prioritizedPage = [...prioritizedFiltered];
-  // Si el servidor devuelve página paginada, aplicamos prioridad dentro de esa página
-  // Si no, priorizamos y luego paginamos localmente
-  // Usar siempre la lista ordenada local y luego paginar (consistente con dashboard)
-  const displayedDevices = displayedDevicesAll.slice((page - 1) * limit, page * limit);
+  // Si el backend ya devuelve la página paginada, no volver a paginar localmente
+  // Si el total de devices es menor o igual al límite, o igual al total reportado, mostrar tal cual
+  let displayedDevices = sortedByUi;
+  if (devices.length > limit && devices.length === totalItems) {
+    // Si el backend devuelve todos los dispositivos, paginar localmente
+    displayedDevices = sortedByUi.slice((page - 1) * limit, page * limit);
+  }
 
   const getTypeIcon = (type: string) => {
     const Icon = typeIconMap[type] || Laptop;
