@@ -30,6 +30,8 @@ import {
   Download,
   Printer,
   Shield,
+  Eye,
+  Image as ImageIcon,
 } from 'lucide-react';
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
@@ -110,6 +112,8 @@ const isOlderThanFiveYears = (purchaseDate?: string) => {
 const oldAssetClass = "text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]";
 
 function DevicesPage() {
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [modalImageSrc, setModalImageSrc] = useState<string | null>(null);
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState('');
   const [devices, setDevices] = useState<Device[]>([]);
@@ -509,6 +513,7 @@ function DevicesPage() {
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('status')}>Estado {sort.key === 'status' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Asignado a {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                    <TableHead>Imagen</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -580,6 +585,46 @@ function DevicesPage() {
                       </TableCell>
                       <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
                       <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>
+                        <TableCell className="text-sm">
+                              {(() => {
+                                let imgSrc = device.imagen;
+                                if (device.assetType === 'security' && device.attributesJson && typeof device.attributesJson.imagen === 'string') {
+                                  imgSrc = device.attributesJson.imagen;
+                                }
+                                if (imgSrc && typeof imgSrc === 'string' && imgSrc.match(/^https?:\/\//)) {
+                                  return (
+                                    <div className="flex items-center gap-2">
+                                      <img
+                                        src={imgSrc}
+                                        alt="Vista previa"
+                                        className="h-12 w-16 object-cover rounded border cursor-pointer hover:scale-105 transition-transform"
+                                        style={{ maxWidth: '64px', maxHeight: '48px', borderRadius: '8px', border: '1px solid #ddd' }}
+                                        onClick={() => { setModalImageSrc(imgSrc); setShowImageModal(true); }}
+                                        onError={e => { e.currentTarget.src = 'https://via.placeholder.com/64x48?text=Sin+Imagen'; }}
+                                      />
+                                      <button
+                                        className="text-blue-600 hover:text-blue-800"
+                                        onClick={() => { setModalImageSrc(imgSrc); setShowImageModal(true); }}
+                                        title="Ver imagen"
+                                      >
+                                        <Eye className="w-5 h-5" />
+                                      </button>
+                                    </div>
+                                  );
+                                } else {
+                                  return (
+                                    <button
+                                      className="flex items-center gap-2 text-muted-foreground hover:text-gray-500"
+                                      onClick={() => { setModalImageSrc(null); setShowImageModal(true); }}
+                                      title="Imagen no asignada"
+                                    >
+                                      <ImageIcon className="w-6 h-6" />
+                                      <span className="sr-only">Imagen no asignada</span>
+                                    </button>
+                                  );
+                                }
+                              })()}
+                        </TableCell>
                       <TableCell className="text-right">
                         <div className="flex items-center justify-end gap-2">
                           <Button
@@ -597,6 +642,40 @@ function DevicesPage() {
                             <Trash2 className="h-4 w-4 text-destructive" />
                           </Button>
                         </div>
+
+                          {/* Modal de imagen ampliada */}
+                            {showImageModal && (
+                              <div
+                                className="fixed inset-0 z-[100] flex items-center justify-center bg-black bg-opacity-70"
+                                onClick={() => setShowImageModal(false)}
+                              >
+                                <div
+                                  className="relative"
+                                  onClick={e => e.stopPropagation()}
+                                >
+                                  <button
+                                    className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-200"
+                                    onClick={() => setShowImageModal(false)}
+                                    aria-label="Cerrar imagen"
+                                  >
+                                    <span style={{ fontSize: 24, fontWeight: 'bold', lineHeight: 1 }}>&times;</span>
+                                  </button>
+                                  {modalImageSrc ? (
+                                    <img
+                                      src={modalImageSrc}
+                                      alt="Imagen ampliada"
+                                      className="max-w-[90vw] max-h-[80vh] rounded shadow-lg border bg-white"
+                                      onError={e => { e.currentTarget.src = 'https://via.placeholder.com/400?text=Sin+Imagen'; }}
+                                    />
+                                  ) : (
+                                    <div className="flex flex-col items-center justify-center bg-white rounded shadow-lg border p-8 min-w-[320px] min-h-[180px]">
+                                      <ImageIcon className="w-16 h-16 text-gray-400 mb-2" />
+                                      <span className="text-gray-500">Imagen no asignada</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                       </TableCell>
                     </TableRow>
                     );

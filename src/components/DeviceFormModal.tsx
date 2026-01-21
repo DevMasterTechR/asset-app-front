@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -102,6 +103,7 @@ export default function DeviceFormModal({
   branches,
   fixedType,
 }: DeviceFormModalProps) {
+  const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [showAccessoryModal, setShowAccessoryModal] = useState(false);
   const [pendingNewAccessory, setPendingNewAccessory] = useState<string | null>(null);
@@ -447,6 +449,16 @@ export default function DeviceFormModal({
                   <div className="space-y-2">
                     <Label>Imagen (link)</Label>
                     <Input value={String(getAttrValue('imagen') || '')} onChange={e => handleAttributeChange('imagen', e.target.value)} placeholder="https://..." />
+                    {getAttrValue('imagen') && getAttrValue('imagen').match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i) && (
+                        <div className="mt-2">
+                          <img
+                            src={getAttrValue('imagen')}
+                            alt="Vista previa"
+                            style={{maxWidth: '180px', maxHeight: '120px', borderRadius: '8px', border: '1px solid #ddd', cursor: 'pointer'}}
+                            onClick={() => setExpandedImage(getAttrValue('imagen'))}
+                          />
+                        </div>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>Observación</Label>
@@ -965,6 +977,32 @@ export default function DeviceFormModal({
           fixedType={pendingNewAccessory ?? undefined}
         />
       </DialogContent>
+        {/* Modal de imagen ampliada */}
+        {expandedImage && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70"
+            onClick={() => setExpandedImage(null)}
+          >
+            <div
+              className="relative"
+              onClick={e => e.stopPropagation()}
+            >
+              <button
+                className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-200"
+                onClick={() => setExpandedImage(null)}
+                aria-label="Cerrar imagen"
+              >
+                <span style={{ fontSize: 24, fontWeight: 'bold', lineHeight: 1 }}>&times;</span>
+              </button>
+              <img
+                src={expandedImage}
+                alt="Imagen ampliada"
+                className="max-w-[90vw] max-h-[80vh] rounded shadow-lg border bg-white"
+                onError={e => { e.currentTarget.src = 'https://via.placeholder.com/400?text=Sin+Imagen'; }}
+              />
+            </div>
+          </div>
+        )}
     </Dialog>
   );
 }

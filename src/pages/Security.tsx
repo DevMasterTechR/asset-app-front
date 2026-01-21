@@ -441,9 +441,9 @@ function SecurityPage() {
                         </TableCell>
                         <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
                         <TableCell className="align-middle">
-                          {attrs.imageUrl ? (
+                          {attrs.imagen ? (
                             <button
-                              onClick={() => setImageModalUrl(attrs.imageUrl)}
+                              onClick={() => setImageModalUrl(attrs.imagen)}
                               className="p-2 hover:bg-blue-100 rounded-full transition-colors mx-auto block"
                               title="Ver imagen"
                             >
