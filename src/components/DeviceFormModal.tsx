@@ -78,6 +78,8 @@ const deviceTypes = [
   { value: 'adaptador-memoria', label: 'Adaptador Memoria' },
   { value: 'adaptador-red', label: 'Adaptador Red' },
   { value: 'teclado', label: 'Teclado' },
+  { value: 'cargador', label: 'Cargador Cel' },
+  { value: 'cable-carga', label: 'Cable de Cargador Cel' },
   { value: 'server', label: 'Servidor' },
   { value: 'printer', label: 'Impresora' },
   { value: 'ip-phone', label: 'Teléfono IP' },
@@ -359,6 +361,44 @@ export default function DeviceFormModal({
   };
 
   const renderDynamicAttributes = () => {
+        // Cargador Celular independiente
+        if (formData.assetType === 'cargador') {
+          return (
+            <>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Potencia (W)</Label>
+                <Input type="number" value={String(getAttrValue('wattage') || '')} onChange={e => handleAttributeChange('wattage', e.target.value)} placeholder="20" />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de conector</Label>
+                <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, USB-A..." />
+              </div>
+            </>
+          );
+        }
+        // Cable de cargador cel independiente
+        if (formData.assetType === 'cable-carga') {
+          return (
+            <>
+              <div className="space-y-2">
+                <Label>Color</Label>
+                <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
+              </div>
+              <div className="space-y-2">
+                <Label>Longitud (cm)</Label>
+                <Input type="number" value={String(getAttrValue('length') || '')} onChange={e => handleAttributeChange('length', e.target.value)} placeholder="100" />
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de conector</Label>
+                <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, Lightning..." />
+              </div>
+            </>
+          );
+        }
     switch (formData.assetType) {
       case 'laptop':
       case 'server':
