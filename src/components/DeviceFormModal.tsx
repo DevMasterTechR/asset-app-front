@@ -452,7 +452,7 @@ export default function DeviceFormModal({
             </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="hasMicas" checked={Boolean(getAttrValue('hasMicas'))} onCheckedChange={c => handleAttributeChange('hasMicas', c === true)} />
-              <Label htmlFor="hasMicas">¿Tiene micas?</Label>
+              <Label htmlFor="hasMicas">¿Tiene mica?</Label>
             </div>
             {renderAccessoryBlock('hasCharger', '¿Tiene cargador cel?', 'hasChargerRadio', 'selectedChargerId', 'cargador', window.__availableChargers ?? [])}
             {renderAccessoryBlock('hasChargingCable', '¿Tiene cable de cargador cel?', 'hasChargingCableRadio', 'selectedChargingCableId', 'cable-carga', window.__availableChargingCables ?? [])}

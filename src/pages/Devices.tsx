@@ -137,7 +137,7 @@ function DevicesPage() {
 
   // Helper para obtener el estado actual (asignado vs préstamo)
   const getStatus = (device: Device) => {
-    if (device.status === 'loaned') {
+    if ((device.status as any) === 'loaned') {
       return 'loaned';
     }
     return device.status;
@@ -159,10 +159,13 @@ function DevicesPage() {
         // Verificar si hay algún dispositivo con préstamo próximo a caducar
         const now = new Date();
         const alertDevice = devices.find(device => {
-          if (device.status === 'loaned' && device.deliveryDate && device.loanDays) {
-            const endDate = new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000);
-            const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-            return daysLeft === 1;
+          if ((device.status as any) === 'loaned' && device.deliveryDate) {
+            const loan = loans.find(l => l.assetId === device.id && !l.returnDate);
+            if (loan && loan.loanDays) {
+              const endDate = new Date(new Date(device.deliveryDate).getTime() + loan.loanDays * 24 * 60 * 60 * 1000);
+              const daysLeft = Math.ceil((endDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+              return daysLeft === 1;
+            }
           }
           return false;
         });
@@ -535,13 +538,21 @@ function DevicesPage() {
 
                       <TableCell className="text-sm">{device.serialNumber || '-'}</TableCell>
                       <TableCell>
-                        {device.status === 'loaned' && device.deliveryDate && device.loanDays && (() => {
-                          const endDate = new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000);
-                          const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
-                          if (daysLeft === 1) {
+                        {device.status === 'loaned' && device.deliveryDate && (() => {
+                          const loan = loans.find(l => l.assetId === device.id && !l.returnDate);
+                          if (loan && loan.loanDays) {
+                            const endDate = new Date(new Date(device.deliveryDate).getTime() + loan.loanDays * 24 * 60 * 60 * 1000);
+                            const daysLeft = Math.ceil((endDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+                            if (daysLeft === 1) {
+                              return (
+                                <Badge className="bg-rose-600 text-white animate-pulse">
+                                  Prestado
+                                </Badge>
+                              );
+                            }
                             return (
-                              <Badge className="bg-rose-600 text-white animate-pulse">
-                                Prestado
+                              <Badge variant={getStatusVariant(device)}>
+                                {getStatusLabel(device)}
                               </Badge>
                             );
                           }
@@ -552,14 +563,20 @@ function DevicesPage() {
                           );
                         })()}
                         {/* Días de préstamo y restantes */}
-                        {device.status === 'loaned' && device.deliveryDate && device.loanDays && (
-                          <div className="mt-1 text-xs text-muted-foreground">
-                            Días préstamo: <span className="font-semibold">{device.loanDays}</span><br />
-                            Días restantes: <span className={diffDays(new Date().toISOString(), new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000).toISOString()) <= 1 ? 'text-rose-600 font-bold' : 'font-semibold'}>
-                              {diffDays(new Date().toISOString(), new Date(new Date(device.deliveryDate).getTime() + device.loanDays * 24 * 60 * 60 * 1000).toISOString())}
-                            </span>
-                          </div>
-                        )}
+                        {device.status === 'loaned' && device.deliveryDate && (() => {
+                          const loan = loans.find(l => l.assetId === device.id && !l.returnDate);
+                          if (loan && loan.loanDays) {
+                            return (
+                              <div className="mt-1 text-xs text-muted-foreground">
+                                Días préstamo: <span className="font-semibold">{loan.loanDays}</span><br />
+                                Días restantes: <span className={diffDays(new Date().toISOString(), new Date(new Date(device.deliveryDate).getTime() + loan.loanDays * 24 * 60 * 60 * 1000).toISOString()) <= 1 ? 'text-rose-600 font-bold' : 'font-semibold'}>
+                                  {diffDays(new Date().toISOString(), new Date(new Date(device.deliveryDate).getTime() + loan.loanDays * 24 * 60 * 60 * 1000).toISOString())}
+                                </span>
+                              </div>
+                            );
+                          }
+                          return null;
+                        })()}
                       </TableCell>
                       <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
                       <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>
@@ -626,7 +643,6 @@ function DevicesPage() {
         device={selectedDevice}
         mode={formMode}
         branches={branches}
-        people={people}
       />
 
       <DeleteConfirmationModal
