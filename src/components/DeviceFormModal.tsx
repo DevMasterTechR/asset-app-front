@@ -421,7 +421,7 @@ export default function DeviceFormModal({
           );
         }
     switch (formData.assetType) {
-            case 'seguridad':
+            case 'security':
               return (
                 <>
                   <div className="space-y-2">

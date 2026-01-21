@@ -141,19 +141,41 @@ export default function SecurityAssignmentFormModal({
               value={String(formData.assetId)}
               onValueChange={(value) => setFormData({ ...formData, assetId: value })}
               placeholder="Selecciona dispositivo"
-              options={sortedAssets.map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }))}
+              options={sortedAssets
+                .filter(a => a.type === 'seguridad' || a.assetType === 'seguridad' || a.isSecurity)
+                .map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }))}
               onSearch={async (q) => {
                 try {
                   const res = await devicesApi.getAll(q, 1, 20);
                   const list = Array.isArray(res) ? res : res.data;
                   return (list as any[])
-                    .filter(a => (a.status || '') === 'available' && a.assetType === 'security')
-                    .map(a => ({ label: `${a.assetCode || a.assetCode} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
+                    .filter(a => (a.status || '') === 'available' && (a.assetType === 'seguridad' || a.type === 'seguridad' || a.isSecurity))
+                    .map(a => ({ label: `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
                 } catch (err) {
                   return [];
                 }
               }}
             />
+            {/* Mostrar atributos específicos del dispositivo de seguridad seleccionado */}
+            {(() => {
+              const selected = sortedAssets.find(a => String(a.id) === String(formData.assetId));
+              const attrs = selected && selected.attributesJson ? selected.attributesJson : null;
+              if (!selected || !(selected.type === 'seguridad' || selected.assetType === 'seguridad' || selected.isSecurity) || !attrs) return null;
+              return (
+                <div className="mt-2 border rounded p-3 bg-muted">
+                  <div className="text-xs font-semibold mb-2 text-muted-foreground">Atributos del dispositivo</div>
+                  <div className="grid grid-cols-1 gap-2">
+                    <div><b>Categoría:</b> {attrs.categoria || '-'}</div>
+                    <div><b>Cantidad:</b> {attrs.cantidad || '-'}</div>
+                    <div><b>Ubicación:</b> {attrs.ubicacion || '-'}</div>
+                    <div><b>Estado:</b> {attrs.estado || '-'}</div>
+                    <div><b>Sucursal:</b> {attrs.sucursal || '-'}</div>
+                    <div><b>Imagen:</b> {attrs.imagen ? <a href={attrs.imagen} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver imagen</a> : '-'}</div>
+                    <div><b>Observación:</b> {attrs.observacion || '-'}</div>
+                  </div>
+                </div>
+              );
+            })()}
           </div>
 
           <div className="space-y-2">
