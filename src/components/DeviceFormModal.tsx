@@ -68,7 +68,7 @@ interface DeviceFormModalProps {
 }
 
 const deviceTypes = [
-  { value: 'seguridad', label: 'Dispositivo de Seguridad' },
+  // Eliminamos 'seguridad' del listado visual
   { value: 'laptop', label: 'Laptop' },
   { value: 'desktop', label: 'PC/Sobremesa' },
   { value: 'smartphone', label: 'Smartphone' },
@@ -102,6 +102,8 @@ const CODE_PREFIXES: Record<string, string> = {
   mouse: 'MOSE - ',
   mousepad: 'MPAD - ',
   soporte: 'SPLP - ',
+  monitor: 'MONI - ',
+  'ip-phone': 'TELFIP - ',
   'cargador-laptop': 'CARGL - ',
   'cargador-celular': 'CARG - ',
   'cable-carga': 'CARGC - ',
@@ -212,12 +214,10 @@ export default function DeviceFormModal({
     }
   }, [device, mode, open, fixedType]);
 
-  // Lógica de prefijo automático según tipo (solo en modo create)
+  // Prefijo automático al abrir el modal de agregar dispositivo, agrega los nuevos prefijos para Monitor y Teléfono IP
   useEffect(() => {
     if (mode !== 'create') return;
-
     const prefix = CODE_PREFIXES[formData.assetType as keyof typeof CODE_PREFIXES];
-
     setFormData(prev => {
       const current = prev.assetCode?.trim() || '';
 
@@ -240,7 +240,7 @@ export default function DeviceFormModal({
         assetCode: '',
       };
     });
-  }, [formData.assetType, mode]);
+  }, [formData.assetType, mode, open]);
 
   const hasActiveAssignment = Boolean(device && (device.assignedPersonId || deliveryDateAuto));
 
