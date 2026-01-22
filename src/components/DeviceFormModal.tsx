@@ -754,14 +754,6 @@ export default function DeviceFormModal({
         return (
           <>
             <div className="space-y-2">
-              <Label>Marca</Label>
-              <Input
-                value={String(getAttrValue('brand') || '')}
-                onChange={e => handleAttributeChange('brand', e.target.value)}
-                placeholder="Razer, Logitech, HyperX..."
-              />
-            </div>
-            <div className="space-y-2">
               <Label>Color</Label>
               <Input
                 value={String(getAttrValue('color') || '')}
