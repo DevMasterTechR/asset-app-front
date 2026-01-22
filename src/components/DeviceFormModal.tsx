@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -19,7 +19,6 @@ import { Device, CreateDeviceDto, DeviceStatus, devicesApi } from '@/api/devices
 import { extractArray } from '@/lib/extractData';
 import { assignmentsApi } from '@/api/assignments';
 import { sortBranchesByName } from '@/lib/sort';
-import { useMemo } from 'react';
 import { Loader2 } from 'lucide-react';
 
 declare global {
@@ -95,6 +94,19 @@ const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
   { value: 'maintenance', label: 'Mantenimiento' },
   { value: 'decommissioned', label: 'Dado de baja' },
 ];
+
+// Prefijos estandarizados para assetCode
+const CODE_PREFIXES: Record<string, string> = {
+  laptop: 'LAPT - ',
+  smartphone: 'CEL - ',
+  mouse: 'MOSE - ',
+  mousepad: 'MPAD - ',
+  soporte: 'SPLP - ',
+  'cargador-laptop': 'CARGL - ',
+  'cargador-celular': 'CARG - ',
+  'cable-carga': 'CARGC - ',
+  // Agrega más aquí cuando necesites
+} as const;
 
 export default function DeviceFormModal({
   open,
@@ -199,6 +211,36 @@ export default function DeviceFormModal({
       setDeliveryDateAuto('');
     }
   }, [device, mode, open, fixedType]);
+
+  // Lógica de prefijo automático según tipo (solo en modo create)
+  useEffect(() => {
+    if (mode !== 'create') return;
+
+    const prefix = CODE_PREFIXES[formData.assetType as keyof typeof CODE_PREFIXES];
+
+    setFormData(prev => {
+      const current = prev.assetCode?.trim() || '';
+
+      // Si ya tiene el prefijo correcto → no tocamos
+      if (prefix && current.startsWith(prefix.trim())) {
+        return prev;
+      }
+
+      // Si hay prefijo definido → lo ponemos
+      if (prefix) {
+        return {
+          ...prev,
+          assetCode: prefix,
+        };
+      }
+
+      // Si no hay prefijo para este tipo → limpiamos
+      return {
+        ...prev,
+        assetCode: '',
+      };
+    });
+  }, [formData.assetType, mode]);
 
   const hasActiveAssignment = Boolean(device && (device.assignedPersonId || deliveryDateAuto));
 
@@ -367,107 +409,107 @@ export default function DeviceFormModal({
   };
 
   const renderDynamicAttributes = () => {
-        // Cargador de Laptop independiente
-        if (formData.assetType === 'cargador-laptop') {
-          return (
-            <>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Potencia (W)</Label>
-                <Input type="number" value={String(getAttrValue('wattage') || '')} onChange={e => handleAttributeChange('wattage', e.target.value)} placeholder="65" />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de conector</Label>
-                <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, Barrel..." />
-              </div>
-            </>
-          );
-        }
-        // Cargador de Celular independiente
-        if (formData.assetType === 'cargador-celular') {
-          return (
-            <>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Potencia (W)</Label>
-                <Input type="number" value={String(getAttrValue('wattage') || '')} onChange={e => handleAttributeChange('wattage', e.target.value)} placeholder="20" />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de conector</Label>
-                <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, USB-A..." />
-              </div>
-            </>
-          );
-        }
-        // Cable de cargador cel independiente
-        if (formData.assetType === 'cable-carga') {
-          return (
-            <>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
-              </div>
-              <div className="space-y-2">
-                <Label>Longitud (cm)</Label>
-                <Input type="number" value={String(getAttrValue('length') || '')} onChange={e => handleAttributeChange('length', e.target.value)} placeholder="100" />
-              </div>
-              <div className="space-y-2">
-                <Label>Tipo de conector</Label>
-                <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, Lightning..." />
-              </div>
-            </>
-          );
-        }
+    // Cargador de Laptop independiente
+    if (formData.assetType === 'cargador-laptop') {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Potencia (W)</Label>
+            <Input type="number" value={String(getAttrValue('wattage') || '')} onChange={e => handleAttributeChange('wattage', e.target.value)} placeholder="65" />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo de conector</Label>
+            <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, Barrel..." />
+          </div>
+        </>
+      );
+    }
+    // Cargador de Celular independiente
+    if (formData.assetType === 'cargador-celular') {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Potencia (W)</Label>
+            <Input type="number" value={String(getAttrValue('wattage') || '')} onChange={e => handleAttributeChange('wattage', e.target.value)} placeholder="20" />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo de conector</Label>
+            <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, USB-A..." />
+          </div>
+        </>
+      );
+    }
+    // Cable de cargador cel independiente
+    if (formData.assetType === 'cable-carga') {
+      return (
+        <>
+          <div className="space-y-2">
+            <Label>Color</Label>
+            <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Negro, Blanco..." />
+          </div>
+          <div className="space-y-2">
+            <Label>Longitud (cm)</Label>
+            <Input type="number" value={String(getAttrValue('length') || '')} onChange={e => handleAttributeChange('length', e.target.value)} placeholder="100" />
+          </div>
+          <div className="space-y-2">
+            <Label>Tipo de conector</Label>
+            <Input value={String(getAttrValue('connectorType') || '')} onChange={e => handleAttributeChange('connectorType', e.target.value)} placeholder="USB-C, Lightning..." />
+          </div>
+        </>
+      );
+    }
     switch (formData.assetType) {
-            case 'security':
-              return (
-                <>
-                  <div className="space-y-2">
-                    <Label>Categoría</Label>
-                    <Input value={String(getAttrValue('categoria') || '')} onChange={e => handleAttributeChange('categoria', e.target.value)} placeholder="Ej: Cámara, Sensor, Alarma..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Cantidad</Label>
-                    <Input type="number" value={String(getAttrValue('cantidad') || '')} onChange={e => handleAttributeChange('cantidad', e.target.value)} placeholder="1" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Ubicación</Label>
-                    <Input value={String(getAttrValue('ubicacion') || '')} onChange={e => handleAttributeChange('ubicacion', e.target.value)} placeholder="Ej: Oficina, Bodega, Entrada..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Estado</Label>
-                    <Input value={String(getAttrValue('estado') || '')} onChange={e => handleAttributeChange('estado', e.target.value)} placeholder="Operativo, Dañado, En revisión..." />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Sucursal</Label>
-                    <Input value={String(getAttrValue('sucursal') || '')} onChange={e => handleAttributeChange('sucursal', e.target.value)} placeholder="Nombre de la sucursal" />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Imagen (link)</Label>
-                    <Input value={String(getAttrValue('imagen') || '')} onChange={e => handleAttributeChange('imagen', e.target.value)} placeholder="https://..." />
-                    {getAttrValue('imagen') && getAttrValue('imagen').match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i) && (
-                        <div className="mt-2">
-                          <img
-                            src={getAttrValue('imagen')}
-                            alt="Vista previa"
-                            style={{maxWidth: '180px', maxHeight: '120px', borderRadius: '8px', border: '1px solid #ddd', cursor: 'pointer'}}
-                            onClick={() => setExpandedImage(getAttrValue('imagen'))}
-                          />
-                        </div>
-                    )}
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Observación</Label>
-                    <Textarea value={String(getAttrValue('observacion') || '')} onChange={e => handleAttributeChange('observacion', e.target.value)} placeholder="Observaciones adicionales..." rows={2} />
-                  </div>
-                </>
-              );
+      case 'seguridad':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Categoría</Label>
+              <Input value={String(getAttrValue('categoria') || '')} onChange={e => handleAttributeChange('categoria', e.target.value)} placeholder="Ej: Cámara, Sensor, Alarma..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Cantidad</Label>
+              <Input type="number" value={String(getAttrValue('cantidad') || '')} onChange={e => handleAttributeChange('cantidad', e.target.value)} placeholder="1" />
+            </div>
+            <div className="space-y-2">
+              <Label>Ubicación</Label>
+              <Input value={String(getAttrValue('ubicacion') || '')} onChange={e => handleAttributeChange('ubicacion', e.target.value)} placeholder="Ej: Oficina, Bodega, Entrada..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Estado</Label>
+              <Input value={String(getAttrValue('estado') || '')} onChange={e => handleAttributeChange('estado', e.target.value)} placeholder="Operativo, Dañado, En revisión..." />
+            </div>
+            <div className="space-y-2">
+              <Label>Sucursal</Label>
+              <Input value={String(getAttrValue('sucursal') || '')} onChange={e => handleAttributeChange('sucursal', e.target.value)} placeholder="Nombre de la sucursal" />
+            </div>
+            <div className="space-y-2">
+              <Label>Imagen (link)</Label>
+              <Input value={String(getAttrValue('imagen') || '')} onChange={e => handleAttributeChange('imagen', e.target.value)} placeholder="https://..." />
+              {getAttrValue('imagen') && getAttrValue('imagen').match(/^https?:\/\/.+\.(jpg|jpeg|png|gif|webp)$/i) && (
+                <div className="mt-2">
+                  <img
+                    src={getAttrValue('imagen')}
+                    alt="Vista previa"
+                    style={{ maxWidth: '180px', maxHeight: '120px', borderRadius: '8px', border: '1px solid #ddd', cursor: 'pointer' }}
+                    onClick={() => setExpandedImage(getAttrValue('imagen'))}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>Observación</Label>
+              <Textarea value={String(getAttrValue('observacion') || '')} onChange={e => handleAttributeChange('observacion', e.target.value)} placeholder="Observaciones adicionales..." rows={2} />
+            </div>
+          </>
+        );
       case 'laptop':
       case 'server':
         return (
@@ -837,7 +879,18 @@ export default function DeviceFormModal({
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label>Código <span className="text-destructive">*</span></Label>
-              <Input value={formData.assetCode} onChange={e => handleChange('assetCode', e.target.value)} placeholder="LAPTOP-001" required />
+              <Input
+                value={formData.assetCode}
+                onChange={e => handleChange('assetCode', e.target.value)}
+                placeholder="Ej: LAPT - 042"
+                required
+              />
+              {mode === 'create' && formData.assetType in CODE_PREFIXES && (
+                <p className="text-xs text-muted-foreground mt-1">
+                  Prefijo automático: <strong>{CODE_PREFIXES[formData.assetType as keyof typeof CODE_PREFIXES]}</strong>
+                  (agrega el número o identificador después)
+                </p>
+              )}
             </div>
 
             {fixedType ? (
@@ -878,7 +931,11 @@ export default function DeviceFormModal({
                 options={statusOptions.map(s => ({ label: s.label, value: s.value }))}
                 disabled={hasActiveAssignment}
               />
-              {hasActiveAssignment && <div className="text-sm text-rose-600 mt-1">No puedes editar este dispositivo hasta que deje de tener una asignación activa</div>}
+              {hasActiveAssignment && (
+                <div className="text-sm text-rose-600 mt-1">
+                  No puedes editar este dispositivo hasta que deje de tener una asignación activa
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label>Sucursal</Label>
@@ -941,13 +998,24 @@ export default function DeviceFormModal({
 
           <DialogFooter>
             {serverError && <div className="w-full text-center text-sm text-rose-700 mb-2">{serverError}</div>}
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>Cancelar</Button>
+            <Button type="button" onClick={() => onOpenChange(false)} disabled={loading} className="bg-white border border-gray-300 text-gray-900 hover:bg-gray-100">
+              Cancelar
+            </Button>
             <Button type="submit" disabled={loading}>
-              {loading ? <> <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando... </> : mode === 'create' ? 'Crear Dispositivo' : 'Guardar Cambios'}
+              {loading ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" /> Guardando...
+                </>
+              ) : mode === 'create' ? (
+                'Crear Dispositivo'
+              ) : (
+                'Guardar Cambios'
+              )}
             </Button>
           </DialogFooter>
         </form>
 
+        {/* Modal para crear accesorio nuevo */}
         <DeviceFormModal
           open={showAccessoryModal}
           onOpenChange={(isOpen) => {
@@ -965,7 +1033,8 @@ export default function DeviceFormModal({
               'adaptador-red': 'selectedNetworkAdapterId',
               hub: 'selectedHubId',
               mousepad: 'selectedMousepadId',
-              cargador: 'selectedChargerId',
+              'cargador-laptop': 'selectedLaptopChargerId',
+              'cargador-celular': 'selectedCellChargerId',
               'cable-carga': 'selectedChargingCableId',
             };
             const key = map[pendingNewAccessory || ''];
@@ -978,17 +1047,14 @@ export default function DeviceFormModal({
           branches={branches}
           fixedType={pendingNewAccessory ?? undefined}
         />
-      </DialogContent>
+
         {/* Modal de imagen ampliada */}
         {expandedImage && (
           <div
             className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-70"
             onClick={() => setExpandedImage(null)}
           >
-            <div
-              className="relative"
-              onClick={e => e.stopPropagation()}
-            >
+            <div className="relative" onClick={e => e.stopPropagation()}>
               <button
                 className="absolute top-2 right-2 bg-white rounded-full p-1 shadow hover:bg-gray-200"
                 onClick={() => setExpandedImage(null)}
@@ -1000,11 +1066,14 @@ export default function DeviceFormModal({
                 src={expandedImage}
                 alt="Imagen ampliada"
                 className="max-w-[90vw] max-h-[80vh] rounded shadow-lg border bg-white"
-                onError={e => { e.currentTarget.src = 'https://via.placeholder.com/400?text=Sin+Imagen'; }}
+                onError={e => {
+                  (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400?text=Sin+Imagen';
+                }}
               />
             </div>
           </div>
         )}
+      </DialogContent>
     </Dialog>
   );
 }
