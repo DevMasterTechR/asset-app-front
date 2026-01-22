@@ -898,9 +898,9 @@ export default function DeviceFormModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle>{mode === 'create' ? 'Agregar Dispositivo' : 'Editar Dispositivo'}</DialogTitle>
+          <DialogTitle>{mode === 'create' ? 'Agregar dispositivo' : 'Editar dispositivo'}</DialogTitle>
           <DialogDescription>
-            {mode === 'create' ? 'Completa los datos del nuevo dispositivo' : 'Modifica los datos del dispositivo'}
+            {mode === 'create' ? 'Completa los datos del nuevo dispositivo.' : 'Modifica los datos del dispositivo.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -948,7 +948,7 @@ export default function DeviceFormModal({
               <Input value={formData.model} onChange={e => handleChange('model', e.target.value)} placeholder="Latitude 5420" />
             </div>
             <div className="space-y-2">
-              <Label>Número de Serie</Label>
+              <Label>Número de serie</Label>
               <Input value={formData.serialNumber} onChange={e => handleChange('serialNumber', e.target.value)} placeholder="SN123456" />
             </div>
             <div className="space-y-2">
@@ -962,7 +962,7 @@ export default function DeviceFormModal({
               />
               {hasActiveAssignment && (
                 <div className="text-sm text-rose-600 mt-1">
-                  No puedes editar este dispositivo hasta que deje de tener una asignación activa
+                  No puedes editar este dispositivo hasta que deje de tener una asignación activa.
                 </div>
               )}
             </div>
