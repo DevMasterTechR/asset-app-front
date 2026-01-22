@@ -86,20 +86,26 @@ export default function SearchableSelect({
 
   React.useEffect(() => {
     let mounted = true;
+    
+    // Si query está vacío, usar las opciones estáticas (no hacer búsqueda remota)
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      if (!areOptionsEqual(internalOptions, options)) {
+        setInternalOptions(options);
+      }
+      setLoading(false);
+      return () => {
+        mounted = false;
+      };
+    }
+    
+    // Si no hay onSearch, hacer búsqueda local
     if (!onSearchRef.current) {
-      // Búsqueda local: nunca activar loading
-      const q = query.trim().toLowerCase();
-      if (!q) {
-        if (!areOptionsEqual(internalOptions, options)) {
-          setInternalOptions(options);
-        }
-      } else {
-        const filtered = options.filter(
-          (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
-        );
-        if (!areOptionsEqual(internalOptions, filtered)) {
-          setInternalOptions(filtered);
-        }
+      const filtered = options.filter(
+        (o) => o.label.toLowerCase().includes(q) || o.value.toLowerCase().includes(q),
+      );
+      if (!areOptionsEqual(internalOptions, filtered)) {
+        setInternalOptions(filtered);
       }
       setLoading(false);
       return () => {
@@ -107,7 +113,7 @@ export default function SearchableSelect({
       };
     }
 
-    // Solo activar loading en búsquedas remotas
+    // Solo activar búsqueda remota cuando hay query no vacío
     let timer: ReturnType<typeof setTimeout> | undefined;
     setLoading(true);
     timer = setTimeout(() => {

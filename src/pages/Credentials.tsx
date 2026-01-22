@@ -212,9 +212,19 @@ function CredentialsPage() {
   };
 
   const handleEdit = (credential: Credential) => {
+    // Agregar datos de la persona al credential para que el modal los tenga de inmediato
+    const person = people.find(p => Number(p.id) === Number(credential.personId));
+    const credentialWithPerson = person 
+      ? { ...credential, person } 
+      : credential;
+    
+    // Establecer todo en el orden correcto
+    setSelectedCredential(credentialWithPerson as Credential);
     setFormMode('edit');
-    setSelectedCredential(credential);
-    setFormModalOpen(true);
+    // Abrir el modal en el siguiente tick para asegurar que el estado se haya actualizado
+    setTimeout(() => {
+      setFormModalOpen(true);
+    }, 0);
   };
 
   const handleDeleteClick = (credential: Credential) => {

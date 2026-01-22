@@ -97,30 +97,34 @@ export default function CredentialFormModal({
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Memoize people options so hooks order stays stable and rendering is efficient
-  // initial option when editing (show selected person label even before search)
-  const [initialPersonOption, setInitialPersonOption] = useState<{ label: string; value: string } | null>(null);
-
-  useEffect(() => {
-    let mounted = true;
-    const pid = credential?.personId ?? formData.personId;
-    if (pid && pid !== 0) {
-      (async () => {
-        try {
-          const person = await peopleApi.getOne(String(pid));
-          if (!mounted) return;
-          setInitialPersonOption({ label: `${person.firstName} ${person.lastName} (${person.username || ''})`, value: String(person.id) });
-        } catch (err) {
-          // ignore
-        }
-      })();
-    } else {
-      setInitialPersonOption(null);
+  // Calcular la etiqueta de la persona directamente para el render actual
+  const currentPersonLabel = useMemo(() => {
+    if (mode !== 'edit' || !credential?.personId) return undefined;
+    const pid = credential.personId;
+    
+    // Intentar obtener de credential si tiene person anidado
+    const personFromCredential = (credential as any).person;
+    if (personFromCredential) {
+      return `${personFromCredential.firstName || ''} ${personFromCredential.lastName || ''} (${personFromCredential.username || ''})`.trim();
     }
-    return () => {
-      mounted = false;
-    };
-  }, [credential, formData.personId]);
+    
+    // Intentar obtener de la prop people (comparar como números)
+    if (people && pid) {
+      const found = people.find(p => Number(p.id) === Number(pid));
+      if (found) {
+        return `${found.firstName || ''} ${found.lastName || ''} (${(found as any).username || ''})`.trim();
+      }
+    }
+    return undefined;
+  }, [credential, mode, people]);
+
+  // Opciones para el select de persona
+  const personSelectOptions = useMemo(() => {
+    if (mode === 'edit' && credential?.personId && currentPersonLabel) {
+      return [{ label: currentPersonLabel, value: String(credential.personId) }];
+    }
+    return [];
+  }, [mode, credential?.personId, currentPersonLabel]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -143,13 +147,13 @@ export default function CredentialFormModal({
               Persona <span className="text-destructive">*</span>
             </Label>
               <SearchableSelect
+                key={`person-select-${credential?.id || 'new'}-${open}`}
                 value={formData.personId ? formData.personId.toString() : ''}
                 onValueChange={(value) => handleChange('personId', Number(value))}
                 placeholder="Selecciona una persona"
                 searchPlaceholder="Buscar persona..."
-                // initial option to show when editing
-                options={initialPersonOption ? [initialPersonOption] : []}
-                initialLabel={initialPersonOption?.label}
+                options={personSelectOptions}
+                initialLabel={currentPersonLabel}
                 onSearch={async (q) => {
                   // call people API with search query, return mapped options
                   try {
@@ -162,7 +166,6 @@ export default function CredentialFormModal({
                 }}
               />
           </div>
-
           {/* Sistema */}
           <div className="space-y-2">
             <Label htmlFor="system">
