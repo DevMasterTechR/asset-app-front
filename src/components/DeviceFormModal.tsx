@@ -592,6 +592,10 @@ export default function DeviceFormModal({
               <Label>RAM (GB)</Label>
               <Input type="number" value={Number(getAttrValue('ram')) || ''} onChange={e => handleAttributeChange('ram', e.target.value ? Number(e.target.value) : 0)} placeholder="4" />
             </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input value={String(getAttrValue('color') || '')} onChange={e => handleAttributeChange('color', e.target.value)} placeholder="Rojo , Negro , Azul , etc" />
+            </div>
             <div className="flex items-center space-x-2">
               <Checkbox id="hasMicas" checked={Boolean(getAttrValue('hasMicas'))} onCheckedChange={c => handleAttributeChange('hasMicas', c === true)} />
               <Label htmlFor="hasMicas">¿Tiene mica?</Label>
