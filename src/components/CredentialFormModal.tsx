@@ -32,7 +32,6 @@ const systemOptions: { value: SystemType; label: string }[] = [
   { value: 'erp', label: 'ERP - Sistema de Planificación' },
   { value: 'crm', label: 'CRM - Gestión de Clientes' },
   { value: 'email', label: 'Email - Correo Electrónico' },
-  { value: 'glpi', label: 'GLPI - Gestión de Inventario' },
 ];
 
 export default function CredentialFormModal({
