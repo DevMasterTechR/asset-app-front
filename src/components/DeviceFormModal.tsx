@@ -545,12 +545,44 @@ export default function DeviceFormModal({
         );
 
       case 'smartphone':
-      case 'tablet':
+      case 'tablet': {
+        // IMEIs dinámicos
+        const imeis: string[] = Array.isArray(getAttrValue('imeis')) ? getAttrValue('imeis') : (getAttrValue('imeis') ? [getAttrValue('imeis')] : ['']);
+        const handleImeiChange = (idx: number, value: string) => {
+          const newImeis = [...imeis];
+          newImeis[idx] = value;
+          handleAttributeChange('imeis', newImeis.filter(i => i.trim() !== ''));
+        };
+        const addImei = () => {
+          handleAttributeChange('imeis', [...imeis, '']);
+        };
+        const removeImei = (idx: number) => {
+          const newImeis = imeis.filter((_, i) => i !== idx);
+          handleAttributeChange('imeis', newImeis);
+        };
         return (
           <>
             <div className="space-y-2">
-              <Label>Tamaño de pantalla (pulgadas)</Label>
-              <Input type="number" value={Number(getAttrValue('screenSize')) || ''} onChange={e => handleAttributeChange('screenSize', e.target.value ? Number(e.target.value) : 0)} placeholder="6.1" />
+              <Label>IMEI</Label>
+              {imeis.map((imei, idx) => (
+                <div key={idx} className="flex items-center gap-2 mb-2">
+                  <Input
+                    value={imei}
+                    onChange={e => handleImeiChange(idx, e.target.value)}
+                    placeholder={`IMEI ${idx + 1}`}
+                  />
+                  {imeis.length > 1 && (
+                    <Button type="button" variant="destructive" size="icon" onClick={() => removeImei(idx)} title="Eliminar IMEI">
+                      –
+                    </Button>
+                  )}
+                  {idx === imeis.length - 1 && (
+                    <Button type="button" variant="outline" size="icon" onClick={addImei} title="Agregar IMEI">
+                      +
+                    </Button>
+                  )}
+                </div>
+              ))}
             </div>
             <div className="space-y-2">
               <Label>Procesador</Label>
@@ -586,6 +618,7 @@ export default function DeviceFormModal({
             </div>
           </>
         );
+      }
 
       case 'ip-phone':
         return (
