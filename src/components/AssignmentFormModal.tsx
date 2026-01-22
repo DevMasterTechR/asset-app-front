@@ -178,6 +178,25 @@ export default function AssignmentFormModal({
   const sortedAssets = useMemo(() => sortByString(assets || [], (a: any) => `${a.code ? a.code + ' - ' : ''}${a.name || ''}`.trim()), [assets])
   const sortedBranches = useMemo(() => sortBranchesByName(branches || []), [branches])
 
+  // Etiquetas iniciales para mostrar inmediatamente en modo edición
+  const initialAssetLabel = useMemo(() => {
+    if (!assignment) return undefined;
+    const a = (assignment as any).asset;
+    if (a) return `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`;
+    const found = assets.find(x => x.id === String(assignment.assetId));
+    if (found) return `${found.code} - ${found.name}`;
+    return undefined;
+  }, [assignment, assets]);
+
+  const initialPersonLabel = useMemo(() => {
+    if (!assignment) return undefined;
+    const p = (assignment as any).person;
+    if (p) return `${p.firstName || ''} ${p.lastName || ''}`.trim();
+    const found = people.find(x => x.id === String(assignment.personId));
+    if (found) return `${found.firstName} ${found.lastName}`;
+    return undefined;
+  }, [assignment, people]);
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
@@ -199,16 +218,29 @@ export default function AssignmentFormModal({
               onValueChange={(value) => handleChange('assetId', value)}
               placeholder="Selecciona activo"
               searchPlaceholder="Buscar activo (por código, marca o modelo)"
-              options={sortedAssets.map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }))}
+              initialLabel={initialAssetLabel}
+              options={(() => {
+                // Siempre incluir la opción seleccionada aunque no esté en el listado actual
+                const opts = sortedAssets.map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }));
+                if (formData.assetId && !opts.find(o => o.value === String(formData.assetId))) {
+                  opts.unshift({ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) });
+                }
+                return opts;
+              })()}
               onSearch={async (q) => {
                 try {
                   const res = await devicesApi.getAll(q, 1, 20);
                   const list = Array.isArray(res) ? res : res.data;
-                  return (list as any[])
+                  const opts = (list as any[])
                     .filter(a => (a.status || '') === 'available' && a.assetType !== 'security')
                     .map(a => ({ label: `${a.assetCode || a.assetCode} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
+                  // Siempre incluir la opción seleccionada
+                  if (formData.assetId && !opts.find(o => o.value === String(formData.assetId))) {
+                    opts.unshift({ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) });
+                  }
+                  return opts;
                 } catch (err) {
-                  return [];
+                  return formData.assetId ? [{ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) }] : [];
                 }
               }}
             />
@@ -223,14 +255,25 @@ export default function AssignmentFormModal({
               onValueChange={(value) => handleChange('personId', value)}
               placeholder="Selecciona persona"
               searchPlaceholder="Buscar persona..."
-              options={sortedPeople.map(p => ({ label: `${p.firstName} ${p.lastName}`, value: p.id }))}
+              initialLabel={initialPersonLabel}
+              options={(() => {
+                const opts = sortedPeople.map(p => ({ label: `${p.firstName} ${p.lastName}`, value: p.id }));
+                if (formData.personId && !opts.find(o => o.value === String(formData.personId))) {
+                  opts.unshift({ label: initialPersonLabel || String(formData.personId), value: String(formData.personId) });
+                }
+                return opts;
+              })()}
               onSearch={async (q) => {
                 try {
                   const res = await peopleApi.getAll(undefined, 10, q);
                   const list = Array.isArray(res) ? res : res.data;
-                  return (list as any[]).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }));
+                  const opts = (list as any[]).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }));
+                  if (formData.personId && !opts.find(o => o.value === String(formData.personId))) {
+                    opts.unshift({ label: initialPersonLabel || String(formData.personId), value: String(formData.personId) });
+                  }
+                  return opts;
                 } catch (err) {
-                  return [];
+                  return formData.personId ? [{ label: initialPersonLabel || String(formData.personId), value: String(formData.personId) }] : [];
                 }
               }}
             />

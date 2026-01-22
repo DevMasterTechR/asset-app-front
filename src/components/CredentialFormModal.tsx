@@ -149,6 +149,7 @@ export default function CredentialFormModal({
                 searchPlaceholder="Buscar persona..."
                 // initial option to show when editing
                 options={initialPersonOption ? [initialPersonOption] : []}
+                initialLabel={initialPersonOption?.label}
                 onSearch={async (q) => {
                   // call people API with search query, return mapped options
                   try {
