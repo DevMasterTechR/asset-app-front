@@ -170,21 +170,21 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     addHeader();
 
     // Fecha a la derecha debajo del logo
-    doc.setFontSize(10);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    doc.text(`Quito, ${formattedDate}`, pageWidth - 15, 40, { align: "right" });
+    doc.text(`Quito, ${formattedDate}`, pageWidth - 15, 32, { align: "right" });
 
     // Título (más cerca del logo)
-    doc.setFontSize(13);
+    doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("ACTA DE ENTREGA DE EQUIPOS TECNOLÓGICOS", pageWidth / 2, 50, { align: "center" });
+    doc.text("ACTA DE ENTREGA DE EQUIPOS TECNOLÓGICOS", pageWidth / 2, 40, { align: "center" });
 
-    // Párrafo introductorio (más cerca del título)
-    doc.setFontSize(10);
+    // Párrafo introductorio (más compacto)
+    doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const introText = `En la ciudad de QUITO se llevó a cabo la entrega formal de los equipos tecnológicos pertenecientes a la empresa TechResources a ${user.userName || "Desconocido"} con CI: ${user.nationalId || "No especificado"}.`;
+    const introText = `En la ciudad de QUITO se llevó a cabo la entrega formal de los equipos tecnológicos de TechResources a ${user.userName || "Desconocido"} con CI: ${user.nationalId || "No especificado"}.`;
     const splitIntro = doc.splitTextToSize(introText, 180);
-    doc.text(splitIntro, 15, 58);
+    doc.text(splitIntro, 15, 47);
 
     // Tabla de equipos (más compacta)
     const equipmentData = user.devices
@@ -198,14 +198,17 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
         ])
       : [];
 
-    const tableStartY = 75;
+    const tableStartY = 55;
 
-    let currentY = 75;
+    let currentY = 55;
 
     // Cuadros de detalles por dispositivo (AQUI, ANTES DE OBSERVACIONES)
-    const drawDeviceDetailBox = (d: any, idx: number) => {
+    // Configuración para dos dispositivos por fila
+    const boxWidth = (pageWidth - 30) / 2; // Ancho de cada caja (mitad de la página con margen)
+    const boxMargin = 6; // Margen entre cajas
+
+    const getDeviceLines = (d: any) => {
       const typeLabel = d.assetType || d.type || "-";
-      const detailLineHeight = 3.5;
       const baseLines = [
         `Tipo: ${typeLabel}`,
         `Marca: ${d.brand || "-"}`,
@@ -300,289 +303,202 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
           `[Sin atributos específicos registrados]`
         ];
       }
-      
-      // Dividir en dos columnas para mejor presentación
-      const itemsPerCol = Math.ceil(displayLines.length / 2);
-      const leftCol = displayLines.slice(0, itemsPerCol);
-      const rightCol = displayLines.slice(itemsPerCol);
-      
-      const maxRows = Math.max(leftCol.length, rightCol.length);
-      const boxHeight = 11 + maxRows * detailLineHeight + 5;
-      
-      if (currentY + boxHeight > pageHeight - 50) {
-        doc.addPage();
-        addHeader();
-        currentY = 40;
-      }
+
+      return { displayLines, typeLabel };
+    };
+
+    const drawDeviceDetailBox = (d: any, idx: number, xOffset: number, boxH: number) => {
+      const { displayLines, typeLabel } = getDeviceLines(d);
+      const detailLineHeight = 2.8;
       
       // Caja con fondo y bordes mejorados
       doc.setFillColor(248, 250, 252);
-      doc.rect(12, currentY, pageWidth - 24, boxHeight, 'F');
+      doc.rect(xOffset, currentY, boxWidth, boxH, 'F');
       
       // Borde principal azul más grueso
       doc.setDrawColor(41, 128, 185);
-      doc.setLineWidth(1.2);
-      doc.rect(12, currentY, pageWidth - 24, boxHeight);
+      doc.setLineWidth(0.8);
+      doc.rect(xOffset, currentY, boxWidth, boxH);
       
       // Título con fondo azul más oscuro
       doc.setFillColor(31, 110, 170);
-      doc.rect(12, currentY, pageWidth - 24, 10, 'F');
+      doc.rect(xOffset, currentY, boxWidth, 7, 'F');
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
+      doc.setFontSize(6);
       doc.setTextColor(255, 255, 255);
-      const titleText = `DISPOSITIVO #${idx + 1} — ${d.code || "SIN-CODIGO"} | ${typeLabel.toUpperCase()}`;
-      doc.text(titleText, 16, currentY + 6.5);
+      const titleText = `#${idx + 1} — ${d.code || "SIN-CODIGO"} | ${typeLabel.toUpperCase()}`;
+      doc.text(titleText, xOffset + 2, currentY + 4.5);
       
       // Línea separadora debajo del título
       doc.setDrawColor(41, 128, 185);
-      doc.setLineWidth(0.5);
-      doc.line(12, currentY + 10, pageWidth - 12, currentY + 10);
+      doc.setLineWidth(0.3);
+      doc.line(xOffset, currentY + 7, xOffset + boxWidth, currentY + 7);
       
-      // Contenido en dos columnas
+      // Contenido en una sola columna (más compacto para el ancho reducido)
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(8);
+      doc.setFontSize(6);
       doc.setTextColor(40, 40, 40);
       
-      const colWidth = (pageWidth - 48) / 2;
-      const midPageX = 12 + colWidth + 12;
-      let ly = currentY + 13;
+      let ly = currentY + 10;
+      const contentWidth = boxWidth - 4;
       
-      for (let i = 0; i < maxRows; i++) {
-        // Columna izquierda
-        if (leftCol[i]) {
-          const wrapped = doc.splitTextToSize(leftCol[i], colWidth - 2);
-          doc.text(wrapped, 16, ly);
-        }
-        // Línea separadora vertical
-        doc.setDrawColor(200, 200, 200);
-        doc.setLineWidth(0.3);
-        doc.line(midPageX - 6, currentY + 10, midPageX - 6, ly + 2);
-        
-        // Columna derecha
-        if (rightCol[i]) {
-          const wrapped = doc.splitTextToSize(rightCol[i], colWidth - 2);
-          doc.text(wrapped, midPageX, ly);
-        }
-        ly += detailLineHeight;
+      for (let i = 0; i < displayLines.length; i++) {
+        const wrapped = doc.splitTextToSize(displayLines[i], contentWidth);
+        doc.text(wrapped, xOffset + 2, ly);
+        ly += detailLineHeight * wrapped.length;
       }
-      
-      currentY += boxHeight + 6;
     };
 
-    (user.devices || []).forEach((d: any, idx: number) => drawDeviceDetailBox(d, idx));
+    // Calcular altura de cada caja basándose en su contenido
+    const calculateBoxHeight = (d: any): number => {
+      const { displayLines } = getDeviceLines(d);
+      const detailLineHeight = 2.8;
+      return 8 + displayLines.length * detailLineHeight + 3;
+    };
+
+    // Dibujar dispositivos en pares (dos por fila)
+    const devices = user.devices || [];
+    for (let i = 0; i < devices.length; i += 2) {
+      const d1 = devices[i];
+      const d2 = devices[i + 1];
+      
+      const height1 = calculateBoxHeight(d1);
+      const height2 = d2 ? calculateBoxHeight(d2) : 0;
+      const rowHeight = Math.max(height1, height2);
+      
+      // Verificar si cabe en la página
+      if (currentY + rowHeight > pageHeight - 35) {
+        doc.addPage();
+        addHeader();
+        currentY = 30;
+      }
+      
+      // Dibujar primer dispositivo (columna izquierda)
+      drawDeviceDetailBox(d1, i, 12, rowHeight);
+      
+      // Dibujar segundo dispositivo (columna derecha) si existe
+      if (d2) {
+        drawDeviceDetailBox(d2, i + 1, 12 + boxWidth + boxMargin, rowHeight);
+      }
+      
+      currentY += rowHeight + 4;
+    }
 
     // Observaciones después de los cuadros
-    if (currentY > pageHeight - 60) {
+    if (currentY > pageHeight - 40) {
       doc.addPage();
       addHeader();
-      currentY = 40;
+      currentY = 35;
     }
     
-    currentY += 2;
-    doc.setFontSize(10);
+    currentY += 1;
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Observaciones:", 15, currentY);
     
-    doc.setFontSize(9);
+    doc.setFontSize(7);
     doc.setFont("helvetica", "normal");
     const splitObs = doc.splitTextToSize(observations, 180);
-    doc.text(splitObs, 15, currentY + 5);
-    currentY += splitObs.length * 4 + 6;
+    doc.text(splitObs, 15, currentY + 4);
+    currentY += splitObs.length * 3 + 4;
 
-    // Solo agregar nueva página si no hay suficiente espacio para el siguiente contenido
-    if (currentY > pageHeight - 60) {
-      doc.addPage();
-      addHeader();
-      currentY = 40;
-    }
-
-    doc.setFontSize(9);
+    // Texto legal compacto en un solo bloque
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
 
-    const sections = [
-      {
-        title: "",
-        content: `El receptor de los equipos tecnológicos (en adelante, el/la/los/las colaboradores) es responsable de su uso adecuado y del mantenimiento en condiciones óptimas, conforme a las instrucciones y políticas establecidas por la empresa.`,
-      },
-      {
-        title: "",
-        content: `Será responsabilidad de el/la/los/las colaboradores reportar de manera inmediata cualquier daño, falla, pérdida o incidente que afecte el funcionamiento del equipo, mediante correo electrónico dirigido al Departamento de Tecnología a la dirección dep-sistemas@recursos-tecnologicos.com.`,
-      },
-      {
-        title: "",
-        content: `Se considera mal uso del equipo cualquier conducta que cause daño intencional, pérdida o deterioro en su funcionamiento. A título ejemplificativo, se considera mal uso:`,
-      },
-    ];
+    const legalText = `El receptor de los equipos tecnológicos (colaborador) es responsable de su uso adecuado y mantenimiento en condiciones óptimas. Deberá reportar de manera inmediata cualquier daño, falla, pérdida o incidente al Departamento de Tecnología (dep-sistemas@recursos-tecnologicos.com). Se considera mal uso: a) Manipulación indebida de componentes internos, b) Instalación de software no autorizado, c) Uso en condiciones ambientales inadecuadas, d) Derrame de líquidos, e) Uso de fuerza excesiva, f) Golpes, caídas o impactos por descuido, g) Modificación física sin autorización.
 
-    // Agregar secciones iniciales
-    sections.forEach((section) => {
-      if (currentY > pageHeight - 40) {
-        doc.addPage();
-        addHeader();
-        currentY = 55;
-      }
-      if (section.title) {
-        doc.setFont("helvetica", "bold");
-        doc.text(section.title, 15, currentY);
-        currentY += 4;
-      }
-      doc.setFont("helvetica", "normal");
-      const splitText = doc.splitTextToSize(section.content, 180);
-      doc.text(splitText, 15, currentY);
-      currentY += splitText.length * 4 + 3;
-    });
+En caso de robo, el colaborador deberá presentar denuncia ante las autoridades. Si la denuncia es presentada y el procesador tiene hasta 5 años de vigencia, el costo de reposición será 50% colaborador y 50% empresa. Si el procesador tiene más de 5 años, la empresa asume el 100%. Sin denuncia, el colaborador asume el 100% del costo. El costo de reposición se calcula según el valor comercial actual de un equipo equivalente. Los valores de reposición o reparación serán descontados del rol de pagos o de la liquidación final.`;
 
-    // Lista de mal uso
-    const badUsageItems = [
-      "a) La manipulación indebida de componentes internos.",
-      "b) La instalación o utilización de software no autorizado.",
-      "c) El uso del equipo en condiciones ambientales inadecuadas (temperatura, humedad, etc.).",
-      "d) El derrame de líquidos sobre el equipo.",
-      "e) El uso de fuerza excesiva sobre teclados, pantallas o conexiones.",
-      "f) Los golpes, caídas o impactos accidentales atribuibles a descuido del Usuario.",
-      "g) La modificación física del dispositivo sin la debida autorización técnica por parte del Departamento de Tecnología.",
-    ];
-
-    badUsageItems.forEach((item) => {
-      if (currentY > pageHeight - 40) {
-        doc.addPage();
-        addHeader();
-        currentY = 55;
-      }
-      const splitItem = doc.splitTextToSize(item, 170);
-      doc.text(splitItem, 20, currentY);
-      currentY += splitItem.length * 4 + 2;
-    });
-
-    // Resto del texto
-    if (currentY > pageHeight - 80) {
+    const splitLegal = doc.splitTextToSize(legalText, 180);
+    
+    if (currentY + splitLegal.length * 2.5 > pageHeight - 70) {
       doc.addPage();
       addHeader();
-      currentY = 45;
+      currentY = 35;
     }
+    
+    doc.text(splitLegal, 15, currentY);
+    currentY += splitLegal.length * 2.5 + 4;
 
-    // Párrafo sobre robo
-    const roboText = `En caso de robo del equipo, el/la/los/las colaboradores deberá presentar la denuncia correspondiente ante las autoridades competentes.`;
-    const splitRobo = doc.splitTextToSize(roboText, 180);
-    doc.text(splitRobo, 15, currentY);
-    currentY += splitRobo.length * 4 + 4;
-
-    // Viñetas de costos
-    const costItems = [
-      "• Si la denuncia es presentada y el procesador del equipo tiene una vigencia de hasta cinco (5) años en el mercado, el costo de reposición será asumido en un cincuenta por ciento (50%) por el Usuario y un cincuenta por ciento (50%) por la empresa.",
-      "• Si el procesador del equipo tiene una vigencia superior a cinco (5) años, la empresa asumirá el cien por ciento (100%) del costo de reposición presentando la denuncia respectiva.",
-      "• Si el Usuario no presenta la denuncia, asumirá el cien por ciento (100%) del costo del equipo, independientemente de su antigüedad.",
-    ];
-
-    costItems.forEach((item) => {
-      if (currentY > pageHeight - 40) {
-        doc.addPage();
-        addHeader();
-        currentY = 55;
-      }
-      const splitItem = doc.splitTextToSize(item, 170);
-      doc.text(splitItem, 20, currentY);
-      currentY += splitItem.length * 4 + 3;
-    });
-
-    if (currentY > pageHeight - 60) {
+    // ===== SECCIÓN FINAL: ACEPTACIÓN EXPRESA y firmas =====
+    if (currentY > pageHeight - 65) {
       doc.addPage();
       addHeader();
-      currentY = 55;
-    }
-
-    const finalSections = [
-      `El costo de reposición se calculará en función del valor comercial actual de un equipo de características equivalentes al entregado.`,
-      `Cualquier valor derivado de la reposición o reparación de equipos, en los casos antes descritos, será descontado automáticamente del rol de pagos de el/la/los/las colaboradores. En caso de terminación de la relación laboral, por cualquier causa, dichos valores serán deducidos del monto correspondiente a la liquidación final.`,
-    ];
-
-    finalSections.forEach((text) => {
-      if (currentY > pageHeight - 60) {
-        doc.addPage();
-        addHeader();
-        currentY = 55;
-      }
-      const splitText = doc.splitTextToSize(text, 180);
-      doc.text(splitText, 15, currentY);
-      currentY += splitText.length * 4 + 4;
-    });
-
-    // ===== PÁGINA FINAL: Logo, ACEPTACION EXPRESA y firmas =====
-    if (currentY > pageHeight - 120) {
-      doc.addPage();
-      addHeader();
-      currentY = 55;
-    } else {
-      currentY += 10;
+      currentY = 35;
     }
 
     // Título ACEPTACION EXPRESA - Tamaño mediano en negrita
-    doc.setFontSize(12);
+    doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("ACEPTACION EXPRESA", 15, currentY);
-    currentY += 8;
+    doc.text("ACEPTACIÓN EXPRESA", 15, currentY);
+    currentY += 5;
 
-    // Texto de aceptación
-    doc.setFontSize(8);
+    // Texto de aceptación más compacto
+    doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
-    const acceptanceText = `Yo, ___________________________________________, portador(a) de la cédula de identidad No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados anteriormente. Me comprometo a hacer uso adecuado de los mismos, conforme a las políticas y directrices establecidas por la empresa, y acepto expresamente que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos, o en su defecto, de mi liquidación final en caso de terminación de la relación laboral.`;
+    const acceptanceText = `Yo, ___________________________________________, con C.I. No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados. Me comprometo a hacer uso adecuado de los mismos y acepto que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos o liquidación final.`;
     
     const splitAcceptance = doc.splitTextToSize(acceptanceText, 180);
     doc.text(splitAcceptance, 15, currentY);
-    currentY += splitAcceptance.length * 4 + 15;
+    currentY += splitAcceptance.length * 2.5 + 8;
 
-    // Sección de firmas en dos columnas
+    // Sección de firmas en dos columnas más compacta
     const colWidth = (pageWidth - 30) / 2;
     const leftColX = 15;
     const rightColX = 15 + colWidth + 10;
     
+    // Establecer color negro para las líneas de firma
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.5);
+    
     // Columna izquierda: Aceptado por
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Aceptado por:", leftColX, currentY);
     
     // Línea para nombre
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    const lineY1 = currentY + 15;
+    doc.setFontSize(7);
+    const lineY1 = currentY + 10;
     doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
-    doc.text("Nombre completo del colaborador", leftColX, lineY1 + 4);
+    doc.text("Nombre del colaborador", leftColX, lineY1 + 3);
     
     // Línea para C.I.
-    const lineY2 = currentY + 28;
+    const lineY2 = currentY + 18;
     doc.text("C.I.: ", leftColX, lineY2);
-    doc.line(leftColX + 10, lineY2, leftColX + colWidth, lineY2);
+    doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
     
     // Línea para Firma
-    const lineY3 = currentY + 41;
+    const lineY3 = currentY + 26;
     doc.text("Firma: ", leftColX, lineY3);
-    doc.line(leftColX + 12, lineY3, leftColX + colWidth, lineY3);
+    doc.line(leftColX + 10, lineY3, leftColX + colWidth, lineY3);
     
     // Línea para Fecha
-    const lineY4 = currentY + 54;
+    const lineY4 = currentY + 34;
     doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
     
     // Columna derecha: Entregado por
-    doc.setFontSize(9);
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Entregado por:", rightColX, currentY);
     
     // Nombre dinámico del usuario que generó el reporte
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
+    doc.setFontSize(7);
     const generatedUserName = currentUser?.firstName && currentUser?.lastName 
       ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
       : "ADMINISTRADOR";
     const generatedUserCI = currentUser?.nationalId || "N/A";
     doc.text(generatedUserName, rightColX, lineY1 - 2);
-    doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 4);
+    doc.text("Responsable de entrega", rightColX, lineY1 + 3);
     
     // C.I. del usuario que generó el reporte
     doc.text(`C.I.: ${generatedUserCI}`, rightColX, lineY2);
     
     // Línea para Firma (vacía)
     doc.text("Firma: ", rightColX, lineY3);
-    doc.line(rightColX + 12, lineY3, rightColX + colWidth, lineY3);
+    doc.line(rightColX + 10, lineY3, rightColX + colWidth, lineY3);
     
     // Fecha actual (se llena automáticamente)
     doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
@@ -590,7 +506,16 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     // Pie de página en todas las páginas
     addFooterToAllPages();
 
-    doc.save(`Acta_${user.userName?.replace(/\s+/g, "_")}_${today.getFullYear()}.pdf`);
+    // Formato del nombre del archivo: Acta_Entrega_NombreCompleto_DDMMYYYY_HHMM.pdf
+    const userName = user.userName?.replace(/\s+/g, "_") || "Usuario";
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+    const hours = String(today.getHours()).padStart(2, "0");
+    const minutes = String(today.getMinutes()).padStart(2, "0");
+    const fileName = `Acta_Entrega_${userName}_${day}${month}${year}_${hours}${minutes}.pdf`;
+    
+    doc.save(fileName);
   };
 
   return (
