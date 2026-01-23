@@ -60,18 +60,21 @@ export const credentialsApi = {
   },
 
   async create(data: CreateCredentialDto): Promise<Credential> {
-
+    // Solo permitir valores válidos para system
+    const allowedSystems = ['erp', 'crm', 'email', 'glpi', 'tefl'];
+    let system: SystemType = data.system;
+    if (!allowedSystems.includes(system)) {
+      system = 'erp'; // valor por defecto seguro
+    }
     const cleanedData: CreateCredentialDto = {
       personId: Number(data.personId),
-      username: data.username.trim(),
-      password: data.password,
-      system: data.system,
+      username: data.username ? data.username.trim() : '',
+      password: data.password ? data.password : '',
+      system,
       phone: data.phone?.trim() || undefined,
       notes: data.notes?.trim() || undefined,
     };
-
     console.log(' Datos enviados al crear credencial:', cleanedData);
-
     const response = await apiFetch(`${API_URL}/credentials`, { method: 'POST', body: JSON.stringify(cleanedData) });
     await handleApiError(response);
     return response.json();
