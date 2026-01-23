@@ -53,6 +53,29 @@ export default function PersonFormModal({
     status: 'active'
   });
 
+    // Autogenerar username cuando se escriben nombre y apellido (solo en modo 'create')
+    useEffect(() => {
+      if (mode === 'create' || mode === 'edit') {
+        const firstNamePart = formData.firstName.trim().split(' ')[0];
+        const lastNamePart = formData.lastName.trim().split(' ')[0];
+        // Username: primera letra del primer nombre + todo el primer apellido, minúsculas
+        const autoUsername = firstNamePart && lastNamePart ? `${firstNamePart.charAt(0).toLowerCase()}${lastNamePart.toLowerCase()}` : '';
+
+        // Password: RT{año_actual}@{primera letra nombre mayúscula}{primera letra apellido mayúscula}
+        const year = new Date().getFullYear();
+        const firstInitial = firstNamePart ? firstNamePart.charAt(0).toUpperCase() : '';
+        const lastInitial = lastNamePart ? lastNamePart.charAt(0).toUpperCase() : '';
+        const autoPassword = firstNamePart && lastNamePart ? `RT${year}@${firstInitial}${lastInitial}` : '';
+
+        setFormData(prev => {
+          let updated = { ...prev };
+          if (prev.username !== autoUsername) updated.username = autoUsername;
+          if (prev.password !== autoPassword) updated.password = autoPassword;
+          return updated;
+        });
+      }
+    }, [formData.firstName, formData.lastName, mode]);
+
   useEffect(() => {
     if (person && mode === 'edit') {
       setFormData({
