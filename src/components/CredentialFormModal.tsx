@@ -14,7 +14,7 @@ import {
 import SearchableSelect from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Loader2, Eye, EyeOff } from 'lucide-react';
-import { Credential, CreateCredentialDto, SystemType } from '@/api/credentials';
+import { Credential, CreateCredentialDto, type SystemType } from '@/api/credentials';
 import { Person } from '@/data/mockDataExtended';
 
 interface CredentialFormModalProps {
@@ -27,11 +27,11 @@ interface CredentialFormModalProps {
 }
 
 const systemOptions: { value: SystemType; label: string }[] = [
-  { value: SystemType.erp, label: 'ERP - Sistema de Planificación' },
-  { value: SystemType.crm, label: 'CRM - Gestión de Clientes' },
-  { value: SystemType.email, label: 'Email - Correo Electrónico' },
-  { value: SystemType.glpi, label: 'GLPI - Mesa de Ayuda' },     // ← si lo tienes en el enum
-  { value: SystemType.tefl, label: 'TEFL - Número telefónico' },
+  { value: 'erp', label: 'ERP - Sistema de Planificación' },
+  { value: 'crm', label: 'CRM - Gestión de Clientes' },
+  { value: 'email', label: 'Email - Correo Electrónico' },
+  { value: 'glpi', label: 'GLPI - Mesa de Ayuda' },
+  { value: 'tefl', label: 'TEFL - Número telefónico' },
 ];
 
 export default function CredentialFormModal({
@@ -48,7 +48,7 @@ export default function CredentialFormModal({
     personId: 0,
     username: '',
     password: '',
-    system: SystemType.erp,
+    system: 'erp',
     phone: '',
     notes: '',
   });
@@ -69,7 +69,7 @@ export default function CredentialFormModal({
           personId: 0,
           username: '',
           password: '',
-          system: SystemType.erp,
+          system: 'erp',
           phone: '',
           notes: '',
         });
@@ -87,12 +87,12 @@ export default function CredentialFormModal({
     }
 
     // Validación extra en frontend (opcional pero recomendado)
-    if (formData.system === SystemType.tefl && !formData.phone?.trim()) {
+    if (formData.system === 'tefl' && !formData.phone?.trim()) {
       alert('El número telefónico es obligatorio para TEFL');
       return;
     }
 
-    if (formData.system !== SystemType.tefl) {
+    if (formData.system !== 'tefl') {
       if (!formData.username?.trim()) {
         alert('El usuario es obligatorio para este sistema');
         return;
@@ -132,7 +132,7 @@ export default function CredentialFormModal({
 
   const personValue = formData.personId ? String(formData.personId) : null;
 
-  const isTefl = formData.system === SystemType.tefl;
+  const isTefl = formData.system === 'tefl';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -172,7 +172,7 @@ export default function CredentialFormModal({
                 const newSystem = value as SystemType;
                 handleChange('system', newSystem);
                 // Limpiar campos no relevantes
-                if (newSystem === SystemType.tefl) {
+                if (newSystem === 'tefl') {
                   handleChange('username', '');
                   handleChange('password', '');
                 } else {
