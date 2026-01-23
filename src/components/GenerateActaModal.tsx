@@ -326,7 +326,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       doc.setFont("helvetica", "bold");
       doc.setFontSize(6);
       doc.setTextColor(255, 255, 255);
-      const titleText = `#${idx + 1} — ${d.code || "SIN-CODIGO"} | ${typeLabel.toUpperCase()}`;
+      const titleText = `${d.code || "SIN-CODIGO"} | ${typeLabel.toUpperCase()}`;
       doc.text(titleText, xOffset + 2, currentY + 4.5);
       
       // Línea separadora debajo del título
@@ -402,24 +402,91 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     doc.text(splitObs, 15, currentY + 4);
     currentY += splitObs.length * 3 + 4;
 
-    // Texto legal compacto en un solo bloque
+    // Texto legal estructurado en múltiples párrafos
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
 
-    const legalText = `El receptor de los equipos tecnológicos (colaborador) es responsable de su uso adecuado y mantenimiento en condiciones óptimas. Deberá reportar de manera inmediata cualquier daño, falla, pérdida o incidente al Departamento de Tecnología (dep-sistemas@recursos-tecnologicos.com). Se considera mal uso: a) Manipulación indebida de componentes internos, b) Instalación de software no autorizado, c) Uso en condiciones ambientales inadecuadas, d) Derrame de líquidos, e) Uso de fuerza excesiva, f) Golpes, caídas o impactos por descuido, g) Modificación física sin autorización.
+    // Primer párrafo: responsabilidad y reporte
+    const legalText1 = `El receptor de los equipos tecnológicos (colaborador) es responsable de su uso adecuado y mantenimiento en condiciones óptimas. Deberá reportar de manera inmediata cualquier daño, falla, pérdida o incidente al Departamento de Tecnología a la dirección dep-sistemas@recursos-tecnologicos.com.`;
 
-En caso de robo, el colaborador deberá presentar denuncia ante las autoridades. Si la denuncia es presentada y el procesador tiene hasta 5 años de vigencia, el costo de reposición será 50% colaborador y 50% empresa. Si el procesador tiene más de 5 años, la empresa asume el 100%. Sin denuncia, el colaborador asume el 100% del costo. El costo de reposición se calcula según el valor comercial actual de un equipo equivalente. Los valores de reposición o reparación serán descontados del rol de pagos o de la liquidación final.`;
-
-    const splitLegal = doc.splitTextToSize(legalText, 180);
+    const splitLegal1 = doc.splitTextToSize(legalText1, 180);
     
-    if (currentY + splitLegal.length * 2.5 > pageHeight - 70) {
+    if (currentY + splitLegal1.length * 2.5 > pageHeight - 70) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
-    doc.text(splitLegal, 15, currentY);
-    currentY += splitLegal.length * 2.5 + 4;
+    doc.text(splitLegal1, 15, currentY);
+    currentY += splitLegal1.length * 2.5 + 3;
+
+    // Segundo párrafo: Se considera mal uso con letras a) a g)
+    const malUsoText = `Se considera mal uso:
+a) Manipulación indebida de componentes internos.
+b) Instalación de software no autorizado.
+c) Uso en condiciones ambientales inadecuadas.
+d) Derrame de líquidos.
+e) Uso de fuerza excesiva.
+f) Golpes, caídas o impactos por descuido.
+g) Modificación física sin autorización.`;
+
+    const splitMalUso = doc.splitTextToSize(malUsoText, 180);
+    
+    if (currentY + splitMalUso.length * 2.5 > pageHeight - 70) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    doc.text(splitMalUso, 15, currentY);
+    currentY += splitMalUso.length * 2.5 + 3;
+
+    // Tercer párrafo: En caso de robo con puntos
+    const roboText = `En caso de robo, el colaborador deberá presentar denuncia ante las autoridades:
+• Si la denuncia es presentada y el procesador del equipo tiene hasta 5 años de vigencia, el costo de reposición será 50% colaborador y 50% empresa.
+• Si el procesador del equipo tiene más de 5 años de vigencia, la empresa asume el 100% del costo.
+• Si el usuario no presenta denuncia, el colaborador asume el 100% del costo de reposición.`;
+
+    const splitRobo = doc.splitTextToSize(roboText, 180);
+    
+    if (currentY + splitRobo.length * 2.5 > pageHeight - 70) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    doc.text(splitRobo, 15, currentY);
+    currentY += splitRobo.length * 2.5 + 3;
+
+    // Cuarto párrafo: Costo de reposición en negritas
+    doc.setFont("helvetica", "bold");
+    const costoText = `El costo de reposición se calculará en función del valor comercial actual de un equipo de características equivalentes al entregado.`;
+
+    const splitCosto = doc.splitTextToSize(costoText, 180);
+    
+    if (currentY + splitCosto.length * 2.5 > pageHeight - 70) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    doc.text(splitCosto, 15, currentY);
+    currentY += splitCosto.length * 2.5 + 3;
+
+    // Quinto párrafo: Valores de reposición sin negritas
+    doc.setFont("helvetica", "normal");
+    const valoresText = `El costo se calcula según el valor comercial actual de un equipo equivalente. Los valores de reposición o reparación serán descontados del rol de pagos o de la liquidación final.`;
+
+    const splitValores = doc.splitTextToSize(valoresText, 180);
+    
+    if (currentY + splitValores.length * 2.5 > pageHeight - 70) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    doc.text(splitValores, 15, currentY);
+    currentY += splitValores.length * 2.5 + 4;
 
     // ===== SECCIÓN FINAL: ACEPTACIÓN EXPRESA y firmas =====
     if (currentY > pageHeight - 65) {
