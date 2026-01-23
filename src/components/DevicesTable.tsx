@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Laptop, Monitor, Keyboard, Mouse, Smartphone, Server } from "lucide-react";
+import { Laptop, Monitor, Keyboard, Mouse, Smartphone, Server, PlugZap, Cable, Plug, Square, Phone, Printer } from "lucide-react";
 
 export type DeviceStatus = "available" | "assigned" | "maintenance" | "retired";
 
@@ -34,9 +34,29 @@ const getDeviceIcon = (type: string) => {
     case "mouse":
       return <Mouse className="h-4 w-4" />;
     case "móvil":
+    case "smartphone":
+    case "celular":
       return <Smartphone className="h-4 w-4" />;
     case "servidor":
+    case "server":
       return <Server className="h-4 w-4" />;
+    case "cargador-celular":
+      return <PlugZap className="h-4 w-4" />;
+    case "cargador-laptop":
+      return <Plug className="h-4 w-4" />;
+    case "soporte":
+      // Usar Laptop como icono de soporte para laptop
+      return <Laptop className="h-4 w-4" />;
+    case "monitor":
+      return <Monitor className="h-4 w-4" />;
+    case "ip-phone":
+      return <Phone className="h-4 w-4" />;
+    case "mousepad":
+      return <Square className="h-4 w-4" />;
+    case "cable-carga":
+      return <Cable className="h-4 w-4" />;
+    case "printer":
+      return <Printer className="h-4 w-4" />;
     default:
       return <Laptop className="h-4 w-4" />;
   }
@@ -130,7 +150,7 @@ export const DevicesTable = ({ devices, showCode }: DevicesTableProps) => {
                 <TableCell>
                   <div className={`flex items-center gap-2 ${typeClass}`}>
                     {getDeviceIcon(device.type)}
-                    <span className="font-medium">{device.type}</span>
+                    <span className="font-medium capitalize">{device.type.replace(/[-_]/g, ' ')}</span>
                   </div>
                 </TableCell>
               {/* render asset code cell if present on device */}
