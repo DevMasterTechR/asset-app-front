@@ -26,9 +26,33 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
   const { toast } = useToast();
   const [observations, setObservations] = useState("");
 
+  // Generar observaciones dinámicas desde las notas de cada asignación
+  const generateObservationsFromDevices = () => {
+    if (!user?.devices || user.devices.length === 0) return "";
+    
+    // Filtrar solo las observaciones reales (no las automáticas)
+    const notesPerDevice = user.devices
+      .filter((d: any) => {
+        const notes = d.deliveryNotes?.trim();
+        if (!notes) return false;
+        // Excluir notas automáticas
+        const isAutomatic = /asignación automática/i.test(notes);
+        return !isAutomatic;
+      })
+      .map((d: any) => d.deliveryNotes.trim());
+    
+    if (notesPerDevice.length === 0) return "";
+    
+    // Cada observación en una línea separada (sin código, sin espacio extra)
+    return notesPerDevice.join("\n");
+  };
+
   useEffect(() => {
     if (open) {
-      setObservations("");
+      // Generar observaciones dinámicas desde las notas de cada asignación
+      const autoObservations = generateObservationsFromDevices();
+      setObservations(autoObservations);
+      
       console.log("Usuario en GenerateActaModal:", user);
       if (user?.devices) {
         console.log("Dispositivos:", user.devices);
@@ -36,6 +60,7 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
           console.log(`Device ${idx}:`, {
             code: d.code,
             type: d.assetType,
+            deliveryNotes: d.deliveryNotes,
             attributesJson: d.attributesJson,
             attributes: d.attributes,
             allKeys: Object.keys(d),
@@ -633,6 +658,7 @@ g) Modificación física sin autorización.`;
                     <th className="px-3 py-2 text-left">Marca</th>
                     <th className="px-3 py-2 text-left">Modelo</th>
                     <th className="px-3 py-2 text-left">Serial</th>
+                    <th className="px-3 py-2 text-left">Observaciones</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -645,11 +671,14 @@ g) Modificación física sin autorización.`;
                         <td className="px-3 py-2">{d.brand || "-"}</td>
                         <td className="px-3 py-2">{d.model || "-"}</td>
                         <td className="px-3 py-2 text-xs">{d.serialNumber || "-"}</td>
+                        <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={d.deliveryNotes || "-"}>
+                          {d.deliveryNotes || "-"}
+                        </td>
                       </tr>
                     ))
                   ) : (
                     <tr>
-                      <td colSpan={6} className="px-3 py-2 text-center text-muted-foreground">
+                      <td colSpan={7} className="px-3 py-2 text-center text-muted-foreground">
                         Sin equipos asignados
                       </td>
                     </tr>
@@ -663,10 +692,11 @@ g) Modificación física sin autorización.`;
           <div className="space-y-2">
             <Label htmlFor="observations">
               Observaciones <span className="text-red-500">*</span>
+              <span className="text-xs text-muted-foreground ml-2">(Se generan automáticamente desde las notas de cada asignación)</span>
             </Label>
             <Textarea
               id="observations"
-              placeholder="Ingresa observaciones sobre la entrega..."
+              placeholder="Las observaciones se generan automáticamente desde las notas de cada asignación. Puedes editarlas si es necesario."
               value={observations}
               onChange={(e) => setObservations(e.target.value)}
               className="min-h-20"

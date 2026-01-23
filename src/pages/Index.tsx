@@ -253,6 +253,7 @@ const Index = () => {
           purchaseDate: fullAsset?.purchaseDate || fullAsset?.purchase_date || a.asset?.purchaseDate || a.asset?.purchase_date,
           branchId: a.branchId || a.branch?.id || a.asset?.branchId,
           attributesJson: fullAsset?.attributesJson || a.asset?.attributesJson || {},
+          deliveryNotes: a.deliveryNotes || '',
           branch:
             a.branch?.name ||
             a.branchName ||
