@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToast } from '@/hooks/use-toast';
 import { Search, Plus, Edit, Trash2, Loader2, Eye, EyeOff, Key, Copy, Check, Download } from 'lucide-react';
 import { 
@@ -60,7 +61,6 @@ function CredentialsPage() {
   const [loading, setLoading] = useState(true);
   const [showPasswords, setShowPasswords] = useState<Record<number, boolean>>({});
   const [copiedPasswords, setCopiedPasswords] = useState<Record<number, boolean>>({});
-  
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedCredential, setSelectedCredential] = useState<Credential | null>(null);
@@ -69,6 +69,7 @@ function CredentialsPage() {
   const [filterPersonId, setFilterPersonId] = useState<'all' | string>('all');
   const [filterSystem, setFilterSystem] = useState<'all' | keyof typeof systemLabelMap>('all');
   const [personFilterSearch, setPersonFilterSearch] = useState('');
+  const [tab, setTab] = useState<'all' | 'tefl'>('all');
 
   useEffect(() => {
     loadData();
@@ -108,11 +109,15 @@ function CredentialsPage() {
   const filteredCredentials = credentials.filter((cred) => {
     const personName = getPersonName(cred.personId).toLowerCase();
     const search = searchTerm.toLowerCase();
-    return (
+    const matchesSearch =
       personName.includes(search) ||
       cred.username.toLowerCase().includes(search) ||
-      cred.system.toLowerCase().includes(search)
-    );
+      cred.system.toLowerCase().includes(search);
+    if (tab === 'tefl') {
+      return cred.system === 'tefl' && matchesSearch;
+    }
+    // En la vista 'Todas', ocultar los de tipo teléfono
+    return cred.system !== 'tefl' && matchesSearch;
   });
 
   const sort = useSort();
@@ -212,16 +217,13 @@ function CredentialsPage() {
   };
 
   const handleEdit = (credential: Credential) => {
-    // Agregar datos de la persona al credential para que el modal los tenga de inmediato
     const person = people.find(p => Number(p.id) === Number(credential.personId));
     const credentialWithPerson = person 
       ? { ...credential, person } 
       : credential;
     
-    // Establecer todo en el orden correcto
     setSelectedCredential(credentialWithPerson as Credential);
     setFormMode('edit');
-    // Abrir el modal en el siguiente tick para asegurar que el estado se haya actualizado
     setTimeout(() => {
       setFormModalOpen(true);
     }, 0);
@@ -304,9 +306,9 @@ function CredentialsPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
-          <div className="lg:col-span-3">
-            <div className="relative">
+        <div className="flex flex-col gap-2 mb-2">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div className="relative w-full sm:w-1/2">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
@@ -316,12 +318,20 @@ function CredentialsPage() {
                 onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
               />
             </div>
-          </div>
-          <div className="flex items-center justify-center bg-muted rounded-lg p-4">
+            <div className="flex items-center justify-center bg-muted rounded-lg p-4">
               <div className="text-center">
                 <p className="text-2xl font-bold">{displayedCredentials.length}</p>
                 <p className="text-sm text-muted-foreground">Credenciales</p>
               </div>
+            </div>
+          </div>
+          <div className="flex w-full mt-2">
+            <Tabs value={tab} onValueChange={v => setTab(v as 'all' | 'tefl')} className="w-full">
+              <TabsList className="w-fit flex gap-1 bg-[#f7fafc] rounded-lg p-1 shadow-none border-none">
+                <TabsTrigger value="all" className="px-3 py-1 text-base rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">Todas</TabsTrigger>
+                <TabsTrigger value="tefl" className="px-3 py-1 text-base rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm data-[state=active]:font-bold">Telefónicas</TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         </div>
 
@@ -331,94 +341,131 @@ function CredentialsPage() {
           </div>
         ) : (
           <div className="border rounded-lg bg-card">
-              <Table>
+            <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('system')}>Sistema {sort.key === 'system' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario {sort.key === 'username' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead>Contraseña</TableHead>
-                  <TableHead>Notas</TableHead>
-                  <TableHead className="text-right">Acciones</TableHead>
+                  {tab === 'tefl' ? (
+                    <>
+                      <TableHead>Persona</TableHead>
+                      <TableHead>Número telefónico</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </>
+                  ) : (
+                    <>
+                      <TableHead className="cursor-pointer" onClick={() => sort.toggle('person')}>Persona {sort.key === 'person' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => sort.toggle('system')}>Sistema {sort.key === 'system' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                      <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario {sort.key === 'username' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                      <TableHead>Contraseña</TableHead>
+                      <TableHead>Notas</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
+                    </>
+                  )}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {displayedCredentials.length > 0 ? (
                   paginatedCredentials.map((credential) => (
                     <TableRow key={credential.id}>
-                      <TableCell className="font-medium">
-                        {getPersonName(credential.personId)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant={systemColorMap[credential.system]}>
-                          {systemLabelMap[credential.system]}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="font-mono text-sm">
-                        {credential.username}
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-sm">
-                            {showPasswords[credential.id] 
-                              ? credential.password 
-                              : '••••••••'
-                            }
-                          </span>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => togglePasswordVisibility(credential.id)}
-                            title={showPasswords[credential.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-                          >
-                            {showPasswords[credential.id] ? (
-                              <EyeOff className="h-3 w-3" />
-                            ) : (
-                              <Eye className="h-3 w-3" />
-                            )}
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6"
-                            onClick={() => copyPasswordToClipboard(credential.password, credential.id)}
-                            title="Copiar contraseña"
-                          >
-                            {copiedPasswords[credential.id] ? (
-                              <Check className="h-3 w-3 text-green-500" />
-                            ) : (
-                              <Copy className="h-3 w-3" />
-                            )}
-                          </Button>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
-                        {credential.notes || '-'}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleEdit(credential)}
-                          >
-                            <Edit className="h-4 w-4" />
-                          </Button>
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleDeleteClick(credential)}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </TableCell>
+                      {tab === 'tefl' ? (
+                        <>
+                          <TableCell className="font-medium">{getPersonName(credential.personId)}</TableCell>
+                          <TableCell>{credential.phone || '-'}</TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleEdit(credential)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleDeleteClick(credential)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </>
+                      ) : (
+                        <>
+                          <TableCell className="font-medium">
+                            {getPersonName(credential.personId)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={systemColorMap[credential.system]}>
+                              {systemLabelMap[credential.system]}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="font-mono text-sm">
+                            {credential.username}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm">
+                                {showPasswords[credential.id] 
+                                  ? credential.password 
+                                  : '••••••••'
+                                }
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => togglePasswordVisibility(credential.id)}
+                                title={showPasswords[credential.id] ? 'Ocultar contraseña' : 'Mostrar contraseña'}
+                              >
+                                {showPasswords[credential.id] ? (
+                                  <EyeOff className="h-3 w-3" />
+                                ) : (
+                                  <Eye className="h-3 w-3" />
+                                )}
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                onClick={() => copyPasswordToClipboard(credential.password, credential.id)}
+                                title="Copiar contraseña"
+                              >
+                                {copiedPasswords[credential.id] ? (
+                                  <Check className="h-3 w-3 text-green-500" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </Button>
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-sm text-muted-foreground max-w-xs truncate">
+                            {credential.notes || '-'}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleEdit(credential)}
+                              >
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleDeleteClick(credential)}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </>
+                      )}
                     </TableRow>
                   ))
                 ) : (
                   <TableRow>
-                    <TableCell colSpan={6} className="text-center py-12">
+                    <TableCell colSpan={tab === 'tefl' ? 3 : 6} className="text-center py-12">
                       <Key className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                       <h3 className="text-lg font-semibold mb-2">
                         No se encontraron credenciales
@@ -435,6 +482,7 @@ function CredentialsPage() {
             </Table>
           </div>
         )}
+
         {/* Pagination */}
         <div className="flex items-center gap-4 w-full">
           <div className="flex-1" />
