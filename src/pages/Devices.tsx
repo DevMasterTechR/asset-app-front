@@ -246,7 +246,7 @@ function DevicesPage() {
         setLoans([]);
       }
     } catch (error) {
-      console.error('❌ Error cargando datos:', error);
+      console.error(' Error cargando datos:', error);
       toast({
         title: 'Error',
         description: error instanceof Error ? error.message : 'No se pudieron cargar los datos',
