@@ -432,18 +432,18 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     }
     
     currentY += 1;
-    doc.setFontSize(8);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "bold");
     doc.text("Observaciones:", 15, currentY);
     
-    doc.setFontSize(7);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
     const splitObs = doc.splitTextToSize(observations, 180);
     doc.text(splitObs, 15, currentY + 4);
-    currentY += splitObs.length * 3 + 4;
+    currentY += splitObs.length * 4 + 6; // Separación de 6 puntos después de observaciones
 
     // Texto legal estructurado en múltiples párrafos
-    doc.setFontSize(6.5);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
 
     // Primer párrafo: responsabilidad y reporte
@@ -451,14 +451,14 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
 
     const splitLegal1 = doc.splitTextToSize(legalText1, 180);
     
-    if (currentY + splitLegal1.length * 2.5 > pageHeight - 30) {
+    if (currentY + splitLegal1.length * 4 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitLegal1, 15, currentY);
-    currentY += splitLegal1.length * 2.5 + 2;
+    currentY += splitLegal1.length * 4 + 2;
 
     // Segundo párrafo: reporte de incidentes
     doc.setFont("helvetica", "normal");
@@ -466,14 +466,14 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
 
     const splitLegal2 = doc.splitTextToSize(legalText2, 180);
     
-    if (currentY + splitLegal2.length * 2.5 > pageHeight - 30) {
+    if (currentY + splitLegal2.length * 4 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitLegal2, 15, currentY);
-    currentY += splitLegal2.length * 2.5;
+    currentY += splitLegal2.length * 4;
 
     // Correo en negritas
     doc.setFont("helvetica", "bold");
@@ -494,14 +494,14 @@ g) Modificación física sin autorización.`;
 
     const splitMalUso = doc.splitTextToSize(malUsoText, 180);
     
-    if (currentY + splitMalUso.length * 2.5 > pageHeight - 30) {
+    if (currentY + splitMalUso.length * 4 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitMalUso, 15, currentY);
-    currentY += splitMalUso.length * 2.5 + 2;
+    currentY += splitMalUso.length * 4 + 2;
 
     // Tercer párrafo: En caso de robo con puntos
     const roboText = `En caso de robo, el colaborador deberá presentar denuncia ante las autoridades:
@@ -511,14 +511,14 @@ g) Modificación física sin autorización.`;
 
     const splitRobo = doc.splitTextToSize(roboText, 180);
     
-    if (currentY + splitRobo.length * 2.5 > pageHeight - 30) {
+    if (currentY + splitRobo.length * 4 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitRobo, 15, currentY);
-    currentY += splitRobo.length * 2.5 + 2;
+    currentY += splitRobo.length * 4 + 2;
 
     // Cuarto párrafo: Costo de reposición (sin negritas)
     doc.setFont("helvetica", "normal");
@@ -526,14 +526,14 @@ g) Modificación física sin autorización.`;
 
     const splitCosto = doc.splitTextToSize(costoText, 180);
     
-    if (currentY + splitCosto.length * 2.5 > pageHeight - 30) {
+    if (currentY + splitCosto.length * 4 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitCosto, 15, currentY);
-    currentY += splitCosto.length * 2.5 + 2;
+    currentY += splitCosto.length * 4 + 2;
 
     // Quinto párrafo: Valores de reposición sin negritas
     doc.setFont("helvetica", "normal");
@@ -541,14 +541,14 @@ g) Modificación física sin autorización.`;
 
     const splitValores = doc.splitTextToSize(valoresText, 180);
     
-    if (currentY + splitValores.length * 2.5 > pageHeight - 30) {
+    if (currentY + splitValores.length * 4 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitValores, 15, currentY);
-    currentY += splitValores.length * 2.5 + 3;
+    currentY += splitValores.length * 4 + 3;
 
     // ===== SECCIÓN FINAL: ACEPTACIÓN EXPRESA y firmas =====
     if (currentY > pageHeight - 50) {
