@@ -517,7 +517,7 @@ g) Modificación física sin autorización.`;
     
     // Establecer color negro para las líneas de firma
     doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.5);
+    doc.setLineWidth(0.2); // Grosor más delgado para las líneas de firma
     
     // Columna izquierda: Aceptado por
     doc.setFontSize(8);
