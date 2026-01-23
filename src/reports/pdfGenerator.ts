@@ -761,15 +761,28 @@ export const generateAssignmentsReportPDF = async (
 		}
 
 		// Mostrar info especial según tipo
-		let assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}`.trim();
-		if (assignment.assetType && assignment.assetType.toLowerCase().includes('laptop')) {
-			// Laptop: mostrar procesador y año de compra
-			assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}${assignment.procesador ? ' - ' + assignment.procesador : ''}${assignment.anioCompra ? ' (' + assignment.anioCompra + ')' : ''}`.trim();
-		}
-		if (assignment.assetType && assignment.assetType.toLowerCase().includes('celular')) {
-			// Celular: mostrar mica
-			assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}${assignment.mica ? ' - Mica: ' + assignment.mica : ''}`.trim();
-		}
+        let assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}`.trim();
+        // Laptops: solo marca, modelo, procesador y año de compra
+        if (assignment.assetType && assignment.assetType.toLowerCase().includes('laptop')) {
+            assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}`.trim();
+            if (assignment.procesador) {
+                assetDisplay += ` - ${assignment.procesador}`;
+            }
+            if (assignment.anioCompra) {
+                assetDisplay += ` (${assignment.anioCompra})`;
+            }
+        }
+        // Celulares: mostrar mica y teléfono si tiene mica
+        else if (assignment.assetType && assignment.assetType.toLowerCase().includes('celular')) {
+            assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}`.trim();
+            if (assignment.mica) {
+                assetDisplay += ` - Mica: ${assignment.mica}`;
+                if (assignment['telefono']) {
+                    assetDisplay += ` - Tel: ${assignment['telefono']}`;
+                }
+            }
+        }
+
 		const returnDateDisplay = assignment.returnDate 
 			? new Date(assignment.returnDate).toLocaleDateString('es-ES') 
 			: '-';
@@ -816,6 +829,26 @@ export const generateAssignmentsReportPDF = async (
 		rowIndex++;
 		if (onProgress) onProgress((i + 1) / Math.max(1, assignments.length));
 	}
+
+		// --- Agregar texto de responsabilidad después de la tabla ---
+		y += 10;
+		doc.setFont('helvetica', 'bold');
+		doc.setFontSize(11);
+		doc.setTextColor(40, 40, 40);
+		doc.text('Responsabilidad del receptor', margin, y);
+		y += 7;
+		doc.setFont('helvetica', 'normal');
+		doc.setFontSize(9);
+		doc.setTextColor(60, 60, 60);
+		const lines1 = doc.splitTextToSize('El receptor de los equipos tecnológicos (en adelante, el/la/los/las colaboradores) es responsable de su uso adecuado y del mantenimiento en condiciones óptimas, conforme a las instrucciones y políticas establecidas por la empresa. Será responsabilidad de el/la/los/las colaborador/es/as reportar de manera inmediata cualquier daño, falla, pérdida o incidente que afecte el funcionamiento del equipo, mediante correo electrónico dirigido al Departamento de Tecnología a la dirección', pageWidth - 2 * margin);
+		doc.text(lines1, margin, y);
+		y += lines1.length * 5;
+		doc.setFont('helvetica', 'bold');
+		doc.setTextColor(30, 30, 200);
+		doc.text('dep-sistemas@recursos-tecnologicos.com', margin, y);
+		doc.setFont('helvetica', 'normal');
+		doc.setTextColor(60, 60, 60);
+		y += 7;
 
 	/* --------------------- FOOTER ---------------------- */
 	const pageCount = doc.getNumberOfPages();

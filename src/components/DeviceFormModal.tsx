@@ -71,7 +71,7 @@ const deviceTypes = [
   // Eliminamos 'seguridad' del listado visual
   { value: 'laptop', label: 'Laptop' },
   { value: 'desktop', label: 'PC/Sobremesa' },
-  { value: 'smartphone', label: 'Smartphone' },
+  { value: 'celular', label: 'Celular' },
   { value: 'tablet', label: 'Tablet' },
   { value: 'monitor', label: 'Monitor' },
   { value: 'mouse', label: 'Mouse' },
@@ -98,7 +98,7 @@ const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
 // Prefijos estandarizados para assetCode
 const CODE_PREFIXES: Record<string, string> = {
   laptop: 'LAPT - ',
-  smartphone: 'CEL - ',
+  celular: 'CEL - ',
   mouse: 'MOSE - ',
   mousepad: 'MPAD - ',
   soporte: 'SPLP - ',
@@ -256,7 +256,7 @@ export default function DeviceFormModal({
     try {
       const phoneRaw = String(getAttrValue('phoneNumber') || '').trim();
       const phoneNormalized = phoneRaw.replace(/\s+/g, '').replace(/[^+0-9]/g, '');
-      if ((formData.assetType === 'smartphone' || formData.assetType === 'tablet') && phoneNormalized) {
+      if ((formData.assetType === 'celular' || formData.assetType === 'tablet') && phoneNormalized) {
         try {
           const check = await devicesApi.checkPhone(phoneNormalized);
           if (check?.exists && !(mode === 'edit' && String(check.deviceId) === String(device?.id))) {
@@ -544,7 +544,7 @@ export default function DeviceFormModal({
           </>
         );
 
-      case 'smartphone':
+      case 'celular':
       case 'tablet': {
         // IMEIs dinámicos
         const imeis: string[] = Array.isArray(getAttrValue('imeis')) ? getAttrValue('imeis') : (getAttrValue('imeis') ? [getAttrValue('imeis')] : ['']);

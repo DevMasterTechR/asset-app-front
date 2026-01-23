@@ -298,8 +298,8 @@ export default function Assignments() {
             deliveryNotes: 'Asignación automática junto con laptop',
           }));
         }
-        // Siempre asignar cargador y cable si es smartphone/tablet
-        if ((result.asset.assetType === 'smartphone' || result.asset.assetType === 'tablet')) {
+        // Siempre asignar cargador y cable si es celular/tablet
+        if ((result.asset.assetType === 'celular' || result.asset.assetType === 'tablet')) {
           if (selectedCellChargerId) {
             perifAssignments.push(assignmentsApi.create({
               assetId: selectedCellChargerId,
@@ -307,7 +307,7 @@ export default function Assignments() {
               branchId: converted.branchId,
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
-              deliveryNotes: 'Asignación automática junto con smartphone/tablet',
+              deliveryNotes: 'Asignación automática junto con celular/tablet',
             }));
           }
           if (selectedChargingCableId) {
@@ -317,7 +317,7 @@ export default function Assignments() {
               branchId: converted.branchId,
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
-              deliveryNotes: 'Asignación automática junto con smartphone/tablet',
+              deliveryNotes: 'Asignación automática junto con celular/tablet',
             }));
           }
         }

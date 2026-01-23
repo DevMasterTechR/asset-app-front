@@ -96,6 +96,12 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
   const resolveField = (obj: any, keys: string[], yesNo = false, skipSerialNumber = false) => {
     const tryVal = (v: any) => {
       if (v === undefined || v === null) return undefined;
+      // Manejar arrays (como imeis)
+      if (Array.isArray(v)) {
+        const filtered = v.filter((item: any) => item !== null && item !== undefined && String(item).trim() !== '');
+        if (filtered.length === 0) return undefined;
+        return filtered.join(', ');
+      }
       if (typeof v === 'object') return JSON.stringify(v);
       const s = String(v).trim();
       if (!s) return undefined;
@@ -242,38 +248,38 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
       ];
 
       const isLaptop = /laptop|notebook|ultrabook/i.test(typeLabel);
-      const isSmartphone = /smartphone|cellphone|phone|celular/i.test(typeLabel);
+      const isCelular = /celular|cellphone|phone/i.test(typeLabel);
       const isDesktop = /desktop|pc|computadora/i.test(typeLabel);
       const isIPPhone = /ip-phone|ipphone|teléfono ip|telefono ip/i.test(typeLabel);
       const isPrinter = /printer|impresora/i.test(typeLabel);
+      // Obtener año de compra desde purchaseDate
+      const purchaseDateValue = d?.purchaseDate || d?.attributesJson?.purchaseDate;
+      const purchaseYear = purchaseDateValue ? new Date(purchaseDateValue).getFullYear() : '-';
+      
       const laptopLines = isLaptop
         ? [
-            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])}`,
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
             `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
             `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "ssd", "hdd", "disk"])}`,
             `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
             `Maletín: ${resolveField(d, ["hasBag", "bagIncluded", "bag", "maletin"], true)}`,
-            `Mouse: ${resolveField(d, ["hasMouse", "mouse"], true)}`,
-            `Mouse Pad: ${resolveField(d, ["hasMousePad", "mousePad"], true)}`,
-            `Teclado: ${resolveField(d, ["hasKeyboard", "keyboard"], true)}`,
-            `Soporte: ${resolveField(d, ["hasStand", "stand", "soporte"], true)}`,
-            `Adaptador de Red: ${resolveField(d, ["hasNetworkAdapter", "networkAdapter"], true)}`,
-            `Adaptador de Memoria: ${resolveField(d, ["hasMemoryAdapter", "memoryAdapter"], true)}`,
-            `Pantalla(s) Externa(s): ${resolveField(d, ["hasScreen", "screen", "pantalla"], true)}`,
-            ...(resolveField(d, ["hasScreen", "screen"], true) === 'Sí' ? [`Cantidad de Pantallas: ${resolveField(d, ["screenCount", "screens"])}`] : []),
-            `HUB: ${resolveField(d, ["hasHub", "hub"], true)}`,
           ]
         : [];
 
-      const phoneLines = isSmartphone
+      const phoneLines = isCelular
         ? [
-            `Procesador: ${resolveField(d, ["cpu", "processor", "chip"])}`,
-            `RAM (GB): ${resolveField(d, ["ram", "memory"])}`,
-            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento"])}`,
-            `IMEI: ${resolveField(d, ["imei", "imei1"], false, true)}`,
-            `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
-            `Funda/Case: ${resolveField(d, ["hasCase", "case", "hasBag", "bagIncluded"], true)}`,
-            `Mica/Protector: ${resolveField(d, ["hasScreenProtector", "screenProtector", "mica"], true)}`,
+            `Número Celular: ${resolveField(d, ["chipNumber", "phoneNumber", "phone", "number", "telefono", "numeroCelular", "celular"])}`,
+            `Operadora: ${resolveField(d, ["operator", "operadora", "carrier"])}`,
+            `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
+            `IMEI: ${resolveField(d, ["imeis", "imei", "imei1"], false, true)}`,
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])}`,
+            `Color: ${resolveField(d, ["color"])}`,
+            `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Cable de carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
+            `Estuche/Case: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
+            `Mica: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
+            `Chip: ${resolveField(d, ["hasChip", "chip"], true)}`,
           ]
         : [];
 
@@ -320,9 +326,18 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
         return true;
       });
       
+      // Debug: mostrar en consola los datos del dispositivo
+      console.log(`[getDeviceLines] Device ${d.code || d.assetCode}:`, {
+        assetType: typeLabel,
+        attributesJson: d.attributesJson,
+        attributes: d.attributes,
+        rawDevice: d,
+        filteredLinesCount: filteredLines.length
+      });
+      
       // Si no hay atributos específicos (solo quedan las baseLines), mostrar mensaje
       let displayLines = filteredLines;
-      if (filteredLines.length <= 5) {
+      if (filteredLines.length <= 4) {
         displayLines = [
           ...baseLines.filter(l => !l.includes(': -')),
           `[Sin atributos específicos registrados]`
@@ -432,20 +447,42 @@ const GenerateActaModal = ({ open, onOpenChange, user }: GenerateActaModalProps)
     doc.setFont("helvetica", "normal");
 
     // Primer párrafo: responsabilidad y reporte
-    const legalText1 = `El receptor de los equipos tecnológicos (colaborador) es responsable de su uso adecuado y mantenimiento en condiciones óptimas. Deberá reportar de manera inmediata cualquier daño, falla, pérdida o incidente al Departamento de Tecnología a la dirección dep-sistemas@recursos-tecnologicos.com.`;
+    const legalText1 = `El receptor de los equipos tecnológicos (en adelante, el/la/los/las colaboradores) es responsable de su uso adecuado y del mantenimiento en condiciones óptimas, conforme a las instrucciones y políticas establecidas por la empresa.`;
 
     const splitLegal1 = doc.splitTextToSize(legalText1, 180);
     
-    if (currentY + splitLegal1.length * 2.5 > pageHeight - 70) {
+    if (currentY + splitLegal1.length * 2.5 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitLegal1, 15, currentY);
-    currentY += splitLegal1.length * 2.5 + 3;
+    currentY += splitLegal1.length * 2.5 + 2;
+
+    // Segundo párrafo: reporte de incidentes
+    doc.setFont("helvetica", "normal");
+    const legalText2 = `Será responsabilidad de el/la/los/las colaborador/es/as reportar de manera inmediata cualquier daño, falla, pérdida o incidente que afecte el funcionamiento del equipo, mediante correo electrónico dirigido al Departamento de Tecnología a la dirección`;
+
+    const splitLegal2 = doc.splitTextToSize(legalText2, 180);
+    
+    if (currentY + splitLegal2.length * 2.5 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    doc.text(splitLegal2, 15, currentY);
+    currentY += splitLegal2.length * 2.5;
+
+    // Correo en negritas
+    doc.setFont("helvetica", "bold");
+    doc.text("dep-sistemas@recursos-tecnologicos.com.", 15, currentY);
+    doc.setFont("helvetica", "normal");  // Restaurar fuente normal
+    currentY += 4;
 
     // Segundo párrafo: Se considera mal uso con letras a) a g)
+    doc.setFont("helvetica", "normal");
     const malUsoText = `Se considera mal uso:
 a) Manipulación indebida de componentes internos.
 b) Instalación de software no autorizado.
@@ -457,14 +494,14 @@ g) Modificación física sin autorización.`;
 
     const splitMalUso = doc.splitTextToSize(malUsoText, 180);
     
-    if (currentY + splitMalUso.length * 2.5 > pageHeight - 70) {
+    if (currentY + splitMalUso.length * 2.5 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitMalUso, 15, currentY);
-    currentY += splitMalUso.length * 2.5 + 3;
+    currentY += splitMalUso.length * 2.5 + 2;
 
     // Tercer párrafo: En caso de robo con puntos
     const roboText = `En caso de robo, el colaborador deberá presentar denuncia ante las autoridades:
@@ -474,29 +511,29 @@ g) Modificación física sin autorización.`;
 
     const splitRobo = doc.splitTextToSize(roboText, 180);
     
-    if (currentY + splitRobo.length * 2.5 > pageHeight - 70) {
+    if (currentY + splitRobo.length * 2.5 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitRobo, 15, currentY);
-    currentY += splitRobo.length * 2.5 + 3;
+    currentY += splitRobo.length * 2.5 + 2;
 
-    // Cuarto párrafo: Costo de reposición en negritas
-    doc.setFont("helvetica", "bold");
+    // Cuarto párrafo: Costo de reposición (sin negritas)
+    doc.setFont("helvetica", "normal");
     const costoText = `El costo de reposición se calculará en función del valor comercial actual de un equipo de características equivalentes al entregado.`;
 
     const splitCosto = doc.splitTextToSize(costoText, 180);
     
-    if (currentY + splitCosto.length * 2.5 > pageHeight - 70) {
+    if (currentY + splitCosto.length * 2.5 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitCosto, 15, currentY);
-    currentY += splitCosto.length * 2.5 + 3;
+    currentY += splitCosto.length * 2.5 + 2;
 
     // Quinto párrafo: Valores de reposición sin negritas
     doc.setFont("helvetica", "normal");
@@ -504,17 +541,17 @@ g) Modificación física sin autorización.`;
 
     const splitValores = doc.splitTextToSize(valoresText, 180);
     
-    if (currentY + splitValores.length * 2.5 > pageHeight - 70) {
+    if (currentY + splitValores.length * 2.5 > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
     doc.text(splitValores, 15, currentY);
-    currentY += splitValores.length * 2.5 + 4;
+    currentY += splitValores.length * 2.5 + 3;
 
     // ===== SECCIÓN FINAL: ACEPTACIÓN EXPRESA y firmas =====
-    if (currentY > pageHeight - 65) {
+    if (currentY > pageHeight - 50) {
       doc.addPage();
       addHeader();
       currentY = 35;

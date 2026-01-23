@@ -204,7 +204,7 @@ export const mockAssets: Asset[] = [
   {
     id: '2',
     assetCode: 'PHONE-001',
-    assetType: 'smartphone',
+    assetType: 'celular',
     serialNumber: 'IMEI123456',
     brand: 'Samsung',
     model: 'Galaxy S23',
