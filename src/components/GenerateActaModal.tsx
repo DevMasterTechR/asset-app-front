@@ -504,7 +504,8 @@ g) Modificación física sin autorización.`;
     // Texto de aceptación más compacto
     doc.setFontSize(6.5);
     doc.setFont("helvetica", "normal");
-    const acceptanceText = `Yo, ___________________________________________, con C.I. No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados. Me comprometo a hacer uso adecuado de los mismos y acepto que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos o liquidación final.`;
+    // Línea de firma más larga después de 'Yo,'
+    const acceptanceText = `Yo, __________________________________________________________________________________, con C.I. No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados. Me comprometo a hacer uso adecuado de los mismos y acepto que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos o liquidación final.`;
     
     const splitAcceptance = doc.splitTextToSize(acceptanceText, 180);
     doc.text(splitAcceptance, 15, currentY);
