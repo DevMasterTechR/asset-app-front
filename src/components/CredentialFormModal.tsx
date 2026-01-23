@@ -12,12 +12,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import SearchableSelect from '@/components/ui/searchable-select';
-import { peopleApi } from '@/api/people';
 import { Textarea } from '@/components/ui/textarea';
-import { sortByString } from '@/lib/sort';
+import { Loader2, Eye, EyeOff } from 'lucide-react';
 import { Credential, CreateCredentialDto, SystemType } from '@/api/credentials';
 import { Person } from '@/data/mockDataExtended';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
 
 interface CredentialFormModalProps {
   open: boolean;
@@ -32,6 +30,7 @@ const systemOptions: { value: SystemType; label: string }[] = [
   { value: 'erp', label: 'ERP - Sistema de Planificación' },
   { value: 'crm', label: 'CRM - Gestión de Clientes' },
   { value: 'email', label: 'Email - Correo Electrónico' },
+  { value: 'tefl', label: 'TEFL - Número telefónico' },
 ];
 
 export default function CredentialFormModal({
@@ -40,7 +39,7 @@ export default function CredentialFormModal({
   onSave,
   credential,
   mode,
-  people
+  people = [],
 }: CredentialFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -48,212 +47,191 @@ export default function CredentialFormModal({
     personId: 0,
     username: '',
     password: '',
-    system: 'erp',
+    system: 'erp' as SystemType,
     notes: ''
   });
 
+  // Reset form cuando cambia el modal
   useEffect(() => {
-    if (credential && mode === 'edit') {
-      setFormData({
-        personId: credential.personId,
-        username: credential.username,
-        password: credential.password,
-        system: credential.system,
-        notes: credential.notes || ''
-      });
-    } else if (mode === 'create') {
-      setFormData({
-        personId: 0,
-        username: '',
-        password: '',
-        system: 'erp',
-        notes: ''
-      });
+    if (open) {
+      if (credential && mode === 'edit') {
+        setFormData({
+          personId: credential.personId,
+          username: credential.username,
+          password: credential.password,
+          system: credential.system,
+          notes: credential.notes || ''
+        });
+      } else {
+        setFormData({
+          personId: 0,
+          username: '',
+          password: '',
+          system: 'erp',
+          notes: ''
+        });
+      }
+      setShowPassword(false);
     }
-    setShowPassword(false);
   }, [credential, mode, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!formData.personId || formData.personId === 0) {
-      alert('Por favor selecciona una persona');
+      alert('Por favor selecciona una persona 👤');
       return;
     }
 
     setLoading(true);
-    
     try {
       await onSave(formData);
       onOpenChange(false);
     } catch (error) {
-      console.error('Error al guardar:', error);
+      console.error('Error al guardar credencial:', error);
+      alert('Error al guardar. Revisa los datos e inténtalo de nuevo ⚠️');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleChange = (field: keyof CreateCredentialDto, value: string | number | undefined) => {
+  const handleChange = (field: keyof CreateCredentialDto, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
-  // Calcular la etiqueta de la persona directamente para el render actual
-  const currentPersonLabel = useMemo(() => {
-    if (mode !== 'edit' || !credential?.personId) return undefined;
-    const pid = credential.personId;
-    
-    // Intentar obtener de credential si tiene person anidado
-    const personFromCredential = (credential as any).person;
-    if (personFromCredential) {
-      return `${personFromCredential.firstName || ''} ${personFromCredential.lastName || ''} (${personFromCredential.username || ''})`.trim();
-    }
-    
-    // Intentar obtener de la prop people (comparar como números)
-    if (people && pid) {
-      const found = people.find(p => Number(p.id) === Number(pid));
-      if (found) {
-        return `${found.firstName || ''} ${found.lastName || ''} (${(found as any).username || ''})`.trim();
-      }
-    }
-    return undefined;
-  }, [credential, mode, people]);
+  // Opciones de personas para el select
+  const personOptions = useMemo(() => 
+    people.map(person => ({
+      value: String(person.id),
+      label: `${person.firstName || ''} ${person.lastName || ''}`.trim() || `ID: ${person.id}`
+    }))
+    .sort((a, b) => a.label.localeCompare(b.label)),
+  [people]);
 
-  // Opciones para el select de persona
-  const personSelectOptions = useMemo(() => {
-    if (mode === 'edit' && credential?.personId && currentPersonLabel) {
-      return [{ label: currentPersonLabel, value: String(credential.personId) }];
-    }
-    return [];
-  }, [mode, credential?.personId, currentPersonLabel]);
+  // Valor actual del select de persona
+  const personValue = useMemo(() => 
+    formData.personId ? String(formData.personId) : null, 
+  [formData.personId]);
+
+  const isTefl = formData.system === 'tefl';
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Agregar Credencial' : 'Editar Credencial'}
+            {mode === 'create' ? 'Nueva Credencial 🔑' : 'Editar Credencial'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create' 
-              ? 'Registra las credenciales de acceso del usuario'
-              : 'Modifica los datos de la credencial'}
+              ? 'Registra las credenciales de acceso del usuario.' 
+              : 'Modifica los datos de la credencial existente.'
+            }
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Persona */}
+          {/* Selección de Persona */}
           <div className="space-y-2">
-            <Label htmlFor="personId">
-              Persona <span className="text-destructive">*</span>
-            </Label>
-              <SearchableSelect
-                key={`person-select-${credential?.id || 'new'}-${open}`}
-                value={formData.personId ? formData.personId.toString() : ''}
-                onValueChange={(value) => handleChange('personId', Number(value))}
-                placeholder="Selecciona una persona"
-                searchPlaceholder="Buscar persona..."
-                options={personSelectOptions}
-                initialLabel={currentPersonLabel}
-                onSearch={async (q) => {
-                  // call people API with search query, return mapped options
-                  try {
-                    const res = await peopleApi.getAll(undefined, 10, q);
-                    const list = Array.isArray(res) ? res : res.data;
-                    return (list as any[]).map((p) => ({ label: `${p.firstName} ${p.lastName} (${p.username || ''})`, value: String(p.id) }));
-                  } catch (err) {
-                    return [];
-                  }
-                }}
-              />
-          </div>
-          {/* Sistema */}
-          <div className="space-y-2">
-            <Label htmlFor="system">
-              Sistema <span className="text-destructive">*</span>
-            </Label>
+            <Label htmlFor="person">Persona <span className="text-red-500">*</span></Label>
             <SearchableSelect
-              value={formData.system}
-              onValueChange={(value) => handleChange('system', value as SystemType)}
-              placeholder="Selecciona sistema"
-              options={systemOptions.map(s => ({ label: s.label, value: s.value }))}
+              options={personOptions}
+              value={personValue}
+              onValueChange={(value) => handleChange('personId', Number(value))}
+              placeholder="Busca y selecciona una persona..."
             />
           </div>
 
-          {/* Usuario */}
+          {/* Selección de Sistema */}
+          <div className="space-y-2">
+            <Label htmlFor="system">Sistema <span className="text-red-500">*</span></Label>
+            <SearchableSelect
+              options={systemOptions}
+              value={formData.system}
+              onValueChange={(value) => {
+                handleChange('system', value as SystemType);
+                // Reset username/password cuando cambia sistema
+                handleChange('username', '');
+                handleChange('password', '');
+              }}
+              placeholder="Selecciona el sistema..."
+            />
+          </div>
+
+          {/* Username / Número telefónico */}
           <div className="space-y-2">
             <Label htmlFor="username">
-              Usuario <span className="text-destructive">*</span>
+              {isTefl ? '📱 Número telefónico' : '👤 Usuario / Email'} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="username"
               value={formData.username}
               onChange={(e) => handleChange('username', e.target.value)}
-              placeholder="nombre.usuario o usuario@email.com"
+              placeholder={isTefl ? 'Ej: +593 99 123 4567' : 'usuario@empresa.com o nombredeusuario'}
               required
+              className="w-full"
             />
           </div>
 
-          {/* Contraseña */}
-          <div className="space-y-2">
-            <Label htmlFor="password">
-              Contraseña <span className="text-destructive">*</span>
-            </Label>
-            <div className="relative">
-              <Input
-                id="password"
-                type={showPassword ? 'text' : 'password'}
-                value={formData.password}
-                onChange={(e) => handleChange('password', e.target.value)}
-                placeholder="••••••••"
-                required
-                className="pr-10"
-              />
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="absolute right-0 top-0 h-full"
-                onClick={() => setShowPassword(!showPassword)}
-                tabIndex={-1}
-              >
-                {showPassword ? (
-                  <EyeOff className="h-4 w-4" />
-                ) : (
-                  <Eye className="h-4 w-4" />
-                )}
-              </Button>
+          {/* Contraseña (solo si NO es TEFL) */}
+          {!isTefl && (
+            <div className="space-y-2">
+              <Label htmlFor="password">🔒 Contraseña <span className="text-red-500">*</span></Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="password"
+                  type={showPassword ? 'text' : 'password'}
+                  value={formData.password}
+                  onChange={(e) => handleChange('password', e.target.value)}
+                  placeholder="Ingresa la contraseña segura"
+                  required
+                  className="flex-1"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="h-10 w-10 p-0"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Notas */}
           <div className="space-y-2">
-            <Label htmlFor="notes">Notas</Label>
+            <Label htmlFor="notes">📝 Observaciones</Label>
             <Textarea
               id="notes"
               value={formData.notes}
               onChange={(e) => handleChange('notes', e.target.value)}
-              placeholder="Observaciones adicionales sobre esta credencial..."
+              placeholder="Notas adicionales, instrucciones especiales, fecha de vencimiento, etc..."
               rows={3}
+              className="w-full"
             />
           </div>
 
-          <DialogFooter>
+          {/* Botones Footer */}
+          <DialogFooter className="gap-2 sm:gap-3">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={loading}
+              className="flex-1 sm:flex-none"
             >
               Cancelar
             </Button>
-            <Button type="submit" disabled={loading}>
+            <Button type="submit" disabled={loading || !formData.personId} className="flex-1 sm:flex-none">
               {loading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Guardando...
+                  {mode === 'create' ? 'Creando...' : 'Guardando...'}
                 </>
               ) : (
-                mode === 'create' ? 'Crear Credencial' : 'Guardar Cambios'
+                mode === 'create' ? 'Crear Credencial' : 'Actualizar'
               )}
             </Button>
           </DialogFooter>
