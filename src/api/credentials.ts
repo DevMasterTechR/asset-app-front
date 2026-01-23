@@ -4,30 +4,36 @@ import apiFetch from '@/lib/fetchClient';
 
 export type SystemType = 'erp' | 'crm' | 'email' | 'glpi' | 'tefl';
 
+
 export interface Credential {
   id: number;
   personId: number;
   username: string;
   password: string;
   system: SystemType;
+  phone?: string;
   notes?: string;
   createdAt?: string;
   updatedAt?: string;
 }
+
 
 export interface CreateCredentialDto {
   personId: number;
   username: string;
   password: string;
   system: SystemType;
+  phone?: string;
   notes?: string;
 }
+
 
 export interface UpdateCredentialDto {
   personId?: number;
   username?: string;
   password?: string;
   system?: SystemType;
+  phone?: string;
   notes?: string;
 }
 
@@ -54,11 +60,13 @@ export const credentialsApi = {
   },
 
   async create(data: CreateCredentialDto): Promise<Credential> {
+
     const cleanedData: CreateCredentialDto = {
       personId: Number(data.personId),
       username: data.username.trim(),
       password: data.password,
       system: data.system,
+      phone: data.phone?.trim() || undefined,
       notes: data.notes?.trim() || undefined,
     };
 
@@ -76,6 +84,7 @@ export const credentialsApi = {
     if (data.username) cleanedData.username = data.username.trim();
     if (data.password) cleanedData.password = data.password;
     if (data.system) cleanedData.system = data.system;
+    if (data.phone !== undefined) cleanedData.phone = data.phone.trim() || undefined;
     if (data.notes !== undefined) cleanedData.notes = data.notes.trim() || undefined;
 
     console.log(' Datos enviados al actualizar credencial:', cleanedData);

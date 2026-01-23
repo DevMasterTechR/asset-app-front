@@ -48,6 +48,7 @@ export default function CredentialFormModal({
     username: '',
     password: '',
     system: 'erp' as SystemType,
+    phone: '',
     notes: ''
   });
 
@@ -60,6 +61,7 @@ export default function CredentialFormModal({
           username: credential.username,
           password: credential.password,
           system: credential.system,
+          phone: credential.phone || '',
           notes: credential.notes || ''
         });
       } else {
@@ -68,6 +70,7 @@ export default function CredentialFormModal({
           username: '',
           password: '',
           system: 'erp',
+          phone: '',
           notes: ''
         });
       }
@@ -95,7 +98,7 @@ export default function CredentialFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreateCredentialDto, value: string | number) => {
+  const handleChange = (field: keyof CreateCredentialDto | 'phone', value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -158,18 +161,33 @@ export default function CredentialFormModal({
             />
           </div>
 
-          {/* Username / Número telefónico */}
+          {/* Username */}
           <div className="space-y-2">
             <Label htmlFor="username">
-              {isTefl ? ' Número telefónico' : ' Usuario / Email'} <span className="text-red-500">*</span>
+              Usuario / Email <span className="text-red-500">*</span>
             </Label>
             <Input
               id="username"
               value={formData.username}
               onChange={(e) => handleChange('username', e.target.value)}
-              placeholder={isTefl ? 'Ej: +593 99 123 4567' : 'usuario@empresa.com o nombredeusuario'}
+              placeholder={'usuario@empresa.com o nombredeusuario'}
               required
               className="w-full"
+            />
+          </div>
+
+          {/* Teléfono */}
+          <div className="space-y-2">
+            <Label htmlFor="phone">Número telefónico</Label>
+            <Input
+              id="phone"
+              value={formData.phone}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              placeholder="Ej: +593991234567"
+              className="w-full"
+              type="tel"
+              pattern="^\+?[0-9\s-]{7,20}$"
+              maxLength={20}
             />
           </div>
 
