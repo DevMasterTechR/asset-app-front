@@ -603,6 +603,9 @@ export interface AssignmentReport {
 	deliveryCondition: string;
 	returnCondition?: string;
 	isActive: boolean; // true = activa, false = historial
+	mica?: string;
+	procesador?: string;
+	anioCompra?: number;
 }
 
 export const generateAssignmentsReportPDF = async (
@@ -757,7 +760,16 @@ export const generateAssignmentsReportPDF = async (
 			doc.rect(margin, y, pageWidth - 2 * margin, 8, 'F');
 		}
 
-		const assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}`.trim();
+		// Mostrar info especial según tipo
+		let assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}`.trim();
+		if (assignment.assetType && assignment.assetType.toLowerCase().includes('laptop')) {
+			// Laptop: mostrar procesador y año de compra
+			assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}${assignment.procesador ? ' - ' + assignment.procesador : ''}${assignment.anioCompra ? ' (' + assignment.anioCompra + ')' : ''}`.trim();
+		}
+		if (assignment.assetType && assignment.assetType.toLowerCase().includes('celular')) {
+			// Celular: mostrar mica
+			assetDisplay = `${assignment.assetBrand || ''} ${assignment.assetModel || ''}${assignment.mica ? ' - Mica: ' + assignment.mica : ''}`.trim();
+		}
 		const returnDateDisplay = assignment.returnDate 
 			? new Date(assignment.returnDate).toLocaleDateString('es-ES') 
 			: '-';

@@ -46,7 +46,7 @@ export default function PreviewAssignmentsReportModal({
   toast 
 }: {
   assignments: Assignment[];
-  assets: Array<{ id: string; code: string; name: string; brand?: string; model?: string; purchaseDate?: string; assetCode?: string }>;
+  assets: Array<{ id: string; code: string; name: string; brand?: string; model?: string; purchaseDate?: string; assetCode?: string; procesador?: string; mica?: string }>;
   people: Array<{ id: string; firstName: string; lastName: string }>;
   branches: Array<{ id: number; name: string }>;
   onClose: () => void;
@@ -101,6 +101,12 @@ export default function PreviewAssignmentsReportModal({
         deliveryCondition: a.deliveryCondition,
         returnCondition: a.returnCondition,
         isActive: !a.returnDate,
+        // Agregar procesador solo para laptop
+        procesador: assetType.toLowerCase().includes('laptop') ? assetFromList?.procesador || '' : undefined,
+        // Agregar mica solo para celular
+        mica: assetType.toLowerCase().includes('celular') ? assetFromList?.mica || '' : undefined,
+        // Agregar año de compra solo para laptop
+        anioCompra: assetType.toLowerCase().includes('laptop') && assetFromList?.purchaseDate ? new Date(assetFromList.purchaseDate).getFullYear() : undefined,
       };
     });
 
