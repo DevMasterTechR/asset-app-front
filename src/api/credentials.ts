@@ -62,7 +62,7 @@ export const credentialsApi = {
       notes: data.notes?.trim() || undefined,
     };
 
-    console.log('📤 Datos enviados al crear credencial:', cleanedData);
+    console.log(' Datos enviados al crear credencial:', cleanedData);
 
     const response = await apiFetch(`${API_URL}/credentials`, { method: 'POST', body: JSON.stringify(cleanedData) });
     await handleApiError(response);
@@ -78,7 +78,7 @@ export const credentialsApi = {
     if (data.system) cleanedData.system = data.system;
     if (data.notes !== undefined) cleanedData.notes = data.notes.trim() || undefined;
 
-    console.log('📤 Datos enviados al actualizar credencial:', cleanedData);
+    console.log(' Datos enviados al actualizar credencial:', cleanedData);
 
     const response = await apiFetch(`${API_URL}/credentials/${id}`, { method: 'PUT', body: JSON.stringify(cleanedData) });
     await handleApiError(response);

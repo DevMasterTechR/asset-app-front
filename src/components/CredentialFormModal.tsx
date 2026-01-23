@@ -79,7 +79,7 @@ export default function CredentialFormModal({
     e.preventDefault();
     
     if (!formData.personId || formData.personId === 0) {
-      alert('Por favor selecciona una persona 👤');
+      alert('Por favor selecciona una persona ');
       return;
     }
 
@@ -120,7 +120,7 @@ export default function CredentialFormModal({
       <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {mode === 'create' ? 'Nueva Credencial 🔑' : 'Editar Credencial'}
+            {mode === 'create' ? 'Nueva Credencial ' : 'Editar Credencial'}
           </DialogTitle>
           <DialogDescription>
             {mode === 'create' 
@@ -161,7 +161,7 @@ export default function CredentialFormModal({
           {/* Username / Número telefónico */}
           <div className="space-y-2">
             <Label htmlFor="username">
-              {isTefl ? '📱 Número telefónico' : '👤 Usuario / Email'} <span className="text-red-500">*</span>
+              {isTefl ? ' Número telefónico' : ' Usuario / Email'} <span className="text-red-500">*</span>
             </Label>
             <Input
               id="username"
@@ -176,7 +176,7 @@ export default function CredentialFormModal({
           {/* Contraseña (solo si NO es TEFL) */}
           {!isTefl && (
             <div className="space-y-2">
-              <Label htmlFor="password">🔒 Contraseña <span className="text-red-500">*</span></Label>
+              <Label htmlFor="password"> Contraseña <span className="text-red-500">*</span></Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="password"
@@ -202,7 +202,7 @@ export default function CredentialFormModal({
 
           {/* Notas */}
           <div className="space-y-2">
-            <Label htmlFor="notes">📝 Observaciones</Label>
+            <Label htmlFor="notes"> Observaciones</Label>
             <Textarea
               id="notes"
               value={formData.notes}
