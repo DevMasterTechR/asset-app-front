@@ -698,6 +698,7 @@ const Index = () => {
                       <th className="px-4 py-3">Persona</th>
                       <th className="px-4 py-3">Sucursal</th>
                       <th className="px-4 py-3">Equipos</th>
+                      <th className="px-4 py-3">Estado Acta</th>
                       <th className="px-4 py-3">Acción</th>
                     </tr>
                   </thead>
@@ -740,6 +741,26 @@ const Index = () => {
                                 <span className="text-muted-foreground">Sin equipos</span>
                               )}
                             </div>
+                          </td>
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const actaMap: Record<string, { label: string; color: string }> = {
+                                no_generada: { label: 'No generada', color: 'bg-gray-200 text-gray-700' },
+                                acta_generada: { label: 'Acta generada', color: 'bg-blue-100 text-blue-700' },
+                                firmada: { label: 'Firmada', color: 'bg-green-100 text-green-700' },
+                              };
+                              if (!u.devices || u.devices.length === 0) {
+                                return <span className="text-muted-foreground">-</span>;
+                              }
+                              const allStatuses = u.devices.map((d: any) => d.actaStatus || 'no_generada');
+                              const unique = Array.from(new Set(allStatuses));
+                              if (unique.length === 1) {
+                                const status = actaMap[unique[0] as string] || actaMap['no_generada'];
+                                return <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>;
+                              } else {
+                                return <span className="inline-block rounded px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700">Mixto</span>;
+                              }
+                            })()}
                           </td>
                           <td className="px-4 py-3">
                             <Button

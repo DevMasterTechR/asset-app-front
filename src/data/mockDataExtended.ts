@@ -42,6 +42,8 @@ export interface AssetAttributes {
   charger?: boolean;
 }
 
+export type ActaStatus = 'no_generada' | 'acta_generada' | 'firmada';
+
 export interface Asset {
   id: string;
   assetCode: string;
@@ -57,6 +59,7 @@ export interface Asset {
   receivedDate?: string;
   notes?: string;
   attributes?: AssetAttributes;
+  actaStatus?: ActaStatus;
 }
 
 export interface Assignment {

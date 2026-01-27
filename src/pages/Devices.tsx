@@ -544,7 +544,6 @@ function DevicesPage() {
                         <TableCell className="text-sm">{formatDate(device.deliveryDate)}</TableCell>
                         <TableCell className="text-sm">{formatDate(device.receivedDate)}</TableCell>
                         <TableCell className="text-sm font-mono">{device.serialNumber || '-'}</TableCell>
-
                         <TableCell>
                           {device.status === 'loaned' && device.deliveryDate ? (() => {
                             const loan = loans.find(l => l.assetId === device.id && !l.returnDate);
@@ -565,7 +564,6 @@ function DevicesPage() {
                               {getStatusLabel(device)}
                             </Badge>
                           )}
-
                           {device.status === 'loaned' && device.deliveryDate && (() => {
                             const loan = loans.find(l => l.assetId === device.id && !l.returnDate);
                             if (!loan || !loan.loanDays) return null;
@@ -581,10 +579,8 @@ function DevicesPage() {
                             );
                           })()}
                         </TableCell>
-
                         <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
                         <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>
-
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(device)}>

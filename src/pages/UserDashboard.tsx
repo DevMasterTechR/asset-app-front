@@ -329,6 +329,17 @@ const UserDashboard = () => {
                   })()}</div>
                 </div>
                 <div>
+                  <div className="text-muted-foreground">Estado Acta</div>
+                  <div className="font-medium">{(() => {
+                    const map: Record<string, string> = {
+                      no_generada: 'No generada',
+                      acta_generada: 'Acta generada',
+                      firmada: 'Firmada',
+                    };
+                    return map[selectedAssignment.actaStatus || 'no_generada'] || 'No generada';
+                  })()}</div>
+                </div>
+                <div>
                   <div className="text-muted-foreground">Estado de asignación</div>
                   <div className="font-medium">{selectedAssignment.returnDate ? 'Devuelto' : 'Entregado'}</div>
                 </div>

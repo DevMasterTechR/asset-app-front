@@ -26,6 +26,8 @@ export const assetsApi = {
 
 export type DeviceStatus = 'available' | 'assigned' | 'maintenance' | 'decommissioned';
 
+export type ActaStatus = 'no_generada' | 'acta_generada' | 'firmada';
+
 export interface Device {
   id: number;
   assetCode: string;
@@ -48,6 +50,9 @@ export interface Device {
     name: string;
   };
   branchName?: string;
+
+  // Estado del acta: no_generada, acta_generada, firmada
+  actaStatus?: ActaStatus;
 }
 
 export interface CreateDeviceDto {
