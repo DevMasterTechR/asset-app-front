@@ -44,6 +44,8 @@ const systemColorMap = {
   crm: 'secondary' as const,
   email: 'outline' as const,
   glpi: 'success' as const,
+  tefl: 'default' as const,
+  phone: 'destructive' as const,
 };
 
 const systemLabelMap = {
@@ -51,6 +53,8 @@ const systemLabelMap = {
   crm: 'CRM',
   email: 'Email',
   glpi: 'GLPI',
+  tefl: 'TEFL',
+  phone: 'Teléfono',
 };
 
 function CredentialsPage() {
@@ -170,12 +174,13 @@ function CredentialsPage() {
     } else {
       autoTable(doc, {
         startY: y,
-        head: [['Persona', 'Sistema', 'Usuario', 'Contraseña', 'Notas']],
+        head: [['Persona', 'Sistema', 'Usuario', 'Contraseña', 'Teléfono', 'Notas']],
         body: data.map((cred) => [
           getPersonName(cred.personId),
           systemLabelMap[cred.system],
           cred.username,
           cred.password,
+          cred.phone || '-',
           cred.notes || '-'
         ]),
         theme: 'grid',
@@ -595,6 +600,7 @@ function CredentialsPage() {
                           <th className="px-3 py-2 text-left">Sistema</th>
                           <th className="px-3 py-2 text-left">Usuario</th>
                           <th className="px-3 py-2 text-left">Contraseña</th>
+                          <th className="px-3 py-2 text-left">Teléfono</th>
                           <th className="px-3 py-2 text-left">Notas</th>
                         </tr>
                       </thead>
@@ -605,6 +611,7 @@ function CredentialsPage() {
                             <td className="px-3 py-2 border-t">{systemLabelMap[cred.system]}</td>
                             <td className="px-3 py-2 border-t">{cred.username}</td>
                             <td className="px-3 py-2 border-t">{cred.password}</td>
+                            <td className="px-3 py-2 border-t">{cred.phone || '-'}</td>
                             <td className="px-3 py-2 border-t">{cred.notes || '-'}</td>
                           </tr>
                         ))}

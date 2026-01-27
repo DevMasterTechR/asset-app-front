@@ -4,6 +4,7 @@ import { StatsCard } from "@/components/StatsCard";
 import DevicesSummaryModal from '@/components/DevicesSummaryModal';
 import { DevicesTable } from "@/components/DevicesTable";
 import GenerateActaModal from "@/components/GenerateActaModal";
+import GenerateActaRecepcionModal from "@/components/GenerateActaRecepcionModal";
 import Pagination from "@/components/Pagination";
 import { devicesApi } from "@/api/devices";
 import * as consumablesApi from '@/api/consumables';
@@ -17,10 +18,12 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download, FileText } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from '@/hooks/use-toast';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
 const Index = () => {
+  const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [stats, setStats] = useState({ total: 0, assigned: 0, available: 0, maintenance: 0, decommissioned: 0 });
   const [devices, setDevices] = useState<any[]>([]);
@@ -33,8 +36,10 @@ const Index = () => {
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryCodes, setSummaryCodes] = useState<any[]>([]);
   const [summaryLoading, setSummaryLoading] = useState(false);
-  const [tab, setTab] = useState<'general' | 'byPerson'>('general');
+  const [tab, setTab] = useState<'general' | 'byPerson' | 'historialActas'>('general');
   const [people, setPeople] = useState<any[]>([]);
+  const [pageHistorial, setPageHistorial] = useState<number>(1);
+  const [limitHistorial, setLimitHistorial] = useState<number>(5);
   const [ownerModalOpen, setOwnerModalOpen] = useState(false);
   const [ownerSelection, setOwnerSelection] = useState<{ userId: string; userName: string; branch: string; devices: any[] } | null>(null);
   const [newOwnerId, setNewOwnerId] = useState<string>("");
@@ -50,6 +55,12 @@ const Index = () => {
   const [actaModalOpen, setActaModalOpen] = useState(false);
   const [selectedUserForActa, setSelectedUserForActa] = useState<any>(null);
   const [loans, setLoans] = useState<any[]>([]);
+  const [confirmFirmadaOpen, setConfirmFirmadaOpen] = useState(false);
+  const [userToMarkFirmada, setUserToMarkFirmada] = useState<any>(null);
+  const [actaRecepcionModalOpen, setActaRecepcionModalOpen] = useState(false);
+  const [selectedUserForActaRecepcion, setSelectedUserForActaRecepcion] = useState<any>(null);
+  const [confirmFirmadaRecepcionOpen, setConfirmFirmadaRecepcionOpen] = useState(false);
+  const [userToMarkFirmadaRecepcion, setUserToMarkFirmadaRecepcion] = useState<any>(null);
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -90,6 +101,7 @@ const Index = () => {
       ]);
 
       const devicesList = extractArray<any>(devicesRes) || [];
+      
       // Fetch consumables (inks, utp cables, rj45 connectors, power strips)
       let consumablesAll: any[] = [];
       try {
@@ -241,6 +253,7 @@ const Index = () => {
         const fullAsset = devicesList.find((d: any) => String(d.id) === String(a.assetId)) || a.asset;
 
         const dev = {
+          id: fullAsset?.id || a.assetId,
           type: a.asset?.assetType || fullAsset?.assetType || "Laptop",
           assetType: a.asset?.assetType || fullAsset?.assetType || "Laptop",
           model: a.asset?.model || fullAsset?.model || "",
@@ -254,6 +267,11 @@ const Index = () => {
           branchId: a.branchId || a.branch?.id || a.asset?.branchId,
           attributesJson: fullAsset?.attributesJson || a.asset?.attributesJson || {},
           deliveryNotes: a.deliveryNotes || '',
+          // actaStatus ahora viene de la asignación (AssignmentHistory), no del dispositivo
+          actaStatus: a.actaStatus || 'no_generada',
+          actaFirmadaAt: a.actaFirmadaAt || null,
+          actaRecepcionStatus: a.actaRecepcionStatus || 'no_generada',
+          actaRecepcionFirmadaAt: a.actaRecepcionFirmadaAt || null,
           branch:
             a.branch?.name ||
             a.branchName ||
@@ -537,11 +555,18 @@ const Index = () => {
   const displayedDevices = orderedDevices.slice((page - 1) * limit, page * limit);
   const hasOldInFiltered = filteredDevices.some((d) => isOlderThanFiveYears(d.purchaseDate));
 
-  const filteredUsers = userAssignments.filter((u) =>
-    `${u.userName} ${u.email} ${u.department} ${u.branch}`
+  const filteredUsers = userAssignments.filter((u) => {
+    // Excluir usuarios donde AMBAS actas estén firmadas (van al historial)
+    const allEntrega = u.devices?.every((d: any) => d.actaStatus === 'firmada') ?? false;
+    const allRecepcion = u.devices?.every((d: any) => d.actaRecepcionStatus === 'firmada') ?? false;
+    const bothCompleted = allEntrega && allRecepcion;
+    
+    if (bothCompleted) return false; // Van al historial
+    
+    return `${u.userName} ${u.email} ${u.department} ${u.branch}`
       .toLowerCase()
-      .includes(searchTerm.toLowerCase())
-  );
+      .includes(searchTerm.toLowerCase());
+  });
 
   const totalPagesByPerson = Math.max(1, Math.ceil(filteredUsers.length / limitByPerson));
   const displayedUsers = filteredUsers.slice((pageByPerson - 1) * limitByPerson, pageByPerson * limitByPerson);
@@ -653,11 +678,12 @@ const Index = () => {
           </div>
         </div>
 
-        {/* Tabs: General y Equipo por persona */}
-        <Tabs value={tab} onValueChange={(v) => setTab(v as 'general' | 'byPerson')} className="mt-6">
+        {/* Tabs: General, Equipo por persona e Historial de Actas */}
+        <Tabs value={tab} onValueChange={(v) => setTab(v as 'general' | 'byPerson' | 'historialActas')} className="mt-6">
           <TabsList>
             <TabsTrigger value="general">General</TabsTrigger>
             <TabsTrigger value="byPerson">Equipo por persona</TabsTrigger>
+            <TabsTrigger value="historialActas">Historial de Actas</TabsTrigger>
           </TabsList>
 
           <TabsContent value="general" className="mt-4">
@@ -698,14 +724,15 @@ const Index = () => {
                       <th className="px-4 py-3">Persona</th>
                       <th className="px-4 py-3">Sucursal</th>
                       <th className="px-4 py-3">Equipos</th>
-                      <th className="px-4 py-3">Estado Acta</th>
+                      <th className="px-4 py-3">Acta Entrega</th>
+                      <th className="px-4 py-3">Acta Recepción</th>
                       <th className="px-4 py-3">Acción</th>
                     </tr>
                   </thead>
                   <tbody>
                     {displayedUsers.length === 0 ? (
                       <tr>
-                        <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">No hay asignaciones activas para mostrar.</td>
+                        <td colSpan={6} className="px-4 py-6 text-center text-muted-foreground">No hay asignaciones activas para mostrar.</td>
                       </tr>
                     ) : (
                       displayedUsers.map((u) => (
@@ -754,27 +781,165 @@ const Index = () => {
                               }
                               const allStatuses = u.devices.map((d: any) => d.actaStatus || 'no_generada');
                               const unique = Array.from(new Set(allStatuses));
-                              if (unique.length === 1) {
-                                const status = actaMap[unique[0] as string] || actaMap['no_generada'];
-                                return <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>;
-                              } else {
+                              const currentStatus = unique.length === 1 ? unique[0] : 'mixed';
+                              
+                              if (currentStatus === 'mixed') {
                                 return <span className="inline-block rounded px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700">Mixto</span>;
                               }
+                              
+                              const status = actaMap[currentStatus as string] || actaMap['no_generada'];
+                              
+                              // Si es "acta_generada", mostrar checkbox para marcar como firmada
+                              if (currentStatus === 'acta_generada') {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>
+                                    <input
+                                      type="checkbox"
+                                      className="w-4 h-4 cursor-pointer"
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setUserToMarkFirmada(u);
+                                          setConfirmFirmadaOpen(true);
+                                          e.target.checked = false;
+                                        }
+                                      }}
+                                      title="Marcar como firmada"
+                                    />
+                                  </div>
+                                );
+                              }
+                              
+                              // Si está firmada, mostrar fecha/hora de Ecuador
+                              if (currentStatus === 'firmada') {
+                                const actaFirmadaAt = u.devices[0]?.actaFirmadaAt;
+                                const fechaFirma = actaFirmadaAt 
+                                  ? new Date(actaFirmadaAt).toLocaleString('es-EC', { 
+                                      timeZone: 'America/Guayaquil',
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  : '';
+                                return (
+                                  <div className="flex flex-col">
+                                    <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>
+                                    {fechaFirma && <span className="text-xs text-muted-foreground mt-1">{fechaFirma}</span>}
+                                  </div>
+                                );
+                              }
+                              
+                              return <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>;
+                            })()}
+                          </td>
+                          {/* Columna Acta Recepción */}
+                          <td className="px-4 py-3">
+                            {(() => {
+                              const actaMap: Record<string, { label: string; color: string }> = {
+                                no_generada: { label: 'No generada', color: 'bg-gray-200 text-gray-700' },
+                                acta_generada: { label: 'Acta generada', color: 'bg-blue-100 text-blue-700' },
+                                firmada: { label: 'Firmada', color: 'bg-green-100 text-green-700' },
+                              };
+                              if (!u.devices || u.devices.length === 0) {
+                                return <span className="text-muted-foreground">-</span>;
+                              }
+                              const allStatuses = u.devices.map((d: any) => d.actaRecepcionStatus || 'no_generada');
+                              const unique = Array.from(new Set(allStatuses));
+                              const currentStatus = unique.length === 1 ? unique[0] : 'mixed';
+                              
+                              if (currentStatus === 'mixed') {
+                                return <span className="inline-block rounded px-2 py-1 text-xs font-semibold bg-yellow-100 text-yellow-700">Mixto</span>;
+                              }
+                              
+                              const status = actaMap[currentStatus as string] || actaMap['no_generada'];
+                              
+                              // Si es "acta_generada", mostrar checkbox para marcar como firmada
+                              if (currentStatus === 'acta_generada') {
+                                return (
+                                  <div className="flex items-center gap-2">
+                                    <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>
+                                    <input
+                                      type="checkbox"
+                                      className="w-4 h-4 cursor-pointer"
+                                      onChange={(e) => {
+                                        if (e.target.checked) {
+                                          setUserToMarkFirmadaRecepcion(u);
+                                          setConfirmFirmadaRecepcionOpen(true);
+                                          e.target.checked = false;
+                                        }
+                                      }}
+                                      title="Marcar como firmada"
+                                    />
+                                  </div>
+                                );
+                              }
+                              
+                              // Si está firmada, mostrar fecha/hora de Ecuador
+                              if (currentStatus === 'firmada') {
+                                const actaFirmadaAt = u.devices[0]?.actaRecepcionFirmadaAt;
+                                const fechaFirma = actaFirmadaAt 
+                                  ? new Date(actaFirmadaAt).toLocaleString('es-EC', { 
+                                      timeZone: 'America/Guayaquil',
+                                      day: '2-digit',
+                                      month: '2-digit',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })
+                                  : '';
+                                return (
+                                  <div className="flex flex-col">
+                                    <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>
+                                    {fechaFirma && <span className="text-xs text-muted-foreground mt-1">{fechaFirma}</span>}
+                                  </div>
+                                );
+                              }
+                              
+                              return <span className={`inline-block rounded px-2 py-1 text-xs font-semibold ${status.color}`}>{status.label}</span>;
                             })()}
                           </td>
                           <td className="px-4 py-3">
-                            <Button
-                              size="sm"
-                              variant="outline"
-                              onClick={() => {
-                                setSelectedUserForActa(u);
-                                setActaModalOpen(true);
-                              }}
-                              className="gap-2"
-                            >
-                              <FileText className="h-4 w-4" />
-                              Generar acta
-                            </Button>
+                            {(() => {
+                              // Verificar si el acta de entrega está firmada
+                              const allEntregaStatuses = u.devices?.map((d: any) => d.actaStatus || 'no_generada') || [];
+                              const uniqueEntrega = Array.from(new Set(allEntregaStatuses));
+                              const entregaFirmada = uniqueEntrega.length === 1 && uniqueEntrega[0] === 'firmada';
+                              
+                              return (
+                                <div className="flex gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedUserForActa(u);
+                                      setActaModalOpen(true);
+                                    }}
+                                    className="gap-1"
+                                    title={entregaFirmada ? "Acta de Entrega ya firmada" : "Acta de Entrega"}
+                                    disabled={entregaFirmada}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    Entrega
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      setSelectedUserForActaRecepcion(u);
+                                      setActaRecepcionModalOpen(true);
+                                    }}
+                                    className="gap-1"
+                                    title={entregaFirmada ? "Acta de Recepción" : "Primero debe firmar el Acta de Entrega"}
+                                    disabled={!entregaFirmada}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    Recepción
+                                  </Button>
+                                </div>
+                              );
+                            })()}
                           </td>
                         </tr>
                       ))
@@ -794,6 +959,138 @@ const Index = () => {
                 />
               </div>
             </div>
+          </TabsContent>
+
+          {/* Historial de Actas - Asignaciones con ambas actas firmadas */}
+          <TabsContent value="historialActas" className="mt-4">
+            {(() => {
+              // Filtrar usuarios donde AMBAS actas estén firmadas
+              const completedUsers = userAssignments.filter((u) => {
+                if (!u.devices || u.devices.length === 0) return false;
+                const allEntrega = u.devices.every((d: any) => d.actaStatus === 'firmada');
+                const allRecepcion = u.devices.every((d: any) => d.actaRecepcionStatus === 'firmada');
+                return allEntrega && allRecepcion;
+              });
+              
+              const filteredCompletedUsers = completedUsers.filter((u) =>
+                `${u.userName} ${u.email} ${u.department} ${u.branch}`
+                  .toLowerCase()
+                  .includes(searchTerm.toLowerCase())
+              );
+              
+              const totalPagesHistorial = Math.max(1, Math.ceil(filteredCompletedUsers.length / limitHistorial));
+              const displayedHistorial = filteredCompletedUsers.slice((pageHistorial - 1) * limitHistorial, pageHistorial * limitHistorial);
+              
+              return (
+                <div className="border rounded-lg bg-card">
+                  <div className="p-4 flex items-center justify-between border-b">
+                    <div>
+                      <h3 className="text-lg font-semibold">Historial de Actas Completadas</h3>
+                      <p className="text-sm text-muted-foreground">Asignaciones donde ambas actas (Entrega y Recepción) están firmadas</p>
+                    </div>
+                    <Badge variant="secondary">{filteredCompletedUsers.length} registros</Badge>
+                  </div>
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead className="text-left">
+                        <tr className="border-b">
+                          <th className="px-4 py-3">Persona</th>
+                          <th className="px-4 py-3">Sucursal</th>
+                          <th className="px-4 py-3">Equipos</th>
+                          <th className="px-4 py-3">Acta Entrega</th>
+                          <th className="px-4 py-3">Acta Recepción</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {displayedHistorial.length === 0 ? (
+                          <tr>
+                            <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
+                              No hay actas completadas para mostrar.
+                            </td>
+                          </tr>
+                        ) : (
+                          displayedHistorial.map((u) => (
+                            <tr key={u.userId} className="border-b last:border-b-0">
+                              <td className="px-4 py-3 font-medium">{u.userName || 'Desconocido'}</td>
+                              <td className="px-4 py-3 text-muted-foreground">{u.branch || '-'}</td>
+                              <td className="px-4 py-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {u.devices && u.devices.length > 0 ? (
+                                    u.devices.map((d: any, idx: number) => (
+                                      <span
+                                        key={`${u.userId}-hist-${idx}`}
+                                        className="inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm border border-green-200 bg-green-50 text-green-700"
+                                      >
+                                        {d.code || 'SIN-CODIGO'}
+                                      </span>
+                                    ))
+                                  ) : (
+                                    <span className="text-muted-foreground">Sin equipos</span>
+                                  )}
+                                </div>
+                              </td>
+                              <td className="px-4 py-3">
+                                {(() => {
+                                  const actaFirmadaAt = u.devices[0]?.actaFirmadaAt;
+                                  const fechaFirma = actaFirmadaAt 
+                                    ? new Date(actaFirmadaAt).toLocaleString('es-EC', { 
+                                        timeZone: 'America/Guayaquil',
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })
+                                    : '-';
+                                  return (
+                                    <div className="flex flex-col">
+                                      <span className="inline-block rounded px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 w-fit">Firmada</span>
+                                      <span className="text-xs text-muted-foreground mt-1">{fechaFirma}</span>
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+                              <td className="px-4 py-3">
+                                {(() => {
+                                  const actaRecepcionFirmadaAt = u.devices[0]?.actaRecepcionFirmadaAt;
+                                  const fechaFirma = actaRecepcionFirmadaAt 
+                                    ? new Date(actaRecepcionFirmadaAt).toLocaleString('es-EC', { 
+                                        timeZone: 'America/Guayaquil',
+                                        day: '2-digit',
+                                        month: '2-digit',
+                                        year: 'numeric',
+                                        hour: '2-digit',
+                                        minute: '2-digit'
+                                      })
+                                    : '-';
+                                  return (
+                                    <div className="flex flex-col">
+                                      <span className="inline-block rounded px-2 py-1 text-xs font-semibold bg-green-100 text-green-700 w-fit">Firmada</span>
+                                      <span className="text-xs text-muted-foreground mt-1">{fechaFirma}</span>
+                                    </div>
+                                  );
+                                })()}
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="mt-4 flex items-center justify-end gap-4 p-4">
+                    <span className="text-sm text-muted-foreground">Página {pageHistorial} / {totalPagesHistorial}</span>
+                    <Pagination
+                      page={pageHistorial}
+                      totalPages={totalPagesHistorial}
+                      onPageChange={(p) => setPageHistorial(p)}
+                      limit={limitHistorial}
+                      onLimitChange={(l) => { setLimitHistorial(l); setPageHistorial(1); }}
+                      limits={[5,10,15,20]}
+                    />
+                  </div>
+                </div>
+              );
+            })()}
           </TabsContent>
         </Tabs>
 
@@ -854,13 +1151,138 @@ const Index = () => {
         )}
 
         {/* Se eliminó la previsualización; descarga directa del PDF */}
+
+        {/* Modal de confirmación para marcar como firmada */}
+        {confirmFirmadaOpen && userToMarkFirmada && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+            <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+              <div className="bg-orange-50 text-orange-700 px-4 py-3 rounded-t-lg border-b border-orange-100 font-semibold">
+                ⚠️ ADVERTENCIA: ACCIÓN IRREVERSIBLE
+              </div>
+              <div className="p-4 space-y-4">
+                <div>
+                  <p className="text-sm text-muted-foreground">Usuario</p>
+                  <p className="text-base font-semibold">{userToMarkFirmada.userName}</p>
+                </div>
+
+                <div className="rounded border border-orange-200 bg-orange-50 text-orange-800 px-4 py-3 text-sm">
+                  <p className="font-semibold mb-2">⚠️ Una vez puesto que la acta está firmada no se puede cambiar.</p>
+                  <p>Esta acción marcará todos los dispositivos de este usuario como firmados de forma permanente.</p>
+                </div>
+
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button 
+                    variant="outline" 
+                    onClick={() => {
+                      setConfirmFirmadaOpen(false);
+                      setUserToMarkFirmada(null);
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                  <Button 
+                    variant="default" 
+                    onClick={async () => {
+                      try {
+                        // Obtener fecha/hora actual en Ecuador (UTC-5)
+                        const ecuadorDate = new Date().toLocaleString('es-EC', { timeZone: 'America/Guayaquil' });
+                        const actaFirmadaAt = new Date().toISOString();
+                        
+                        // Actualizar todas las ASIGNACIONES del usuario a "firmada" con fecha
+                        const updatePromises = userToMarkFirmada.devices.map((device: any) =>
+                          assignmentsApi.updateActaStatus(String(device.assignmentId), 'firmada', actaFirmadaAt)
+                        );
+                        await Promise.all(updatePromises);
+                        toast({ title: 'Éxito', description: 'Acta marcada como firmada correctamente' });
+                        setConfirmFirmadaOpen(false);
+                        setUserToMarkFirmada(null);
+                        loadData(); // Recargar los datos
+                      } catch (error) {
+                        console.error('Error al marcar acta como firmada:', error);
+                        toast({ title: 'Error', description: 'Error al marcar acta como firmada', variant: 'destructive' });
+                      }
+                    }}
+                  >
+                    Aceptar y marcar como firmada
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* Modal Generar Acta */}
+      {/* Modal Generar Acta Entrega */}
       <GenerateActaModal
         open={actaModalOpen}
         onOpenChange={setActaModalOpen}
         user={selectedUserForActa}
+        onActaGenerated={loadData}
+      />
+
+      {/* Modal de confirmación para marcar Acta Recepción como firmada */}
+      {confirmFirmadaRecepcionOpen && userToMarkFirmadaRecepcion && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div className="bg-orange-50 text-orange-700 px-4 py-3 rounded-t-lg border-b border-orange-100 font-semibold">
+              ⚠️ ADVERTENCIA: ACCIÓN IRREVERSIBLE
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Usuario</p>
+                <p className="text-base font-semibold">{userToMarkFirmadaRecepcion.userName}</p>
+              </div>
+
+              <div className="rounded border border-orange-200 bg-orange-50 text-orange-800 px-4 py-3 text-sm">
+                <p className="font-semibold mb-2">⚠️ Una vez puesto que el acta de recepción está firmada no se puede cambiar.</p>
+                <p>Esta acción marcará el acta de recepción de todos los dispositivos de este usuario como firmada de forma permanente.</p>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setConfirmFirmadaRecepcionOpen(false);
+                    setUserToMarkFirmadaRecepcion(null);
+                  }}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="default" 
+                  onClick={async () => {
+                    try {
+                      const actaRecepcionFirmadaAt = new Date().toISOString();
+                      
+                      // Actualizar todas las ASIGNACIONES del usuario a "firmada" con fecha
+                      const updatePromises = userToMarkFirmadaRecepcion.devices.map((device: any) =>
+                        assignmentsApi.updateActaRecepcionStatus(String(device.assignmentId), 'firmada', actaRecepcionFirmadaAt)
+                      );
+                      await Promise.all(updatePromises);
+                      toast({ title: 'Éxito', description: 'Acta de recepción marcada como firmada correctamente' });
+                      setConfirmFirmadaRecepcionOpen(false);
+                      setUserToMarkFirmadaRecepcion(null);
+                      loadData(); // Recargar los datos
+                    } catch (error) {
+                      console.error('Error al marcar acta de recepción como firmada:', error);
+                      toast({ title: 'Error', description: 'Error al marcar acta de recepción como firmada', variant: 'destructive' });
+                    }
+                  }}
+                >
+                  Aceptar y marcar como firmada
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal Generar Acta Recepción */}
+      <GenerateActaRecepcionModal
+        open={actaRecepcionModalOpen}
+        onOpenChange={setActaRecepcionModalOpen}
+        user={selectedUserForActaRecepcion}
+        onActaGenerated={loadData}
       />
     </Layout>
   );

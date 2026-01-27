@@ -2,7 +2,7 @@
 import { API_URL } from '@/lib/config';
 import apiFetch from '@/lib/fetchClient';
 
-export type SystemType = 'erp' | 'crm' | 'email' | 'glpi' | 'tefl';
+export type SystemType = 'erp' | 'crm' | 'email' | 'glpi' | 'tefl' | 'phone';
 
 
 export interface Credential {

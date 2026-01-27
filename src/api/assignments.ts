@@ -1,4 +1,5 @@
 import apiFetch from '@/lib/fetchClient'
+import type { ActaStatus } from '@/api/devices'
 
 // Helper para manejar errores de la API (local, igual que en otros módulos)
 const handleApiError = async (response: Response) => {
@@ -23,9 +24,13 @@ export interface UpdateAssignmentDto extends Partial<CreateAssignmentDto> {
   returnDate?: string
   returnCondition?: 'excellent' | 'good' | 'fair' | 'poor'
   returnNotes?: string
+  actaStatus?: ActaStatus
+  actaFirmadaAt?: string
+  actaRecepcionStatus?: ActaStatus
+  actaRecepcionFirmadaAt?: string
 }
 
-const mapBackendToFrontend = (b: any): Assignment & { asset?: any; person?: any; branch?: any } => {
+const mapBackendToFrontend = (b: any): Assignment & { asset?: any; person?: any; branch?: any; actaStatus?: string; actaFirmadaAt?: string; actaRecepcionStatus?: string; actaRecepcionFirmadaAt?: string } => {
   return {
     id: String(b.id),
     assetId: String(b.assetId),
@@ -37,6 +42,10 @@ const mapBackendToFrontend = (b: any): Assignment & { asset?: any; person?: any;
     returnCondition: b.returnCondition,
     deliveryNotes: b.deliveryNotes,
     returnNotes: b.returnNotes,
+    actaStatus: b.actaStatus || 'no_generada',
+    actaFirmadaAt: b.actaFirmadaAt || undefined,
+    actaRecepcionStatus: b.actaRecepcionStatus || 'no_generada',
+    actaRecepcionFirmadaAt: b.actaRecepcionFirmadaAt || undefined,
     // Incluir info relacionada si el backend la devuelve
     asset: b.asset ? {
       id: String(b.asset.id),
@@ -111,10 +120,42 @@ export const assignmentsApi = {
     if (payload.returnDate !== undefined) body.returnDate = payload.returnDate
     if (payload.returnCondition !== undefined) body.returnCondition = payload.returnCondition
     if (payload.returnNotes !== undefined) body.returnNotes = payload.returnNotes
+    if (payload.actaStatus !== undefined) body.actaStatus = payload.actaStatus
+    if (payload.actaFirmadaAt !== undefined) body.actaFirmadaAt = payload.actaFirmadaAt
+    if (payload.actaRecepcionStatus !== undefined) body.actaRecepcionStatus = payload.actaRecepcionStatus
+    if (payload.actaRecepcionFirmadaAt !== undefined) body.actaRecepcionFirmadaAt = payload.actaRecepcionFirmadaAt
 
     const res = await apiFetch(`/assignment-history/${id}`, { method: 'PUT', body: JSON.stringify(body) })
     await handleApiError(res)
     const data = await res.json()
+    // Si el backend devuelve { assignment, asset }
+    if (data && data.assignment) {
+      return mapBackendToFrontend(data.assignment)
+    }
+    return mapBackendToFrontend(data)
+  },
+
+  async updateActaStatus(id: string, actaStatus: ActaStatus, actaFirmadaAt?: string): Promise<Assignment> {
+    const body: any = { actaStatus }
+    if (actaFirmadaAt) body.actaFirmadaAt = actaFirmadaAt
+    const res = await apiFetch(`/assignment-history/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    await handleApiError(res)
+    const data = await res.json()
+    if (data && data.assignment) {
+      return mapBackendToFrontend(data.assignment)
+    }
+    return mapBackendToFrontend(data)
+  },
+
+  async updateActaRecepcionStatus(id: string, actaRecepcionStatus: ActaStatus, actaRecepcionFirmadaAt?: string): Promise<Assignment> {
+    const body: any = { actaRecepcionStatus }
+    if (actaRecepcionFirmadaAt) body.actaRecepcionFirmadaAt = actaRecepcionFirmadaAt
+    const res = await apiFetch(`/assignment-history/${id}`, { method: 'PUT', body: JSON.stringify(body) })
+    await handleApiError(res)
+    const data = await res.json()
+    if (data && data.assignment) {
+      return mapBackendToFrontend(data.assignment)
+    }
     return mapBackendToFrontend(data)
   },
 

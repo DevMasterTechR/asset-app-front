@@ -26,6 +26,7 @@ export const assetsApi = {
 
 export type DeviceStatus = 'available' | 'assigned' | 'maintenance' | 'decommissioned';
 
+// ActaStatus ahora está en AssignmentHistory, no en Device
 export type ActaStatus = 'no_generada' | 'acta_generada' | 'firmada';
 
 export interface Device {
@@ -50,9 +51,6 @@ export interface Device {
     name: string;
   };
   branchName?: string;
-
-  // Estado del acta: no_generada, acta_generada, firmada
-  actaStatus?: ActaStatus;
 }
 
 export interface CreateDeviceDto {
