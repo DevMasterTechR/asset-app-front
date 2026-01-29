@@ -553,26 +553,16 @@ g) Modificación física sin autorización.`;
     
     doc.setFont("helvetica", "bold");
     doc.text("Nota: ", 15, currentY);
-    const notaWidth = doc.getTextWidth("Nota: ");
+    let currentX = 15 + doc.getTextWidth("Nota: ");
     
     doc.setFont("helvetica", "normal");
     const notaText = "El mouse y el teclado se entregan nuevos, en óptimas condiciones y debidamente probados. Cualquier daño o pérdida será responsabilidad del colaborador, quien deberá asumir el ";
-    const splitNota = doc.splitTextToSize(notaText, 180 - notaWidth);
+    doc.text(notaText, currentX, currentY);
+    currentX += doc.getTextWidth(notaText);
     
-    // Primera línea después de "Nota: "
-    if (splitNota.length > 0) {
-      doc.text(splitNota[0], 15 + notaWidth, currentY);
-    }
-    // Resto de líneas
-    for (let i = 1; i < splitNota.length; i++) {
-      currentY += 4;
-      doc.text(splitNota[i], 15, currentY);
-    }
-    currentY += 4;
-    
-    // "100% del costo de reposición." en negritas
+    // "100% del costo de reposición." en negritas en la misma línea
     doc.setFont("helvetica", "bold");
-    doc.text("100% del costo de reposición.", 15, currentY);
+    doc.text("100% del costo de reposición.", currentX, currentY);
     doc.setFont("helvetica", "normal");
     currentY += 6;
 
@@ -689,14 +679,15 @@ g) Modificación física sin autorización.`;
     // Pie de página en todas las páginas
     addFooterToAllPages();
 
-    // Formato del nombre del archivo: Acta_Entrega_NombreCompleto_DDMMYYYY_HHMM.pdf
+    // Formato del nombre del archivo: Acta_Entrega_NombreCompleto_Sucursal_DDMMYYYY_HHMM.pdf
     const userName = user.userName?.replace(/\s+/g, "_") || "Usuario";
+    const userBranch = user.branch?.replace(/\s+/g, "_") || "SinSucursal";
     const day = String(today.getDate()).padStart(2, "0");
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const year = today.getFullYear();
     const hours = String(today.getHours()).padStart(2, "0");
     const minutes = String(today.getMinutes()).padStart(2, "0");
-    const fileName = `Acta_Entrega_${userName}_${day}${month}${year}_${hours}${minutes}.pdf`;
+    const fileName = `Acta_Entrega_${userName}_${userBranch}_${day}${month}${year}_${hours}${minutes}.pdf`;
     
     doc.save(fileName);
 

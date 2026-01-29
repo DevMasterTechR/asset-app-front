@@ -476,12 +476,13 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
 
     // Nombre del archivo
     const userName = user.userName?.replace(/\s+/g, "_") || "Usuario";
+    const userBranch = user.branch?.replace(/\s+/g, "_") || "SinSucursal";
     const day = String(today.getDate()).padStart(2, "0");
     const month = String(today.getMonth() + 1).padStart(2, "0");
     const year = today.getFullYear();
     const hours = String(today.getHours()).padStart(2, "0");
     const minutes = String(today.getMinutes()).padStart(2, "0");
-    const fileName = `Acta_Recepcion_${userName}_${day}${month}${year}_${hours}${minutes}.pdf`;
+    const fileName = `Acta_Recepcion_${userName}_${userBranch}_${day}${month}${year}_${hours}${minutes}.pdf`;
     
     doc.save(fileName);
 
