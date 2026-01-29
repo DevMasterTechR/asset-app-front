@@ -19,6 +19,7 @@ import { Device, CreateDeviceDto, DeviceStatus, devicesApi } from '@/api/devices
 import { extractArray } from '@/lib/extractData';
 import { assignmentsApi } from '@/api/assignments';
 import { sortBranchesByName } from '@/lib/sort';
+import { generateUniqueCodes } from '@/lib/generateUniqueCode';
 import { Loader2 } from 'lucide-react';
 
 declare global {
@@ -292,9 +293,25 @@ export default function DeviceFormModal({
 
       const iterations = mode === 'create' ? quantity : 1;
       
+      // Obtener el prefijo del tipo de dispositivo
+      const prefix = CODE_PREFIXES[formData.assetType as keyof typeof CODE_PREFIXES] || '';
+      
+      // Generar códigos únicos si hay prefijo y cantidad > 1
+      let uniqueCodes: string[] = [];
+      if (mode === 'create' && prefix && iterations > 1) {
+        // Obtener códigos existentes para evitar duplicados
+        const res = await devicesApi.getAll(undefined, 1, 5000);
+        const existingDevices = extractArray<any>(res) || [];
+        const existingCodes = new Set(existingDevices.map((d: any) => d.assetCode));
+        uniqueCodes = generateUniqueCodes(prefix, iterations, existingCodes);
+      }
+      
       for (let i = 0; i < iterations; i++) {
+        // Usar código único generado si existe, sino usar el del formulario
+        const assetCode = uniqueCodes[i] || formData.assetCode;
+        
         const cleanData: CreateDeviceDto = {
-          assetCode: formData.assetCode,
+          assetCode: assetCode,
           assetType: formData.assetType,
           brand: formData.brand || undefined,
           model: formData.model || undefined,

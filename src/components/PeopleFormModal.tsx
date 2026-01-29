@@ -116,8 +116,8 @@ export default function PersonFormModal({
 
     try {
       const cleanedData: Partial<CreatePersonDto> = {
-        firstName: formData.firstName.trim(),
-        lastName: formData.lastName.trim(),
+        firstName: formData.firstName.trim().toUpperCase(),
+        lastName: formData.lastName.trim().toUpperCase(),
         nationalId: formData.nationalId.trim(),
         username: formData.username?.trim() || undefined,
         status: formData.status,
@@ -191,9 +191,10 @@ export default function PersonFormModal({
               <Input
                 id="firstName"
                 value={formData.firstName}
-                onChange={(e) => handleChange('firstName', e.target.value)}
-                placeholder="Juan"
+                onChange={(e) => handleChange('firstName', e.target.value.toUpperCase())}
+                placeholder="JUAN"
                 required
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
             <div className="space-y-2">
@@ -201,9 +202,10 @@ export default function PersonFormModal({
               <Input
                 id="lastName"
                 value={formData.lastName}
-                onChange={(e) => handleChange('lastName', e.target.value)}
-                placeholder="Pérez"
+                onChange={(e) => handleChange('lastName', e.target.value.toUpperCase())}
+                placeholder="PÉREZ"
                 required
+                style={{ textTransform: 'uppercase' }}
               />
             </div>
           </div>
