@@ -178,14 +178,14 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     // Párrafo introductorio con formato similar al de la imagen
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const introText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
+    const introText = ` En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
     doc.text(introText, 15, 47);
     
-    // Nombre del suscrito en negritas
+    // Nombre del suscrito en negritas con espacio antes
     let textWidth = doc.getTextWidth(introText);
     doc.setFont("helvetica", "bold");
-    doc.text(subscriberName, 15 + textWidth, 47);
-    textWidth += doc.getTextWidth(subscriberName);
+    doc.text(` ${subscriberName}`, 15 + textWidth, 47);
+    textWidth += doc.getTextWidth(` ${subscriberName}`);
     
     doc.setFont("helvetica", "normal");
     const introText2 = `, portador de la cédula de identidad N.° `;
@@ -202,7 +202,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     textWidth = doc.getTextWidth(introLine2);
     
     doc.setFont("helvetica", "bold");
-    doc.text(collaboratorName, 15 + textWidth, 51);
+    doc.text(` ${collaboratorName}`, 15 + textWidth, 51);
     
     // Tercera línea
     doc.setFont("helvetica", "normal");
@@ -431,22 +431,23 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setFontSize(7);
     const lineY1 = currentY + 10;
     
-    // Nombre del suscrito (datos quemados) - estático
-    doc.text(subscriberName, leftColX, lineY1 - 2);
+    // Línea para nombre del responsable
+    doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
     doc.text("Nombre completo del responsable de entrega", leftColX, lineY1 + 3);
     
-    // C.I. del suscrito (datos quemados)
+    // C.I. del responsable con línea
     const lineY2 = currentY + 18;
-    doc.text(`C.I.: ${subscriberCI}`, leftColX, lineY2);
+    doc.text("C.I.: ", leftColX, lineY2);
+    doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
     
     // Línea para Firma
     const lineY3 = currentY + 28;
     doc.text("Firma: ", leftColX, lineY3);
     doc.line(leftColX + 10, lineY3, leftColX + colWidth, lineY3);
     
-    // Fecha actual
+    // Fecha vacía
     const lineY4 = currentY + 38;
-    doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, lineY4);
+    doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
     
     // Columna derecha: Entregado por (el colaborador - datos de la asignación)
     doc.setFontSize(8);
