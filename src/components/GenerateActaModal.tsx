@@ -248,7 +248,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     textWidth = doc.getTextWidth(introLine2);
     
     doc.setFont("helvetica", "bold");
-    doc.text(collaboratorName, 15 + textWidth, 51);
+    doc.text(` ${collaboratorName}`, 15 + textWidth, 51);
     
     // Tercera línea
     doc.setFont("helvetica", "normal");
@@ -669,25 +669,22 @@ g) Modificación física sin autorización.`;
     doc.setFont("helvetica", "bold");
     doc.text("Entregado por:", rightColX, currentY);
     
-    // Nombre dinámico del usuario que generó el reporte
+    // Línea para nombre del responsable de entrega
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    const generatedUserName = currentUser?.firstName && currentUser?.lastName 
-      ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
-      : "ADMINISTRADOR";
-    const generatedUserCI = currentUser?.nationalId || "N/A";
-    doc.text(generatedUserName, rightColX, lineY1 - 2);
-    doc.text("Responsable de entrega", rightColX, lineY1 + 3);
+    doc.line(rightColX, lineY1, rightColX + colWidth, lineY1);
+    doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 3);
     
-    // C.I. del usuario que generó el reporte
-    doc.text(`C.I.: ${generatedUserCI}`, rightColX, lineY2);
+    // Línea para C.I.
+    doc.text("C.I.: ", rightColX, lineY2);
+    doc.line(rightColX + 8, lineY2, rightColX + colWidth, lineY2);
     
-    // Línea para Firma (vacía)
+    // Línea para Firma
     doc.text("Firma: ", rightColX, lineY3);
     doc.line(rightColX + 10, lineY3, rightColX + colWidth, lineY3);
     
-    // Fecha actual (se llena automáticamente)
-    doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
+    // Línea para Fecha
+    doc.text("Fecha: ____ / ____ / _______", rightColX, lineY4);
 
     // Pie de página en todas las páginas
     addFooterToAllPages();
