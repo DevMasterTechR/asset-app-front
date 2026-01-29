@@ -221,51 +221,37 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
 
     // Párrafo introductorio completo con saltos de línea controlados
     doc.setFontSize(8);
-    
-    // Primera línea
+    const maxWidth = pageWidth - 30; // Ancho máximo disponible
     let currentLineY = 47;
-    doc.setFont("helvetica", "normal");
-    const line1Text = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
-    doc.text(line1Text, 15, currentLineY);
-    let lineWidth = doc.getTextWidth(line1Text);
+    let currentX = 15;
     
-    doc.setFont("helvetica", "bold");
-    doc.text(subscriberName, 15 + lineWidth, currentLineY);
-    lineWidth += doc.getTextWidth(subscriberName);
+    // Función helper para escribir texto con control de ancho
+    const writeText = (text: string, isBold: boolean = false) => {
+      doc.setFont("helvetica", isBold ? "bold" : "normal");
+      const textWidth = doc.getTextWidth(text);
+      
+      // Si el texto se sale del margen, saltar a la siguiente línea
+      if (currentX + textWidth > pageWidth - 15) {
+        currentLineY += 4;
+        currentX = 15;
+      }
+      
+      doc.text(text, currentX, currentLineY);
+      currentX += textWidth;
+    };
     
-    doc.setFont("helvetica", "normal");
-    const text2 = `, portador de la cédula de identidad N.° `;
-    doc.text(text2, 15 + lineWidth, currentLineY);
-    lineWidth += doc.getTextWidth(text2);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(subscriberCI, 15 + lineWidth, currentLineY);
-    
-    // Segunda línea: procede a entregar... a JUAN PÉREZ con cédula...
-    currentLineY = 51;
-    doc.setFont("helvetica", "normal");
-    const line2TextPart1 = `procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a  `;
-    doc.text(line2TextPart1, 15, currentLineY);
-    lineWidth = doc.getTextWidth(line2TextPart1);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(collaboratorName, 15 + lineWidth, currentLineY);
-    lineWidth += doc.getTextWidth(collaboratorName);
-    
-    doc.setFont("helvetica", "normal");
-    const line2TextPart2 = ` con cédula de identidad N.° `;
-    doc.text(line2TextPart2, 15 + lineWidth, currentLineY);
-    lineWidth += doc.getTextWidth(line2TextPart2);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(collaboratorCI, 15 + lineWidth, currentLineY);
-    
-    // Tercera línea: conforme al siguiente detalle
-    currentLineY = 55;
-    doc.setFont("helvetica", "normal");
-    doc.text(`conforme al siguiente detalle:`, 15, currentLineY);
+    // Construir el párrafo parte por parte
+    writeText(`En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `);
+    writeText(subscriberName, true);
+    writeText(`, portador de la cédula de identidad N.° `);
+    writeText(subscriberCI, true);
+    writeText(` procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a  `);
+    writeText(collaboratorName, true);
+    writeText(` con cédula de identidad N.° `);
+    writeText(collaboratorCI, true);
+    writeText(` conforme al siguiente detalle:`);
 
-    let currentY = 62;
+    let currentY = currentLineY + 8;
 
     // Cuadros de detalles por dispositivo (AQUI, ANTES DE OBSERVACIONES)
     // Configuración para dos dispositivos por fila
