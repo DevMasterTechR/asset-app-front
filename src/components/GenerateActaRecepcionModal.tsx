@@ -29,30 +29,13 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   const [observations, setObservations] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
 
-  // Generar observaciones dinámicas desde las notas de cada asignación
-  const generateObservationsFromDevices = () => {
-    if (!user?.devices || user.devices.length === 0) return "";
-    
-    const notesPerDevice = user.devices
-      .filter((d: any) => {
-        const notes = d.deliveryNotes?.trim();
-        if (!notes) return false;
-        const isAutomatic = /asignación automática/i.test(notes);
-        return !isAutomatic;
-      })
-      .map((d: any) => d.deliveryNotes.trim());
-    
-    if (notesPerDevice.length === 0) return "";
-    
-    return notesPerDevice.join("\n");
-  };
-
+  // Las observaciones de recepción se ingresan manualmente
+  // ya que describen el estado en que se recibe el equipo
   useEffect(() => {
     if (open) {
-      const autoObservations = generateObservationsFromDevices();
-      setObservations(autoObservations);
+      setObservations("");
     }
-  }, [open, user]);
+  }, [open]);
 
   const generatedBy = currentUser?.firstName && currentUser?.lastName 
     ? `${currentUser.firstName} ${currentUser.lastName}` 
@@ -175,54 +158,43 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     const collaboratorName = user.userName?.toUpperCase() || "DESCONOCIDO";
     const collaboratorCI = user.nationalId || "No especificado";
 
-    // Párrafo introductorio con formato similar al de la imagen
+    // Párrafo introductorio - todo en un flujo continuo
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    const introText = ` En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
-    doc.text(introText, 15, 47);
     
-    // Nombre del suscrito en negritas con espacio antes
-    let textWidth = doc.getTextWidth(introText);
-    doc.setFont("helvetica", "bold");
-    doc.text(` ${subscriberName}`, 15 + textWidth, 47);
-    textWidth += doc.getTextWidth(` ${subscriberName}`);
-    
+    // Primera línea
     doc.setFont("helvetica", "normal");
-    const introText2 = `, portador de la cédula de identidad N.° `;
-    doc.text(introText2, 15 + textWidth, 47);
-    textWidth += doc.getTextWidth(introText2);
+    const intro1 = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
+    doc.text(intro1, 15, 47);
+    let xPos = 15 + doc.getTextWidth(intro1);
     
     doc.setFont("helvetica", "bold");
-    doc.text(subscriberCI, 15 + textWidth, 47);
+    doc.text(subscriberName, xPos, 47);
+    xPos += doc.getTextWidth(subscriberName);
     
-    // Segunda línea del párrafo - todo en una sola línea
     doc.setFont("helvetica", "normal");
-    const introLine2 = `declara haber recibido a satisfacción los siguientes equipos tecnológicos de `;
-    doc.text(introLine2, 15, 51);
-    textWidth = doc.getTextWidth(introLine2);
+    const intro2 = ` portador de la cédula de identidad N.° `;
+    doc.text(intro2, xPos, 47);
+    xPos += doc.getTextWidth(intro2);
     
     doc.setFont("helvetica", "bold");
-    doc.text(` ${collaboratorName}`, 15 + textWidth, 51);
-    textWidth += doc.getTextWidth(` ${collaboratorName}`);
+    doc.text(subscriberCI, xPos, 47);
     
+    // Segunda línea - continúa el párrafo
     doc.setFont("helvetica", "normal");
-    const introLine3Start = ` con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega emitida por la misma.`;
+    const intro3 = `declara haber recibido a satisfacción los siguientes equipos tecnológicos de `;
+    doc.text(intro3, 15, 51);
+    xPos = 15 + doc.getTextWidth(intro3);
     
-    // Siempre mantener todo en la misma línea o próxima sin saltos extraños
-    const availableWidth2 = pageWidth - 15 - textWidth - 15;
-    const wouldFit2 = doc.getTextWidth(introLine3Start) <= availableWidth2;
+    doc.setFont("helvetica", "bold");
+    doc.text(collaboratorName, xPos, 51);
+    xPos += doc.getTextWidth(collaboratorName);
     
-    if (wouldFit2) {
-      // Si cabe, ponerlo todo en la misma línea
-      doc.text(introLine3Start, 15 + textWidth, 51);
-      let currentY = 67;
-    } else {
-      // Si no cabe, partir en la siguiente línea directa sin saltos
-      doc.text(introLine3Start, 15, 55);
-      let currentY = 62;
-    }
+    // Tercera línea - continúa sin salto innecesario
+    doc.setFont("helvetica", "normal");
+    const intro4 = `con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega emitida por la misma.`;
+    doc.text(intro4, 15, 55);
 
-    let currentY = 67;
+    let currentY = 62;
 
     // Título "Detalle de los equipos:"
     doc.setFontSize(9);
