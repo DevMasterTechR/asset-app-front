@@ -469,7 +469,7 @@ function DevicesPage() {
             aria-label="Resumen dispositivos"
           >
             <div className="text-center">
-              <p className="text-2xl font-bold">{displayedDevices.length}</p>
+              <p className="text-2xl font-bold">{totalItems}</p>
               <p className="text-sm text-muted-foreground">Dispositivos</p>
             </div>
           </button>

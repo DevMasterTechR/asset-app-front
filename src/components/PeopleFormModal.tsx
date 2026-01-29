@@ -61,11 +61,8 @@ export default function PersonFormModal({
         // Username: primera letra del primer nombre + todo el primer apellido, minúsculas
         const autoUsername = firstNamePart && lastNamePart ? `${firstNamePart.charAt(0).toLowerCase()}${lastNamePart.toLowerCase()}` : '';
 
-        // Password: RT{año_actual}@{primera letra nombre mayúscula}{primera letra apellido mayúscula}
-        const year = new Date().getFullYear();
-        const firstInitial = firstNamePart ? firstNamePart.charAt(0).toUpperCase() : '';
-        const lastInitial = lastNamePart ? lastNamePart.charAt(0).toUpperCase() : '';
-        const autoPassword = firstNamePart && lastNamePart ? `RT${year}@${firstInitial}${lastInitial}` : '';
+        // Password: igual al username
+        const autoPassword = autoUsername;
 
         setFormData(prev => {
           let updated = { ...prev };

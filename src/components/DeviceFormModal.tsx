@@ -82,7 +82,7 @@ const deviceTypes = [
   { value: 'adaptador-memoria', label: 'Adaptador Memoria' },
   { value: 'adaptador-red', label: 'Adaptador Red' },
   { value: 'teclado', label: 'Teclado' },
-  { value: 'cargador-laptop', label: 'Cargador de Lapt' },
+  { value: 'cargador-laptop', label: 'Cargador de Laptop' },
   { value: 'cargador-celular', label: 'Cargador de Celular' },
   { value: 'cable-carga', label: 'Cable de Cargador Cel' },
   { value: 'server', label: 'Servidor' },
@@ -103,13 +103,19 @@ const CODE_PREFIXES: Record<string, string> = {
   mouse: 'MOSE - ',
   mousepad: 'MPAD - ',
   soporte: 'SPLP - ',
-  monitor: 'MONI - ',
+  monitor: 'MONT - ',
   teclado: 'TECLA - ',
-  'ip-phone': 'TELFIP - ',
+  desktop: 'DESK - ',
+  tablet: 'TAB - ',
+  server: 'SERV - ',
+  printer: 'IMPR - ',
+  'adaptador-memoria': 'ADMM - ',
+  'adaptador-red': 'ARED - ',
+  hub: 'HUB - ',
+  'ip-phone': 'TLIP - ',
   'cargador-laptop': 'CARGL - ',
   'cargador-celular': 'CARG - ',
   'cable-carga': 'CARGC - ',
-  // Agrega más aquí cuando necesites
 } as const;
 
 export default function DeviceFormModal({
