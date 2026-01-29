@@ -35,7 +35,6 @@ const getDeviceIcon = (type: string) => {
       return <Mouse className="h-4 w-4" />;
     case "móvil":
     case "celular":
-    case "celular":
       return <Smartphone className="h-4 w-4" />;
     case "servidor":
     case "server":
@@ -47,8 +46,6 @@ const getDeviceIcon = (type: string) => {
     case "soporte":
       // Usar Laptop como icono de soporte para laptop
       return <Laptop className="h-4 w-4" />;
-    case "monitor":
-      return <Monitor className="h-4 w-4" />;
     case "ip-phone":
       return <Phone className="h-4 w-4" />;
     case "mousepad":
