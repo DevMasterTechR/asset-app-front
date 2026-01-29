@@ -297,7 +297,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
             `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
             `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
             `IMEI: ${resolveField(d, ["imeis", "imei", "imei1"], false, true)}`,
-            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])}`,
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
             `Color: ${resolveField(d, ["color"])}`,
             `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
             `Cable de carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
