@@ -77,7 +77,7 @@ export default function People() {
   const loadData = async (pageParam = 1, limitParam = 10) => {
     try {
       const [peopleRes, branchesData, departmentsData, rolesData] = await Promise.all([
-        peopleApi.getAll(1, 99999),
+        peopleApi.getAll(),
         catalogsApi.getBranches(),
         catalogsApi.getDepartments(),
         catalogsApi.getRoles(),
@@ -90,10 +90,10 @@ export default function People() {
         setTotalPages(1);
       } else {
         setPeople(sortPeopleByName(peopleRes.data));
-        setTotalItems(Number(peopleRes.total) || 0);
-        setTotalPages(Number(peopleRes.totalPages) || 1);
-        setPage(Number(peopleRes.page) || pageParam);
-        setLimit(Number(peopleRes.limit) || limitParam);
+        setTotalItems(peopleRes.data.length);
+        setTotalPages(1);
+        setPage(pageParam);
+        setLimit(limitParam);
       }
 
       setBranches(sortBranchesByName(branchesData.map(b => ({ id: Number(b.id), name: b.name }))));
