@@ -158,47 +158,68 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     const collaboratorName = user.userName?.toUpperCase() || "DESCONOCIDO";
     const collaboratorCI = user.nationalId || "No especificado";
 
-    // Párrafo introductorio - todo en un flujo continuo
+    // Párrafo introductorio - usando splitTextToSize para respetar márgenes
     doc.setFontSize(8);
+    const marginLeft = 15;
+    const marginRight = 15;
+    const maxWidth = pageWidth - marginLeft - marginRight;
     
-    // Primera línea
+    // Construir el párrafo completo como texto plano para calcular líneas
+    const fullIntroText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito ${subscriberName}, portador de la cédula de identidad N.° ${subscriberCI}, declara haber recibido a satisfacción los siguientes equipos tecnológicos de ${collaboratorName} con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega emitida por la misma.`;
+    
+    // Dividir en líneas que respeten el margen
     doc.setFont("helvetica", "normal");
-    const intro1 = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
-    doc.text(intro1, 15, 47);
-    let xPos = 15 + doc.getTextWidth(intro1);
+    const introLines = doc.splitTextToSize(fullIntroText, maxWidth);
     
-    doc.setFont("helvetica", "bold");
-    doc.text(subscriberName, xPos, 47);
-    xPos += doc.getTextWidth(subscriberName);
-    
-    doc.setFont("helvetica", "normal");
-    const intro2 = `, portador de la cédula de identidad N.° `;
-    doc.text(intro2, xPos, 47);
-    xPos += doc.getTextWidth(intro2);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(subscriberCI, xPos, 47);
-    
-    // Segunda línea - continúa el párrafo
-    doc.setFont("helvetica", "normal");
-    const intro3 = `declara haber recibido a satisfacción los siguientes equipos tecnológicos de `;
-    doc.text(intro3, 15, 51);
-    xPos = 15 + doc.getTextWidth(intro3);
-    
-    doc.setFont("helvetica", "bold");
-    doc.text(collaboratorName, xPos, 51);
-    xPos += doc.getTextWidth(collaboratorName);
-    
-    // Continuar en la misma línea después del nombre
-    doc.setFont("helvetica", "normal");
-    const intro4 = ` con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources,`;
-    doc.text(intro4, xPos, 51);
-    
-    // Tercera línea - solo el texto restante
-    const intro5 = `conforme al acta de entrega emitida por la misma.`;
-    doc.text(intro5, 15, 55);
+    // Dibujar cada línea aplicando negritas donde corresponde
+    let lineY = 47;
+    for (const line of introLines) {
+      let xPos = marginLeft;
+      
+      // Buscar patrones para aplicar negritas
+      const patterns = [
+        { text: subscriberName, bold: true },
+        { text: subscriberCI, bold: true },
+        { text: collaboratorName, bold: true },
+      ];
+      
+      let remainingText = line;
+      while (remainingText.length > 0) {
+        let foundPattern = false;
+        
+        for (const pattern of patterns) {
+          if (remainingText.startsWith(pattern.text)) {
+            doc.setFont("helvetica", pattern.bold ? "bold" : "normal");
+            doc.text(pattern.text, xPos, lineY);
+            xPos += doc.getTextWidth(pattern.text);
+            remainingText = remainingText.substring(pattern.text.length);
+            foundPattern = true;
+            break;
+          }
+        }
+        
+        if (!foundPattern) {
+          // Buscar hasta el próximo patrón o fin de línea
+          let nextPatternIndex = remainingText.length;
+          for (const pattern of patterns) {
+            const idx = remainingText.indexOf(pattern.text);
+            if (idx > 0 && idx < nextPatternIndex) {
+              nextPatternIndex = idx;
+            }
+          }
+          
+          const normalText = remainingText.substring(0, nextPatternIndex);
+          doc.setFont("helvetica", "normal");
+          doc.text(normalText, xPos, lineY);
+          xPos += doc.getTextWidth(normalText);
+          remainingText = remainingText.substring(nextPatternIndex);
+        }
+      }
+      
+      lineY += 4;
+    }
 
-    let currentY = 62;
+    let currentY = lineY + 3;
 
     // Título "Detalle de los equipos:"
     doc.setFontSize(9);

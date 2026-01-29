@@ -73,9 +73,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     }
   }, [open, user]);
 
-  const generatedBy = currentUser?.firstName && currentUser?.lastName 
-    ? `${currentUser.firstName} ${currentUser.lastName}` 
-    : "Administrador";
+  const generatedBy = "MORETA PAEZ GALO ANIBAL";
 
   if (!user) return null;
 
@@ -214,10 +212,8 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     doc.text("ACTA DE ENTREGA DE EQUIPOS TECNOLÓGICOS", pageWidth / 2, 40, { align: "center" });
 
     // Datos dinámicos de quien genera la acta (el suscrito)
-    const subscriberName = currentUser?.firstName && currentUser?.lastName 
-      ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
-      : "ADMINISTRADOR";
-    const subscriberCI = currentUser?.nationalId || "N/A";
+    const subscriberName = "MORETA PAEZ GALO ANIBAL";
+    const subscriberCI = "1723563480";
     
     // Datos del colaborador (quien recibe)
     const collaboratorName = user.userName?.toUpperCase() || "DESCONOCIDO";
@@ -708,10 +704,8 @@ g) Modificación física sin autorización.`;
     // Nombre de quien genera la acta
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    const generatedUserName = currentUser?.firstName && currentUser?.lastName 
-      ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
-      : "ADMINISTRADOR";
-    const generatedUserCI = currentUser?.nationalId || "N/A";
+    const generatedUserName = "MORETA PAEZ GALO ANIBAL";
+    const generatedUserCI = "1723563480";
     doc.text(generatedUserName, rightColX, lineY1 - 2);
     doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 3);
     
