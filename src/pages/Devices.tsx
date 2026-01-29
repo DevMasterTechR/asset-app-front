@@ -189,7 +189,7 @@ function DevicesPage() {
     setLoading(true);
     try {
       const results = await Promise.allSettled([
-        devicesApi.getAll(undefined, page, limit),
+        devicesApi.getAll(undefined, 1, 99999),
         peopleApi.getAll(),
         catalogsApi.getBranches(),
         loansApi.getAll(),
