@@ -167,11 +167,11 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setFont("helvetica", "bold");
     doc.text("ACTA RECEPCIÓN DE EQUIPOS", pageWidth / 2, 40, { align: "center" });
 
-    // Datos del usuario logueado (quien recibe) y del colaborador (quien entrega)
-    const receiverName = currentUser?.firstName && currentUser?.lastName 
-      ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
-      : "ADMINISTRADOR";
-    const receiverCI = currentUser?.nationalId || "N/A";
+    // Datos quemados del suscrito (responsable de TechResources)
+    const subscriberName = "MORETA PAEZ GALO ANIBAL";
+    const subscriberCI = "1723563480";
+    
+    // Datos del colaborador (quien entrega los equipos)
     const collaboratorName = user.userName?.toUpperCase() || "DESCONOCIDO";
     const collaboratorCI = user.nationalId || "No especificado";
 
@@ -181,11 +181,11 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     const introText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
     doc.text(introText, 15, 47);
     
-    // Nombre del receptor en negritas
+    // Nombre del suscrito en negritas
     let textWidth = doc.getTextWidth(introText);
     doc.setFont("helvetica", "bold");
-    doc.text(receiverName, 15 + textWidth, 47);
-    textWidth += doc.getTextWidth(receiverName);
+    doc.text(subscriberName, 15 + textWidth, 47);
+    textWidth += doc.getTextWidth(subscriberName);
     
     doc.setFont("helvetica", "normal");
     const introText2 = `, portador de la cédula de identidad N.° `;
@@ -193,7 +193,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     textWidth += doc.getTextWidth(introText2);
     
     doc.setFont("helvetica", "bold");
-    doc.text(receiverCI, 15 + textWidth, 47);
+    doc.text(subscriberCI, 15 + textWidth, 47);
     
     // Segunda línea del párrafo
     doc.setFont("helvetica", "normal");
@@ -422,7 +422,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.2);
     
-    // Columna izquierda: Aceptado por (el responsable de TechResources - usuario logueado)
+    // Columna izquierda: Aceptado por (el responsable de TechResources - datos quemados)
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Aceptado por:", leftColX, currentY);
@@ -431,13 +431,13 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setFontSize(7);
     const lineY1 = currentY + 10;
     
-    // Nombre del receptor (usuario logueado) - estático
-    doc.text(receiverName, leftColX, lineY1 - 2);
+    // Nombre del suscrito (datos quemados) - estático
+    doc.text(subscriberName, leftColX, lineY1 - 2);
     doc.text("Nombre completo del responsable de entrega", leftColX, lineY1 + 3);
     
-    // C.I. del receptor
+    // C.I. del suscrito (datos quemados)
     const lineY2 = currentY + 18;
-    doc.text(`C.I.: ${receiverCI}`, leftColX, lineY2);
+    doc.text(`C.I.: ${subscriberCI}`, leftColX, lineY2);
     
     // Línea para Firma
     const lineY3 = currentY + 28;
