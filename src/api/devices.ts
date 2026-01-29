@@ -132,6 +132,17 @@ export const devicesApi = {
     await handleApiError(response);
   },
 
+  async createBulk(quantity: number, template: CreateDeviceDto): Promise<{ created: number; quantity: number; message: string }> {
+    console.log('📤 Creando dispositivos masivamente:', quantity, template);
+    const response = await apiFetch('/assets/bulk', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ quantity, template }),
+    });
+    await handleApiError(response);
+    return response.json();
+  },
+
   // Server-supported quick check for phone uniqueness (recommended)
   // Backend should implement GET /assets/check-phone?phone=... returning { exists: boolean, deviceId?: number }
   async checkPhone(phone: string): Promise<{ exists: boolean; deviceId?: number }> {
