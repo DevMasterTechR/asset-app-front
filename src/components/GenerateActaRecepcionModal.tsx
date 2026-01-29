@@ -172,7 +172,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     xPos += doc.getTextWidth(subscriberName);
     
     doc.setFont("helvetica", "normal");
-    const intro2 = ` portador de la cédula de identidad N.° `;
+    const intro2 = `, portador de la cédula de identidad N.° `;
     doc.text(intro2, xPos, 47);
     xPos += doc.getTextWidth(intro2);
     
@@ -189,10 +189,14 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.text(collaboratorName, xPos, 51);
     xPos += doc.getTextWidth(collaboratorName);
     
-    // Tercera línea - continúa sin salto innecesario
+    // Continuar en la misma línea después del nombre
     doc.setFont("helvetica", "normal");
-    const intro4 = `con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega emitida por la misma.`;
-    doc.text(intro4, 15, 55);
+    const intro4 = ` con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources,`;
+    doc.text(intro4, xPos, 51);
+    
+    // Tercera línea - solo el texto restante
+    const intro5 = `conforme al acta de entrega emitida por la misma.`;
+    doc.text(intro5, 15, 55);
 
     let currentY = 62;
 
