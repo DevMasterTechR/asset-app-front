@@ -556,27 +556,57 @@ g) Modificación física sin autorización.`;
     doc.text(splitRobo, 15, currentY);
     currentY += splitRobo.length * 4 + 4;
 
-    // Nota sobre mouse y teclado - todo en una sola línea con formatos diferentes
+    // Nota sobre mouse y teclado - párrafo bien estructurado
     if (currentY > pageHeight - 30) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
     
+    doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
-    doc.text("Nota: ", 15, currentY);
-    let currentX = 15 + doc.getTextWidth("Nota: ");
+    const notaLabel = "Nota: ";
+    doc.text(notaLabel, 15, currentY);
+    let notaX = 15 + doc.getTextWidth(notaLabel);
     
     doc.setFont("helvetica", "normal");
-    const notaText = "El mouse y el teclado se entregan nuevos, en óptimas condiciones y debidamente probados. Cualquier daño o pérdida será responsabilidad del colaborador, quien deberá asumir el ";
-    doc.text(notaText, currentX, currentY);
-    currentX += doc.getTextWidth(notaText);
+    const notaContent = "El mouse y el teclado se entregan nuevos, en óptimas condiciones y debidamente probados. Cualquier daño o pérdida será responsabilidad del colaborador, quien deberá asumir el ";
     
-    // "100% del costo de reposición." en negritas en la misma línea
-    doc.setFont("helvetica", "bold");
-    doc.text("100% del costo de reposición.", currentX, currentY);
-    doc.setFont("helvetica", "normal");
-    currentY += 6;
+    // Usar splitTextToSize para manejar saltos de línea adecuadamente
+    const notaAvailableWidth = pageWidth - notaX - 15;
+    const notaContentLines = doc.splitTextToSize(notaContent, notaAvailableWidth);
+    
+    // Primera línea después de "Nota: "
+    if (notaContentLines.length > 0) {
+      doc.text(notaContentLines[0], notaX, currentY);
+    }
+    
+    // Resto de líneas
+    let notaY = currentY;
+    for (let i = 1; i < notaContentLines.length; i++) {
+      notaY += 4;
+      doc.text(notaContentLines[i], 15, notaY);
+    }
+    
+    // "100% del costo de reposición." en negritas
+    if (notaContentLines.length > 1) {
+      notaY += 4;
+    } else {
+      // Si cabe todo en una línea, seguir en la misma línea
+      const lastLine = notaContentLines[0] || "";
+      const lastX = notaX + doc.getTextWidth(lastLine);
+      doc.setFont("helvetica", "bold");
+      doc.text("100% del costo de reposición.", lastX, currentY);
+      doc.setFont("helvetica", "normal");
+      currentY = notaY + 6;
+    }
+    
+    if (notaContentLines.length > 1) {
+      doc.setFont("helvetica", "bold");
+      doc.text("100% del costo de reposición.", 15, notaY);
+      doc.setFont("helvetica", "normal");
+      currentY = notaY + 6;
+    }
 
     // Cuarto párrafo: Costo de reposición (sin negritas)
     doc.setFont("helvetica", "normal");
@@ -640,22 +670,22 @@ g) Modificación física sin autorización.`;
     doc.setDrawColor(0, 0, 0);
     doc.setLineWidth(0.2); // Grosor más delgado para las líneas de firma
     
-    // Columna izquierda: Aceptado por
+    // Columna izquierda: Aceptado por (quien recibe - el colaborador)
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Aceptado por:", leftColX, currentY);
     
-    // Línea para nombre
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     const lineY1 = currentY + 10;
-    doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
+    
+    // Nombre de quien recibe (el colaborador)
+    doc.text(collaboratorName, leftColX, lineY1 - 2);
     doc.text("Nombre del colaborador", leftColX, lineY1 + 3);
     
-    // Línea para C.I.
+    // C.I. de quien recibe
     const lineY2 = currentY + 18;
-    doc.text("C.I.: ", leftColX, lineY2);
-    doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
+    doc.text(`C.I.: ${collaboratorCI}`, leftColX, lineY2);
     
     // Línea para Firma
     const lineY3 = currentY + 26;
@@ -666,27 +696,30 @@ g) Modificación física sin autorización.`;
     const lineY4 = currentY + 34;
     doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
     
-    // Columna derecha: Entregado por
+    // Columna derecha: Entregado por (quien genera la acta)
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Entregado por:", rightColX, currentY);
     
-    // Línea para nombre del responsable de entrega
+    // Nombre de quien genera la acta
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
-    doc.line(rightColX, lineY1, rightColX + colWidth, lineY1);
+    const generatedUserName = currentUser?.firstName && currentUser?.lastName 
+      ? `${currentUser.firstName} ${currentUser.lastName}`.toUpperCase() 
+      : "ADMINISTRADOR";
+    const generatedUserCI = currentUser?.nationalId || "N/A";
+    doc.text(generatedUserName, rightColX, lineY1 - 2);
     doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 3);
     
-    // Línea para C.I.
-    doc.text("C.I.: ", rightColX, lineY2);
-    doc.line(rightColX + 8, lineY2, rightColX + colWidth, lineY2);
+    // C.I. de quien genera la acta
+    doc.text(`C.I.: ${generatedUserCI}`, rightColX, lineY2);
     
     // Línea para Firma
     doc.text("Firma: ", rightColX, lineY3);
     doc.line(rightColX + 10, lineY3, rightColX + colWidth, lineY3);
     
-    // Línea para Fecha
-    doc.text("Fecha: ____ / ____ / _______", rightColX, lineY4);
+    // Fecha actual
+    doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
 
     // Pie de página en todas las páginas
     addFooterToAllPages();

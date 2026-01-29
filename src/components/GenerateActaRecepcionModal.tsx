@@ -208,16 +208,18 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setFont("helvetica", "normal");
     const introLine3Start = ` con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega emitida por la misma.`;
     
-    // Verificar si cabe en la línea actual
-    const availableWidth = pageWidth - 15 - textWidth - 15;
-    const wouldFit = doc.getTextWidth(introLine3Start) <= availableWidth;
+    // Siempre mantener todo en la misma línea o próxima sin saltos extraños
+    const availableWidth2 = pageWidth - 15 - textWidth - 15;
+    const wouldFit2 = doc.getTextWidth(introLine3Start) <= availableWidth2;
     
-    if (wouldFit) {
+    if (wouldFit2) {
       // Si cabe, ponerlo todo en la misma línea
       doc.text(introLine3Start, 15 + textWidth, 51);
+      let currentY = 67;
     } else {
-      // Si no cabe, partir en la siguiente línea pero sin dejar hueco
+      // Si no cabe, partir en la siguiente línea directa sin saltos
       doc.text(introLine3Start, 15, 55);
+      let currentY = 62;
     }
 
     let currentY = 67;
