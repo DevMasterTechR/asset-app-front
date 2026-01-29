@@ -217,13 +217,27 @@ export default function People() {
     setPreviewOpen(true);
   };
 
-  const filteredPeople = people.filter(
-    (person) =>
-      person.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      person.nationalId.includes(searchTerm) ||
-      person.username?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredPeople = people.filter((person) => {
+    const search = searchTerm.toLowerCase().trim();
+    if (!search) return true;
+    const departmentName = departments.find(d => d.id === person.departmentId)?.name || '';
+    const roleName = roles.find(r => r.id === person.roleId)?.name || '';
+    const branchName = branches.find(b => b.id === person.branchId)?.name || '';
+    const statusKey = person.status || '';
+    const statusLabel = statusLabelMap[person.status] || '';
+
+    return (
+      (person.firstName || '').toLowerCase().includes(search) ||
+      (person.lastName || '').toLowerCase().includes(search) ||
+      (person.nationalId || '').toLowerCase().includes(search) ||
+      (person.username || '').toLowerCase().includes(search) ||
+      departmentName.toLowerCase().includes(search) ||
+      roleName.toLowerCase().includes(search) ||
+      branchName.toLowerCase().includes(search) ||
+      statusKey.toLowerCase().includes(search) ||
+      statusLabel.toLowerCase().includes(search)
+    );
+  });
 
   const sort = useSort();
 
@@ -302,7 +316,7 @@ export default function People() {
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   type="text"
-                  placeholder="Buscar por nombre, cédula, usuario..."
+                  placeholder="Buscar por nombre, cédula, usuario, estado..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}

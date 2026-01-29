@@ -113,6 +113,7 @@ function DevicesPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
   const [totalItems, setTotalItems] = useState<number>(0);
 
+
   const [formModalOpen, setFormModalOpen] = useState(false);
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -120,7 +121,6 @@ function DevicesPage() {
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [loanAlert, setLoanAlert] = useState<string | null>(null);
-
   // Helper para detectar si un equipo tiene préstamo activo
   const hasActiveLoan = (assetId: number) => {
     return loans.some(l => l.assetId === assetId && !l.returnDate);
@@ -163,7 +163,7 @@ function DevicesPage() {
 
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [page, limit, searchTerm]);
+  }, [page, limit]);
 
   useEffect(() => {
     const handler = (e: Event) => {
@@ -189,7 +189,7 @@ function DevicesPage() {
     setLoading(true);
     try {
       const results = await Promise.allSettled([
-        devicesApi.getAll(searchTerm || undefined, page, limit),
+        devicesApi.getAll(undefined, page, limit),
         peopleApi.getAll(),
         catalogsApi.getBranches(),
         loansApi.getAll(),
@@ -322,16 +322,29 @@ function DevicesPage() {
   };
 
   const filteredDevices = devices.filter((device) => {
-    const search = searchTerm.toLowerCase();
+    const search = searchTerm.toLowerCase().trim();
+    if (!search) return true;
+    const statusKey = getStatus(device);
+    const statusLabel = statusLabelMap[statusKey as keyof typeof statusLabelMap] || statusKey;
+    const branchName = branches.find(b => b.id === device.branchId)?.name || '';
+    const person = people.find(p => Number(p.id) === device.assignedPersonId);
+    const personName = person ? `${person.firstName} ${person.lastName}` : '';
+
     return (
       (device.assetCode || '').toLowerCase().includes(search) ||
       (device.brand || '').toLowerCase().includes(search) ||
       (device.model || '').toLowerCase().includes(search) ||
       (device.serialNumber || '').toLowerCase().includes(search) ||
-      (device.assetType || '').toLowerCase().includes(search)
+      (device.assetType || '').toLowerCase().includes(search) ||
+      statusKey.toLowerCase().includes(search) ||
+      statusLabel.toLowerCase().includes(search) ||
+      branchName.toLowerCase().includes(search) ||
+      personName.toLowerCase().includes(search) ||
+      (device.deliveryDate || '').toLowerCase().includes(search) ||
+      (device.receivedDate || '').toLowerCase().includes(search) ||
+      (device.purchaseDate || '').toLowerCase().includes(search)
     );
   });
-
   const sort = useSort();
 
   const prioritizedFiltered = [...filteredDevices].sort(
@@ -358,10 +371,13 @@ function DevicesPage() {
   if (devices.length > limit && devices.length === totalItems) {
     displayedDevices = sortedByUi.slice((page - 1) * limit, page * limit);
   }
-
   const handleCreate = () => {
+    const prioritizedFilteredWithStatus = [...filteredDevices].sort(
+      (a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate))
+    );
+
+    const hasOldInFiltered = prioritizedFilteredWithStatus.some((d) => isOlderThanFiveYears(d.purchaseDate));
     setFormMode('create');
-    setSelectedDevice(null);
     setFormModalOpen(true);
   };
 
@@ -453,7 +469,7 @@ function DevicesPage() {
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 type="text"
-                placeholder="Buscar por código, marca, modelo, serial..."
+                placeholder="Buscar por código, marca, modelo, serial, estado, sucursal..."
                 className="pl-10"
                 value={searchTerm}
                 onChange={(e) => { setSearchTerm(e.target.value); setPage(1); }}
