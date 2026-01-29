@@ -241,7 +241,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     doc.setFont("helvetica", "bold");
     doc.text(subscriberCI, 15 + textWidth, 47);
     
-    // Segunda línea del párrafo
+    // Segunda línea del párrafo - todo en una sola línea
     doc.setFont("helvetica", "normal");
     const introLine2 = `procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a `;
     doc.text(introLine2, 15, 51);
@@ -249,11 +249,23 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     
     doc.setFont("helvetica", "bold");
     doc.text(` ${collaboratorName}`, 15 + textWidth, 51);
+    textWidth += doc.getTextWidth(` ${collaboratorName}`);
     
-    // Tercera línea
+    // Tercera línea - continuar en la misma línea si cabe
     doc.setFont("helvetica", "normal");
-    const introLine3 = `con cédula de identidad N.° ${collaboratorCI}, conforme al siguiente detalle:`;
-    doc.text(introLine3, 15, 55);
+    const introLine3 = ` con cédula de identidad N.° ${collaboratorCI}, conforme al siguiente detalle:`;
+    
+    // Verificar si cabe en la línea actual
+    const availableWidth = pageWidth - 15 - textWidth - 15;
+    const wouldFit = doc.getTextWidth(introLine3) <= availableWidth;
+    
+    if (wouldFit) {
+      // Si cabe, ponerlo todo en la misma línea
+      doc.text(introLine3, 15 + textWidth, 51);
+    } else {
+      // Si no cabe, partir en la siguiente línea
+      doc.text(introLine3, 15, 55);
+    }
 
     let currentY = 62;
 

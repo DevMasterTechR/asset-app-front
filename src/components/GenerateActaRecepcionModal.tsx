@@ -195,7 +195,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setFont("helvetica", "bold");
     doc.text(subscriberCI, 15 + textWidth, 47);
     
-    // Segunda línea del párrafo
+    // Segunda línea del párrafo - todo en una sola línea
     doc.setFont("helvetica", "normal");
     const introLine2 = `declara haber recibido a satisfacción los siguientes equipos tecnológicos de `;
     doc.text(introLine2, 15, 51);
@@ -203,14 +203,22 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     
     doc.setFont("helvetica", "bold");
     doc.text(` ${collaboratorName}`, 15 + textWidth, 51);
+    textWidth += doc.getTextWidth(` ${collaboratorName}`);
     
-    // Tercera línea
     doc.setFont("helvetica", "normal");
-    const introLine3 = `con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega`;
-    const splitLine3 = doc.splitTextToSize(introLine3, 180);
-    doc.text(splitLine3, 15, 55);
+    const introLine3Start = ` con cédula de identidad N.° ${collaboratorCI}, propiedad de la empresa TechResources, conforme al acta de entrega emitida por la misma.`;
     
-    doc.text("emitida por la misma.", 15, 59);
+    // Verificar si cabe en la línea actual
+    const availableWidth = pageWidth - 15 - textWidth - 15;
+    const wouldFit = doc.getTextWidth(introLine3Start) <= availableWidth;
+    
+    if (wouldFit) {
+      // Si cabe, ponerlo todo en la misma línea
+      doc.text(introLine3Start, 15 + textWidth, 51);
+    } else {
+      // Si no cabe, partir en la siguiente línea pero sin dejar hueco
+      doc.text(introLine3Start, 15, 55);
+    }
 
     let currentY = 67;
 
@@ -259,7 +267,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
             `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
             `IMEI: ${resolveField(d, ["imeis", "imei", "imei1"], false, true)}`,
-            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])}`,
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
             `Color: ${resolveField(d, ["color"])}`,
             `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
             `Cable de carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
@@ -431,25 +439,24 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.setFontSize(7);
     const lineY1 = currentY + 10;
     
-    // Línea para nombre del responsable
-    doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
+    // Nombre quemado del responsable de TechResources
+    doc.text(subscriberName, leftColX, lineY1 - 2);
     doc.text("Nombre completo del responsable de entrega", leftColX, lineY1 + 3);
     
-    // C.I. del responsable con línea
+    // C.I. quemado del responsable
     const lineY2 = currentY + 18;
-    doc.text("C.I.: ", leftColX, lineY2);
-    doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
+    doc.text(`C.I.: ${subscriberCI}`, leftColX, lineY2);
     
     // Línea para Firma
     const lineY3 = currentY + 28;
     doc.text("Firma: ", leftColX, lineY3);
     doc.line(leftColX + 10, lineY3, leftColX + colWidth, lineY3);
     
-    // Fecha vacía
+    // Fecha actual
     const lineY4 = currentY + 38;
-    doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
+    doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, lineY4);
     
-    // Columna derecha: Entregado por (el colaborador - datos de la asignación)
+    // Columna derecha: Entregado por (el colaborador - datos de la asignación con líneas)
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Entregado por:", rightColX, currentY);
@@ -461,7 +468,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.line(rightColX, lineY1, rightColX + colWidth, lineY1);
     doc.text("Nombre completo del colaborador", rightColX, lineY1 + 3);
     
-    // C.I. del colaborador
+    // C.I. del colaborador con línea
     doc.text("C.I.: ", rightColX, lineY2);
     doc.line(rightColX + 8, lineY2, rightColX + colWidth, lineY2);
     
