@@ -15,7 +15,7 @@ import { credentialsApi, type Credential } from "@/api/credentials";
 import { extractArray } from "@/lib/extractData";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download, FileText } from "lucide-react";
+import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
@@ -61,6 +61,7 @@ const Index = () => {
   const [selectedUserForActaRecepcion, setSelectedUserForActaRecepcion] = useState<any>(null);
   const [confirmFirmadaRecepcionOpen, setConfirmFirmadaRecepcionOpen] = useState(false);
   const [userToMarkFirmadaRecepcion, setUserToMarkFirmadaRecepcion] = useState<any>(null);
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -750,20 +751,65 @@ const Index = () => {
                           </td>
                           <td className="px-4 py-3 text-muted-foreground">{u.branch || '-'}</td>
                           <td className="px-4 py-3">
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-2 items-center">
                               {u.devices && u.devices.length > 0 ? (
-                                u.devices.map((d: any, idx: number) => (
+                                <>
+                                  {/* Mostrar primer equipo siempre */}
                                   <span
-                                    key={`${u.userId}-${idx}`}
                                     className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
-                                      isOlderThanFiveYears(d.purchaseDate)
+                                      isOlderThanFiveYears(u.devices[0].purchaseDate)
                                         ? `${oldAssetClass} border border-red-200 bg-red-50`
                                         : 'border border-blue-200 bg-blue-50 text-blue-700'
                                     }`}
                                   >
-                                    {d.code || 'SIN-CODIGO'}
+                                    {u.devices[0].code || 'SIN-CODIGO'}
                                   </span>
-                                ))
+                                  
+                                  {/* Mostrar resto de equipos solo si está expandido */}
+                                  {expandedRows.has(u.userId) && u.devices.slice(1).map((d: any, idx: number) => (
+                                    <span
+                                      key={`${u.userId}-${idx + 1}`}
+                                      className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold shadow-sm ${
+                                        isOlderThanFiveYears(d.purchaseDate)
+                                          ? `${oldAssetClass} border border-red-200 bg-red-50`
+                                          : 'border border-blue-200 bg-blue-50 text-blue-700'
+                                      }`}
+                                    >
+                                      {d.code || 'SIN-CODIGO'}
+                                    </span>
+                                  ))}
+                                  
+                                  {/* Botón expandir/colapsar solo si hay más de 1 equipo */}
+                                  {u.devices.length > 1 && (
+                                    <button
+                                      onClick={() => {
+                                        setExpandedRows(prev => {
+                                          const newSet = new Set(prev);
+                                          if (newSet.has(u.userId)) {
+                                            newSet.delete(u.userId);
+                                          } else {
+                                            newSet.add(u.userId);
+                                          }
+                                          return newSet;
+                                        });
+                                      }}
+                                      className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-xs font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 transition-colors"
+                                      title={expandedRows.has(u.userId) ? 'Colapsar' : 'Ver todos'}
+                                    >
+                                      {expandedRows.has(u.userId) ? (
+                                        <>
+                                          <ChevronUp className="h-3 w-3" />
+                                          Ocultar
+                                        </>
+                                      ) : (
+                                        <>
+                                          <ChevronDown className="h-3 w-3" />
+                                          +{u.devices.length - 1}
+                                        </>
+                                      )}
+                                    </button>
+                                  )}
+                                </>
                               ) : (
                                 <span className="text-muted-foreground">Sin equipos</span>
                               )}
