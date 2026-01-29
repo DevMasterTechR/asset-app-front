@@ -103,10 +103,25 @@ export default function InkFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Validar cantidad solo en modo create
+    if (mode === 'create' && (!formData.quantity || formData.quantity < 1)) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await onSave(formData);
+      // Crear múltiples elementos si quantity > 1 y modo create
+      const qty = mode === 'create' ? formData.quantity : 1;
+      
+      for (let i = 0; i < qty; i++) {
+        await onSave({
+          ...formData,
+          quantity: 1
+        });
+      }
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -191,17 +206,24 @@ export default function InkFormModal({
 
           <div className="space-y-2">
             <Label htmlFor="quantity">
-              Cantidad
+              Cantidad de Equipos <span className="text-destructive">*</span>
             </Label>
             <Input
               id="quantity"
               type="number"
-              min="0"
-              value={formData.quantity}
-              onChange={(e) =>
-                handleChange('quantity', parseInt(e.target.value) || 0)
-              }
+              min="1"
+              max="1000"
+              value={formData.quantity || ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                handleChange('quantity', val > 0 ? val : 0);
+              }}
+              placeholder="1"
+              required
             />
+            <p className="text-xs text-muted-foreground">
+              {mode === 'create' ? 'Si ingresas más de 1, se crearán múltiples elementos' : 'Cantidad de esta tinta'}
+            </p>
           </div>
 
           <div className="space-y-2">

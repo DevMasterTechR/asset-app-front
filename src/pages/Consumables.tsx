@@ -469,6 +469,17 @@ export default function Consumables() {
           <TabsContent value="inks" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Tintas</h2>
+              <Button 
+                onClick={() => {
+                  setSelectedInk(null);
+                  setInkModalMode('create');
+                  setInkModalOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar
+              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -542,6 +553,17 @@ export default function Consumables() {
           <TabsContent value="cables" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Cables UTP</h2>
+              <Button 
+                onClick={() => {
+                  setSelectedCable(null);
+                  setCableModalMode('create');
+                  setCableModalOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar
+              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -611,6 +633,17 @@ export default function Consumables() {
           <TabsContent value="connectors" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Conectores RJ45</h2>
+              <Button 
+                onClick={() => {
+                  setSelectedConnector(null);
+                  setConnectorModalMode('create');
+                  setConnectorModalOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar
+              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">
@@ -678,6 +711,17 @@ export default function Consumables() {
           <TabsContent value="powerstrips" className="space-y-4">
             <div className="flex justify-between items-center">
               <h2 className="text-xl font-semibold">Regletas</h2>
+              <Button 
+                onClick={() => {
+                  setSelectedStrip(null);
+                  setStripModalMode('create');
+                  setStripModalOpen(true);
+                }}
+                className="gap-2"
+              >
+                <Plus className="h-4 w-4" />
+                Agregar
+              </Button>
             </div>
 
             <div className="border rounded-lg bg-card">

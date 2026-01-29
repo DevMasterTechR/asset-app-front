@@ -103,6 +103,7 @@ const CODE_PREFIXES: Record<string, string> = {
   mousepad: 'MPAD - ',
   soporte: 'SPLP - ',
   monitor: 'MONI - ',
+  teclado: 'TECLA - ',
   'ip-phone': 'TELFIP - ',
   'cargador-laptop': 'CARGL - ',
   'cargador-celular': 'CARG - ',
@@ -121,6 +122,7 @@ export default function DeviceFormModal({
 }: DeviceFormModalProps) {
   const [expandedImage, setExpandedImage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const [showAccessoryModal, setShowAccessoryModal] = useState(false);
   const [pendingNewAccessory, setPendingNewAccessory] = useState<string | null>(null);
 
@@ -250,6 +252,12 @@ export default function DeviceFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (mode === 'create' && (!quantity || quantity < 1)) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+    
     setLoading(true);
     setServerError(null);
 
@@ -282,23 +290,27 @@ export default function DeviceFormModal({
         }
       }
 
-      const cleanData: CreateDeviceDto = {
-        assetCode: formData.assetCode,
-        assetType: formData.assetType,
-        brand: formData.brand || undefined,
-        model: formData.model || undefined,
-        serialNumber: formData.serialNumber || undefined,
-        status: formData.status || 'available',
-        branchId: formData.branchId || undefined,
-        assignedPersonId: formData.assignedPersonId || undefined,
-        purchaseDate: formData.purchaseDate || undefined,
-        deliveryDate: deliveryDateAuto || formData.deliveryDate || undefined,
-        receivedDate: formData.receivedDate || undefined,
-        notes: formData.notes || undefined,
-        attributesJson: Object.keys(formData.attributesJson || {}).length > 0 ? formData.attributesJson : undefined,
-      };
+      const iterations = mode === 'create' ? quantity : 1;
+      
+      for (let i = 0; i < iterations; i++) {
+        const cleanData: CreateDeviceDto = {
+          assetCode: formData.assetCode,
+          assetType: formData.assetType,
+          brand: formData.brand || undefined,
+          model: formData.model || undefined,
+          serialNumber: formData.serialNumber || undefined,
+          status: formData.status || 'available',
+          branchId: formData.branchId || undefined,
+          assignedPersonId: formData.assignedPersonId || undefined,
+          purchaseDate: formData.purchaseDate || undefined,
+          deliveryDate: deliveryDateAuto || formData.deliveryDate || undefined,
+          receivedDate: formData.receivedDate || undefined,
+          notes: formData.notes || undefined,
+          attributesJson: Object.keys(formData.attributesJson || {}).length > 0 ? formData.attributesJson : undefined,
+        };
 
-      await onSave(cleanData);
+        await onSave(cleanData);
+      }
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error al guardar:', error);
@@ -1024,6 +1036,21 @@ export default function DeviceFormModal({
             <Label>Notas</Label>
             <Textarea value={formData.notes} onChange={e => handleChange('notes', e.target.value)} placeholder="Observaciones adicionales..." rows={3} />
           </div>
+
+          {mode === 'create' && (
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Cantidad a Crear *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                max="1000"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                required
+              />
+            </div>
+          )}
 
           <DialogFooter>
             {serverError && <div className="w-full text-center text-sm text-rose-700 mb-2">{serverError}</div>}

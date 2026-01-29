@@ -95,6 +95,7 @@ function SecurityPage() {
   const [totalPages, setTotalPages] = useState<number>(1);
 
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');

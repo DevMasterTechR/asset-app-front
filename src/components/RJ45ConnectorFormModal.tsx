@@ -60,6 +60,7 @@ export default function RJ45ConnectorFormModal({
   mode,
 }: RJ45ConnectorFormModalProps) {
   const [loading, setLoading] = useState(false);
+  const [quantity, setQuantity] = useState(1);
 
   const [formData, setFormData] = useState<CreateRJ45ConnectorDto>({
     model: '',
@@ -103,9 +104,18 @@ export default function RJ45ConnectorFormModal({
       return;
     }
 
+    if (mode === 'create' && (!quantity || quantity < 1)) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+
     setLoading(true);
     try {
-      await onSave(formData);
+      const iterations = mode === 'create' ? quantity : 1;
+      
+      for (let i = 0; i < iterations; i++) {
+        await onSave(formData);
+      }
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -216,6 +226,28 @@ export default function RJ45ConnectorFormModal({
               placeholder="Notas adicionales..."
               rows={3}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="quantity">
+              Cantidad de Equipos <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              max="1000"
+              value={quantity || ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                setQuantity(val > 0 ? val : 0);
+              }}
+              placeholder="1"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              {mode === 'create' ? 'Si ingresas más de 1, se crearán múltiples elementos' : 'Cantidad'}
+            </p>
           </div>
 
           <DialogFooter className="col-span-2 mt-4">

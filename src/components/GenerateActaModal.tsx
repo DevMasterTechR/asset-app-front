@@ -219,51 +219,51 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     const collaboratorName = user.userName?.toUpperCase() || "DESCONOCIDO";
     const collaboratorCI = user.nationalId || "No especificado";
 
-    // Párrafo introductorio con formato similar al de Recepción
+    // Párrafo introductorio completo con saltos de línea controlados
     doc.setFontSize(8);
-    doc.setFont("helvetica", "normal");
-    const introText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
-    doc.text(introText, 15, 47);
     
-    // Nombre del suscrito en negritas
-    let textWidth = doc.getTextWidth(introText);
-    doc.setFont("helvetica", "bold");
-    doc.text(subscriberName, 15 + textWidth, 47);
-    textWidth += doc.getTextWidth(subscriberName);
-    
+    // Primera línea
+    let currentLineY = 47;
     doc.setFont("helvetica", "normal");
-    const introText2 = `, portador de la cédula de identidad N.° `;
-    doc.text(introText2, 15 + textWidth, 47);
-    textWidth += doc.getTextWidth(introText2);
+    const line1Text = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `;
+    doc.text(line1Text, 15, currentLineY);
+    let lineWidth = doc.getTextWidth(line1Text);
     
     doc.setFont("helvetica", "bold");
-    doc.text(subscriberCI, 15 + textWidth, 47);
+    doc.text(subscriberName, 15 + lineWidth, currentLineY);
+    lineWidth += doc.getTextWidth(subscriberName);
     
-    // Segunda línea del párrafo - todo en una sola línea
     doc.setFont("helvetica", "normal");
-    const introLine2 = `procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a `;
-    doc.text(introLine2, 15, 51);
-    textWidth = doc.getTextWidth(introLine2);
+    const text2 = `, portador de la cédula de identidad N.° `;
+    doc.text(text2, 15 + lineWidth, currentLineY);
+    lineWidth += doc.getTextWidth(text2);
     
     doc.setFont("helvetica", "bold");
-    doc.text(` ${collaboratorName}`, 15 + textWidth, 51);
-    textWidth += doc.getTextWidth(` ${collaboratorName}`);
+    doc.text(subscriberCI, 15 + lineWidth, currentLineY);
     
-    // Tercera línea - continuar en la misma línea si cabe
+    // Segunda línea: procede a entregar... a JUAN PÉREZ con cédula...
+    currentLineY = 51;
     doc.setFont("helvetica", "normal");
-    const introLine3 = ` con cédula de identidad N.° ${collaboratorCI}, conforme al siguiente detalle:`;
+    const line2TextPart1 = `procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a  `;
+    doc.text(line2TextPart1, 15, currentLineY);
+    lineWidth = doc.getTextWidth(line2TextPart1);
     
-    // Verificar si cabe en la línea actual
-    const availableWidth = pageWidth - 15 - textWidth - 15;
-    const wouldFit = doc.getTextWidth(introLine3) <= availableWidth;
+    doc.setFont("helvetica", "bold");
+    doc.text(collaboratorName, 15 + lineWidth, currentLineY);
+    lineWidth += doc.getTextWidth(collaboratorName);
     
-    if (wouldFit) {
-      // Si cabe, ponerlo todo en la misma línea
-      doc.text(introLine3, 15 + textWidth, 51);
-    } else {
-      // Si no cabe, partir en la siguiente línea
-      doc.text(introLine3, 15, 55);
-    }
+    doc.setFont("helvetica", "normal");
+    const line2TextPart2 = ` con cédula de identidad N.° `;
+    doc.text(line2TextPart2, 15 + lineWidth, currentLineY);
+    lineWidth += doc.getTextWidth(line2TextPart2);
+    
+    doc.setFont("helvetica", "bold");
+    doc.text(collaboratorCI, 15 + lineWidth, currentLineY);
+    
+    // Tercera línea: conforme al siguiente detalle
+    currentLineY = 55;
+    doc.setFont("helvetica", "normal");
+    doc.text(`conforme al siguiente detalle:`, 15, currentLineY);
 
     let currentY = 62;
 

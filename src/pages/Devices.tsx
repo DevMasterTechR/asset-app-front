@@ -114,6 +114,7 @@ function DevicesPage() {
   const [totalItems, setTotalItems] = useState<number>(0);
 
   const [formModalOpen, setFormModalOpen] = useState(false);
+  const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');

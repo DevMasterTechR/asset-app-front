@@ -35,6 +35,7 @@ interface UTPCableFormData {
   material: string;
   lengthMeters: number;
   color: string;
+  quantity: number;
   purchaseDate: string;
   usageDate: string;
   notes: string;
@@ -82,6 +83,7 @@ export default function UTPCableFormModal({
     material: '',
     lengthMeters: 0,
     color: '',
+    quantity: 1,
     purchaseDate: getCurrentDateTimeLocal(),
     usageDate: getCurrentDateTimeLocal(),
     notes: '',
@@ -95,6 +97,7 @@ export default function UTPCableFormModal({
         material: cable.material || '',
         lengthMeters: cable.lengthMeters || 0,
         color: cable.color || '',
+        quantity: 1,
         purchaseDate: formatDateTimeLocal(cable.purchaseDate),
         usageDate: formatDateTimeLocal(cable.usageDate),
         notes: cable.notes || '',
@@ -106,6 +109,7 @@ export default function UTPCableFormModal({
         material: '',
         lengthMeters: 0,
         color: '',
+        quantity: 1,
         purchaseDate: getCurrentDateTimeLocal(),
         usageDate: getCurrentDateTimeLocal(),
         notes: '',
@@ -121,40 +125,50 @@ export default function UTPCableFormModal({
       return;
     }
 
+    if (mode === 'create' && (!formData.quantity || formData.quantity < 1)) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+
     setLoading(true);
     try {
       // Construir objeto solo con campos obligatorios primero
-      const cleanedData: CreateUTPCableDto = {
-        brand: formData.brand.trim(),
-        type: formData.type,
-      };
+      const qty = mode === 'create' ? formData.quantity : 1;
+      
+      for (let i = 0; i < qty; i++) {
+        const cleanedData: CreateUTPCableDto = {
+          brand: formData.brand.trim(),
+          type: formData.type,
+        };
 
-      // Agregar campos opcionales solo si tienen valor válido
-      if (formData.material && formData.material.trim() !== '') {
-        cleanedData.material = formData.material.trim();
-      }
-      
-      if (formData.lengthMeters && formData.lengthMeters > 0) {
-        cleanedData.lengthMeters = formData.lengthMeters;
-      }
-      
-      if (formData.color && formData.color.trim() !== '') {
-        cleanedData.color = formData.color.trim();
-      }
-      
-      if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
-        cleanedData.purchaseDate = formData.purchaseDate;
-      }
-      
-      if (formData.usageDate && formData.usageDate.trim() !== '') {
-        cleanedData.usageDate = formData.usageDate;
-      }
-      
-      if (formData.notes && formData.notes.trim() !== '') {
-        cleanedData.notes = formData.notes.trim();
-      }
+        // Agregar campos opcionales solo si tienen valor válido
+        if (formData.material && formData.material.trim() !== '') {
+          cleanedData.material = formData.material.trim();
+        }
+        
+        if (formData.lengthMeters && formData.lengthMeters > 0) {
+          cleanedData.lengthMeters = formData.lengthMeters;
+        }
+        
+        if (formData.color && formData.color.trim() !== '') {
+          cleanedData.color = formData.color.trim();
+        }
+        
+        if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
+          cleanedData.purchaseDate = formData.purchaseDate;
+        }
+        
+        if (formData.usageDate && formData.usageDate.trim() !== '') {
+          cleanedData.usageDate = formData.usageDate;
+        }
+        
+        if (formData.notes && formData.notes.trim() !== '') {
+          cleanedData.notes = formData.notes.trim();
+        }
 
-      await onSave(cleanedData);
+        await onSave(cleanedData);
+      }
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -249,6 +263,28 @@ export default function UTPCableFormModal({
               placeholder="Azul"
               maxLength={50}
             />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="quantity">
+              Cantidad de Equipos <span className="text-destructive">*</span>
+            </Label>
+            <Input
+              id="quantity"
+              type="number"
+              min="1"
+              max="1000"
+              value={formData.quantity || ''}
+              onChange={(e) => {
+                const val = parseInt(e.target.value) || 0;
+                handleChange('quantity', val > 0 ? val : 0);
+              }}
+              placeholder="1"
+              required
+            />
+            <p className="text-xs text-muted-foreground">
+              {mode === 'create' ? 'Si ingresas más de 1, se crearán múltiples elementos' : 'Cantidad'}
+            </p>
           </div>
 
           <div className="space-y-2">

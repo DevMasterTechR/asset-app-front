@@ -60,6 +60,7 @@ export default function PowerStripFormModal({
   mode
 }: PowerStripFormModalProps) {
   const [loading, setLoading] = useState(false);
+  const [quantity, setQuantity] = useState(1);
   const [formData, setFormData] = useState<CreatePowerStripDto>({
     brand: '',
     model: '',
@@ -102,50 +103,60 @@ export default function PowerStripFormModal({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (mode === 'create' && (!quantity || quantity < 1)) {
+      alert('La cantidad debe ser mayor a 0');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Solo model es obligatorio
-      const cleanedData: CreatePowerStripDto = {
-        model: formData.model.trim(),
-      };
+      const iterations = mode === 'create' ? quantity : 1;
+      
+      for (let i = 0; i < iterations; i++) {
+        // Solo model es obligatorio
+        const cleanedData: CreatePowerStripDto = {
+          model: formData.model.trim(),
+        };
 
-      // Agregar campos opcionales solo si tienen valor válido
-      if (formData.brand && formData.brand.trim() !== '') {
-        cleanedData.brand = formData.brand.trim();
-      }
-      
-      if (formData.outletCount && formData.outletCount > 0) {
-        cleanedData.outletCount = Number(formData.outletCount);
-      }
-      
-      if (formData.lengthMeters && formData.lengthMeters > 0) {
-        cleanedData.lengthMeters = Number(formData.lengthMeters);
-      }
-      
-      if (formData.color && formData.color.trim() !== '') {
-        cleanedData.color = formData.color.trim();
-      }
-      
-      if (formData.capacity && formData.capacity > 0) {
-        cleanedData.capacity = Number(formData.capacity);
-      }
-      
-      if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
-        cleanedData.purchaseDate = formData.purchaseDate;
-      }
-      
-      if (formData.usageDate && formData.usageDate.trim() !== '') {
-        cleanedData.usageDate = formData.usageDate;
-      }
-      
-      if (formData.notes && formData.notes.trim() !== '') {
-        cleanedData.notes = formData.notes.trim();
-      }
+        // Agregar campos opcionales solo si tienen valor válido
+        if (formData.brand && formData.brand.trim() !== '') {
+          cleanedData.brand = formData.brand.trim();
+        }
+        
+        if (formData.outletCount && formData.outletCount > 0) {
+          cleanedData.outletCount = Number(formData.outletCount);
+        }
+        
+        if (formData.lengthMeters && formData.lengthMeters > 0) {
+          cleanedData.lengthMeters = Number(formData.lengthMeters);
+        }
+        
+        if (formData.color && formData.color.trim() !== '') {
+          cleanedData.color = formData.color.trim();
+        }
+        
+        if (formData.capacity && formData.capacity > 0) {
+          cleanedData.capacity = Number(formData.capacity);
+        }
+        
+        if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
+          cleanedData.purchaseDate = formData.purchaseDate;
+        }
+        
+        if (formData.usageDate && formData.usageDate.trim() !== '') {
+          cleanedData.usageDate = formData.usageDate;
+        }
+        
+        if (formData.notes && formData.notes.trim() !== '') {
+          cleanedData.notes = formData.notes.trim();
+        }
 
-      console.log('Datos preparados en el modal:', cleanedData);
+        console.log('Datos preparados en el modal:', cleanedData);
 
-      await onSave(cleanedData);
+        await onSave(cleanedData);
+      }
       onOpenChange(false);
     } catch (error) {
       console.error('Error al guardar:', error);
@@ -270,6 +281,21 @@ export default function PowerStripFormModal({
               rows={3}
             />
           </div>
+
+          {mode === 'create' && (
+            <div className="space-y-2">
+              <Label htmlFor="quantity">Cantidad a Crear *</Label>
+              <Input
+                id="quantity"
+                type="number"
+                min="1"
+                max="1000"
+                value={quantity}
+                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                required
+              />
+            </div>
+          )}
 
           <DialogFooter className="col-span-2 mt-4">
             <Button
