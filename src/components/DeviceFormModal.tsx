@@ -571,7 +571,9 @@ export default function DeviceFormModal({
                 options={[
                   { label: 'No especificado', value: 'none' },
                   { label: 'DDR3', value: 'DDR3' },
+                  { label: 'LPDDR4', value: 'LPDDR4' },
                   { label: 'DDR4', value: 'DDR4' },
+                  { label: 'LPDDR5', value: 'LPDDR5' },
                   { label: 'DDR5', value: 'DDR5' },
                 ]}
               />
