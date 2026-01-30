@@ -70,6 +70,7 @@ export default function InkFormModal({
     color: '',
     quantity: 0,
     inkType: '',
+    purchasePrice: undefined,
     purchaseDate: getCurrentDateTimeLocal(),
     usageDate: getCurrentDateTimeLocal(),
     notes: ''
@@ -83,6 +84,7 @@ export default function InkFormModal({
         color: ink.color,
         quantity: ink.quantity,
         inkType: ink.inkType,
+        purchasePrice: (ink as any).purchasePrice ?? undefined,
         purchaseDate: formatDateTimeLocal(ink.purchaseDate),
         usageDate: formatDateTimeLocal(ink.usageDate),
         notes: ink.notes || ''
@@ -94,6 +96,7 @@ export default function InkFormModal({
         color: '',
         quantity: 0,
         inkType: '',
+        purchasePrice: undefined,
         purchaseDate: getCurrentDateTimeLocal(),
         usageDate: getCurrentDateTimeLocal(),
         notes: ''
@@ -115,10 +118,14 @@ export default function InkFormModal({
     try {
       // Crear múltiples elementos si quantity > 1 y modo create
       const qty = mode === 'create' ? formData.quantity : 1;
+      const payload: CreateInkDto = {
+        ...formData,
+        purchasePrice: formData.purchasePrice === undefined ? undefined : formData.purchasePrice,
+      };
       
       for (let i = 0; i < qty; i++) {
         await onSave({
-          ...formData,
+          ...payload,
           quantity: 1
         });
       }
@@ -130,7 +137,7 @@ export default function InkFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreateInkDto, value: string | number) => {
+  const handleChange = (field: keyof CreateInkDto, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -231,6 +238,19 @@ export default function InkFormModal({
             <DateTimePicker
               value={formData.purchaseDate}
               onChange={(value) => handleChange('purchaseDate', value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="purchasePrice">Precio de Compra</Label>
+            <Input
+              id="purchasePrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.purchasePrice ?? ''}
+              onChange={(e) => handleChange('purchasePrice', e.target.value === '' ? undefined : Number(e.target.value))}
+              placeholder="0.00"
             />
           </div>
 

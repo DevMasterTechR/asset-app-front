@@ -51,6 +51,7 @@ export interface Asset {
   serialNumber: string;
   brand: string;
   model: string;
+  purchasePrice?: number;
   status: 'available' | 'assigned' | 'maintenance' | 'decommissioned';
   branchId: number;
   assignedPersonId?: string;
@@ -82,6 +83,7 @@ export interface Ink {
   color: string;
   quantity: number;
   inkType: string;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
@@ -94,6 +96,7 @@ export interface UTPCable {
   material: string;
   lengthMeters: number;
   color: string;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
@@ -105,6 +108,7 @@ export interface RJ45Connector {
   quantityUnits: number;
   material: string;
   type: string;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
@@ -118,6 +122,7 @@ export interface PowerStrip {
   lengthMeters: number;
   color: string;
   capacity: number;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;

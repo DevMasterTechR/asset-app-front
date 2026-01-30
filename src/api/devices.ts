@@ -36,6 +36,7 @@ export interface Device {
   serialNumber?: string;
   brand?: string;
   model?: string;
+  purchasePrice?: number;
   status: DeviceStatus;
   branchId?: number;
   assignedPersonId?: number;
@@ -59,6 +60,7 @@ export interface CreateDeviceDto {
   serialNumber?: string;
   brand?: string;
   model?: string;
+  purchasePrice?: number;
   status?: DeviceStatus;
   branchId?: number;
   assignedPersonId?: number;

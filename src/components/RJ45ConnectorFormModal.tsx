@@ -67,6 +67,7 @@ export default function RJ45ConnectorFormModal({
     quantityUnits: 0,
     material: '',
     type: '',
+    purchasePrice: undefined,
     purchaseDate: getCurrentDateTimeLocal(),
     usageDate: getCurrentDateTimeLocal(),
     notes: '',
@@ -79,6 +80,7 @@ export default function RJ45ConnectorFormModal({
         quantityUnits: connector.quantityUnits,
         material: connector.material,
         type: connector.type,
+        purchasePrice: (connector as any).purchasePrice ?? undefined,
         purchaseDate: formatDateTimeLocal(connector.purchaseDate),
         usageDate: formatDateTimeLocal(connector.usageDate),
         notes: connector.notes || '',
@@ -89,6 +91,7 @@ export default function RJ45ConnectorFormModal({
         quantityUnits: 0,
         material: '',
         type: '',
+        purchasePrice: undefined,
         purchaseDate: getCurrentDateTimeLocal(),
         usageDate: getCurrentDateTimeLocal(),
         notes: '',
@@ -124,7 +127,7 @@ export default function RJ45ConnectorFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreateRJ45ConnectorDto, value: string | number) => {
+  const handleChange = (field: keyof CreateRJ45ConnectorDto, value: string | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -206,6 +209,19 @@ export default function RJ45ConnectorFormModal({
             <DateTimePicker
               value={formData.purchaseDate}
               onChange={(value) => handleChange('purchaseDate', value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="purchasePrice">Precio de Compra</Label>
+            <Input
+              id="purchasePrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.purchasePrice ?? ''}
+              onChange={(e) => handleChange('purchasePrice', e.target.value === '' ? undefined : Number(e.target.value))}
+              placeholder="0.00"
             />
           </div>
 

@@ -42,6 +42,7 @@ export interface CreateInkDto extends Record<string, unknown> {
   color: string;
   quantity?: number;
   inkType?: string;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
@@ -53,6 +54,7 @@ export interface CreateUTPCableDto extends Record<string, unknown> {
   material?: string;
   lengthMeters?: number; // Backend espera Int, así que redondeamos antes de enviar
   color?: string;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
@@ -63,6 +65,7 @@ export interface CreateRJ45ConnectorDto extends Record<string, unknown> {
   quantityUnits: number;
   material: string;
   type: string;
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;
@@ -75,6 +78,7 @@ export interface CreatePowerStripDto extends Record<string, unknown> {
   lengthMeters?: number; // Opcional - acepta decimales
   color?: string; // Opcional
   capacity?: number; // Opcional - Int en el backend
+  purchasePrice?: number;
   purchaseDate?: string;
   usageDate?: string;
   notes?: string;

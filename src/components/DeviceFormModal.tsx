@@ -138,6 +138,7 @@ export default function DeviceFormModal({
     assetType: fixedType || 'laptop',
     brand: '',
     model: '',
+    purchasePrice: undefined,
     serialNumber: '',
     status: 'available',
     branchId: undefined,
@@ -173,6 +174,7 @@ export default function DeviceFormModal({
         assetType: device.assetType,
         brand: device.brand || '',
         model: device.model || '',
+        purchasePrice: (device as any).purchasePrice ?? undefined,
         serialNumber: device.serialNumber || '',
         status: device.status || 'available',
         branchId: device.branchId,
@@ -209,6 +211,7 @@ export default function DeviceFormModal({
         assetType: fixedType || 'laptop',
         brand: '',
         model: '',
+        purchasePrice: undefined,
         serialNumber: '',
         status: 'available',
         branchId: undefined,
@@ -321,6 +324,7 @@ export default function DeviceFormModal({
           assetType: formData.assetType,
           brand: formData.brand || undefined,
           model: formData.model === '' ? '' : (formData.model || undefined),
+          purchasePrice: formData.purchasePrice,
           serialNumber: formData.serialNumber || undefined,
           status: formData.status || 'available',
           branchId: formData.branchId || undefined,
@@ -1049,6 +1053,17 @@ export default function DeviceFormModal({
               <div className="space-y-2">
                 <Label>Fecha de compra</Label>
                 <DateTimePicker value={formData.purchaseDate} onChange={value => handleChange('purchaseDate', value)} />
+              </div>
+              <div className="space-y-2">
+                <Label>Precio de compra</Label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={formData.purchasePrice ?? ''}
+                  onChange={e => handleChange('purchasePrice', e.target.value === '' ? undefined : Number(e.target.value))}
+                  placeholder="0.00"
+                />
               </div>
               <div className="space-y-2">
                 <Label>Fecha de entrega</Label>

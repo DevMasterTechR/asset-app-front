@@ -68,6 +68,7 @@ export default function PowerStripFormModal({
     lengthMeters: 0,
     color: '',
     capacity: 0,
+    purchasePrice: undefined,
     purchaseDate: getCurrentDateTimeLocal(),
     usageDate: getCurrentDateTimeLocal(),
     notes: ''
@@ -82,6 +83,7 @@ export default function PowerStripFormModal({
         lengthMeters: powerStrip.lengthMeters,
         color: powerStrip.color,
         capacity: powerStrip.capacity,
+        purchasePrice: (powerStrip as any).purchasePrice ?? undefined,
         purchaseDate: formatDateTimeLocal(powerStrip.purchaseDate),
         usageDate: formatDateTimeLocal(powerStrip.usageDate),
         notes: powerStrip.notes || ''
@@ -94,6 +96,7 @@ export default function PowerStripFormModal({
         lengthMeters: 0,
         color: '',
         capacity: 0,
+        purchasePrice: undefined,
         purchaseDate: getCurrentDateTimeLocal(),
         usageDate: getCurrentDateTimeLocal(),
         notes: ''
@@ -140,6 +143,10 @@ export default function PowerStripFormModal({
         if (formData.capacity && formData.capacity > 0) {
           cleanedData.capacity = Number(formData.capacity);
         }
+
+        if (formData.purchasePrice !== undefined && !Number.isNaN(formData.purchasePrice)) {
+          cleanedData.purchasePrice = Number(formData.purchasePrice);
+        }
         
         if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
           cleanedData.purchaseDate = formData.purchaseDate;
@@ -166,7 +173,7 @@ export default function PowerStripFormModal({
     }
   };
 
-  const handleChange = (field: keyof CreatePowerStripDto, value: string | number) => {
+  const handleChange = (field: keyof CreatePowerStripDto, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
   };
 
@@ -260,6 +267,19 @@ export default function PowerStripFormModal({
             <DateTimePicker
               value={formData.purchaseDate}
               onChange={(value) => handleChange('purchaseDate', value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="purchasePrice">Precio de Compra</Label>
+            <Input
+              id="purchasePrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.purchasePrice ?? ''}
+              onChange={(e) => handleChange('purchasePrice', e.target.value === '' ? undefined : Number(e.target.value))}
+              placeholder="0.00"
             />
           </div>
 

@@ -36,6 +36,7 @@ interface UTPCableFormData {
   lengthMeters: number;
   color: string;
   quantity: number;
+  purchasePrice?: number;
   purchaseDate: string;
   usageDate: string;
   notes: string;
@@ -84,6 +85,7 @@ export default function UTPCableFormModal({
     lengthMeters: 0,
     color: '',
     quantity: 1,
+    purchasePrice: undefined,
     purchaseDate: getCurrentDateTimeLocal(),
     usageDate: getCurrentDateTimeLocal(),
     notes: '',
@@ -98,6 +100,7 @@ export default function UTPCableFormModal({
         lengthMeters: cable.lengthMeters || 0,
         color: cable.color || '',
         quantity: 1,
+        purchasePrice: (cable as any).purchasePrice ?? undefined,
         purchaseDate: formatDateTimeLocal(cable.purchaseDate),
         usageDate: formatDateTimeLocal(cable.usageDate),
         notes: cable.notes || '',
@@ -110,6 +113,7 @@ export default function UTPCableFormModal({
         lengthMeters: 0,
         color: '',
         quantity: 1,
+        purchasePrice: undefined,
         purchaseDate: getCurrentDateTimeLocal(),
         usageDate: getCurrentDateTimeLocal(),
         notes: '',
@@ -153,6 +157,10 @@ export default function UTPCableFormModal({
         if (formData.color && formData.color.trim() !== '') {
           cleanedData.color = formData.color.trim();
         }
+
+        if (formData.purchasePrice !== undefined && !Number.isNaN(formData.purchasePrice)) {
+          cleanedData.purchasePrice = formData.purchasePrice;
+        }
         
         if (formData.purchaseDate && formData.purchaseDate.trim() !== '') {
           cleanedData.purchaseDate = formData.purchaseDate;
@@ -178,7 +186,7 @@ export default function UTPCableFormModal({
     }
   };
 
-  const handleChange = (field: keyof UTPCableFormData, value: string | number) => {
+  const handleChange = (field: keyof UTPCableFormData, value: string | number | undefined) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
@@ -292,6 +300,19 @@ export default function UTPCableFormModal({
             <DateTimePicker
               value={formData.purchaseDate}
               onChange={(value) => handleChange('purchaseDate', value)}
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="purchasePrice">Precio de Compra</Label>
+            <Input
+              id="purchasePrice"
+              type="number"
+              min="0"
+              step="0.01"
+              value={formData.purchasePrice ?? ''}
+              onChange={(e) => handleChange('purchasePrice', e.target.value === '' ? undefined : Number(e.target.value))}
+              placeholder="0.00"
             />
           </div>
 
