@@ -84,7 +84,7 @@ function CredentialsPage() {
     try {
       const [credentialsData, peopleData] = await Promise.all([
         credentialsApi.getAll(),
-        peopleApi.getAll(),
+        peopleApi.getAll(undefined, 999999),
       ]);
       
       console.log('✅ Credenciales cargadas:', credentialsData);

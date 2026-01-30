@@ -125,7 +125,7 @@ function SecurityPage() {
     try {
       const results = await Promise.allSettled([
         devicesApi.getAll(searchTerm || undefined, 1, 1000),
-        peopleApi.getAll(),
+        peopleApi.getAll(undefined, 999999),
         catalogsApi.getBranches(),
         assignmentsApi.getAll(),
       ]);

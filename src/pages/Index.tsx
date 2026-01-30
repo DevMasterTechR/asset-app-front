@@ -104,7 +104,7 @@ const Index = () => {
       const [devicesRes, assignmentsRes, peopleRes, credentialsRes, loansRes] = await Promise.all([
         devicesApi.getAll(),
         assignmentsApi.getAll(),
-        peopleApi.getAll(),
+        peopleApi.getAll(undefined, 999999),
         credentialsApi.getAll(),
         loansApi.getAll(),
       ]);

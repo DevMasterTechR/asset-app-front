@@ -265,7 +265,7 @@ export default function AssignmentFormModal({
               })()}
               onSearch={async (q) => {
                 try {
-                  const res = await peopleApi.getAll(undefined, 10, q);
+                  const res = await peopleApi.getAll(1, 999999, q);
                   const list = Array.isArray(res) ? res : res.data;
                   const opts = (list as any[]).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }));
                   if (formData.personId && !opts.find(o => o.value === String(formData.personId))) {

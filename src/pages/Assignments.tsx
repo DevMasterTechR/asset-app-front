@@ -124,7 +124,7 @@ export default function Assignments() {
     try {
       const [data, peopleList, assetList, branchList] = await Promise.all([
         assignmentsApi.getAll(),
-        peopleApi.getAll(),
+        peopleApi.getAll(undefined, 999999),
         devicesApi.getAll(),
         getBranches(),
       ]);

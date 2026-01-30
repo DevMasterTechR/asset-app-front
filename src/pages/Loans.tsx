@@ -90,7 +90,7 @@ export default function Loans() {
       setLoading(true);
       const [loanData, peopleList, assetList, branchList] = await Promise.all([
         loansApi.getAll(),
-        peopleApi.getAll(),
+        peopleApi.getAll(undefined, 999999),
         devicesApi.getAll(),
         getBranches(),
       ]);
