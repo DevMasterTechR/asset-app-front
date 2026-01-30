@@ -77,7 +77,7 @@ export default function People() {
   const loadData = async (pageParam = 1, limitParam = 10) => {
     try {
       const [peopleRes, branchesData, departmentsData, rolesData] = await Promise.all([
-        peopleApi.getAll(),
+        peopleApi.getAll(undefined, 999999),  // Sin paginación - traer todas las personas
         catalogsApi.getBranches(),
         catalogsApi.getDepartments(),
         catalogsApi.getRoles(),
