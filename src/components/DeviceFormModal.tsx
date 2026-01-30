@@ -320,7 +320,7 @@ export default function DeviceFormModal({
           assetCode: assetCode,
           assetType: formData.assetType,
           brand: formData.brand || undefined,
-          model: formData.model || undefined,
+          model: formData.model === '' ? '' : (formData.model || undefined),
           serialNumber: formData.serialNumber || undefined,
           status: formData.status || 'available',
           branchId: formData.branchId || undefined,
@@ -546,6 +546,7 @@ export default function DeviceFormModal({
           </>
         );
       case 'laptop':
+      case 'desktop':
       case 'server':
         return (
           <>
@@ -556,6 +557,29 @@ export default function DeviceFormModal({
             <div className="space-y-2">
               <Label>RAM (GB)</Label>
               <Input type="number" value={Number(getAttrValue('ram')) || ''} onChange={e => handleAttributeChange('ram', e.target.value ? Number(e.target.value) : 0)} placeholder="16" />
+            </div>
+            <div className="space-y-2">
+              <Label>Tipo de RAM</Label>
+              <SearchableSelect
+                value={String(getAttrValue('ramType') || 'none')}
+                onValueChange={value => handleAttributeChange('ramType', value === 'none' ? '' : value)}
+                placeholder="Selecciona tipo"
+                options={[
+                  { label: 'No especificado', value: 'none' },
+                  { label: 'DDR3', value: 'DDR3' },
+                  { label: 'DDR4', value: 'DDR4' },
+                  { label: 'DDR5', value: 'DDR5' },
+                ]}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>RAM (MHz)</Label>
+              <Input
+                type="number"
+                value={Number(getAttrValue('ramMhz')) || ''}
+                onChange={e => handleAttributeChange('ramMhz', e.target.value ? Number(e.target.value) : 0)}
+                placeholder="3200"
+              />
             </div>
             <div className="space-y-2">
               <Label>Almacenamiento</Label>
