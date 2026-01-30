@@ -62,6 +62,14 @@ const Index = () => {
   const [confirmFirmadaRecepcionOpen, setConfirmFirmadaRecepcionOpen] = useState(false);
   const [userToMarkFirmadaRecepcion, setUserToMarkFirmadaRecepcion] = useState<any>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  
+  // Estados para el flujo después de firmar acta de recepción
+  const [postFirmaModalOpen, setPostFirmaModalOpen] = useState(false);
+  const [postFirmaUser, setPostFirmaUser] = useState<any>(null);
+  const [reasignarModalOpen, setReasignarModalOpen] = useState(false);
+  const [newPersonId, setNewPersonId] = useState<string>("");
+  const [reasignarSaving, setReasignarSaving] = useState(false);
+  const [reasignarError, setReasignarError] = useState<string>("");
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -1307,8 +1315,11 @@ const Index = () => {
                       await Promise.all(updatePromises);
                       toast({ title: 'Éxito', description: 'Acta de recepción marcada como firmada correctamente' });
                       setConfirmFirmadaRecepcionOpen(false);
+                      
+                      // Abrir modal de decisión post-firma
+                      setPostFirmaUser(userToMarkFirmadaRecepcion);
+                      setPostFirmaModalOpen(true);
                       setUserToMarkFirmadaRecepcion(null);
-                      loadData(); // Recargar los datos
                     } catch (error) {
                       console.error('Error al marcar acta de recepción como firmada:', error);
                       toast({ title: 'Error', description: 'Error al marcar acta de recepción como firmada', variant: 'destructive' });
@@ -1316,6 +1327,229 @@ const Index = () => {
                   }}
                 >
                   Aceptar y marcar como firmada
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de decisión post-firma: ¿Qué hacer con las asignaciones? */}
+      {postFirmaModalOpen && postFirmaUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div className="bg-blue-50 text-blue-700 px-4 py-3 rounded-t-lg border-b border-blue-100 font-semibold">
+              📋 ¿Qué desea hacer con las asignaciones?
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Usuario</p>
+                <p className="text-base font-semibold">{postFirmaUser.userName}</p>
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Equipos asignados ({postFirmaUser.devices?.length || 0})</p>
+                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                  {(postFirmaUser.devices || []).map((d: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center rounded-full border border-blue-200 bg-blue-50 px-3 py-1 text-xs font-semibold text-blue-700 shadow-sm"
+                    >
+                      {d.code || 'SIN-CODIGO'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded border border-blue-200 bg-blue-50 text-blue-800 px-4 py-3 text-sm">
+                <p className="font-semibold mb-2">Seleccione una opción:</p>
+                <ul className="list-disc list-inside space-y-1">
+                  <li><strong>Finalizar asignaciones:</strong> Todas las asignaciones se cerrarán y los equipos quedarán disponibles.</li>
+                  <li><strong>Reasignar a otra persona:</strong> Todos los equipos se transferirán a un nuevo responsable.</li>
+                </ul>
+              </div>
+
+              <div className="flex flex-col sm:flex-row justify-end gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setPostFirmaModalOpen(false);
+                    setPostFirmaUser(null);
+                    loadData();
+                  }}
+                >
+                  Cerrar sin cambios
+                </Button>
+                <Button 
+                  variant="destructive" 
+                  onClick={async () => {
+                    // Finalizar todas las asignaciones
+                    try {
+                      const now = new Date().toISOString();
+                      const finishPromises = (postFirmaUser.devices || []).map((d: any) =>
+                        assignmentsApi.update(String(d.assignmentId), {
+                          returnDate: now,
+                          returnCondition: 'good',
+                          returnNotes: 'Finalización por firma de acta de recepción',
+                        })
+                      );
+                      await Promise.all(finishPromises);
+                      toast({ title: 'Éxito', description: 'Todas las asignaciones han sido finalizadas correctamente' });
+                      setPostFirmaModalOpen(false);
+                      setPostFirmaUser(null);
+                      loadData();
+                    } catch (error) {
+                      console.error('Error al finalizar asignaciones:', error);
+                      toast({ title: 'Error', description: 'Error al finalizar las asignaciones', variant: 'destructive' });
+                    }
+                  }}
+                >
+                  Finalizar asignaciones
+                </Button>
+                <Button 
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                  onClick={() => {
+                    // Abrir modal de reasignación
+                    setPostFirmaModalOpen(false);
+                    setReasignarModalOpen(true);
+                    setNewPersonId("");
+                    setReasignarError("");
+                  }}
+                >
+                  Reasignar a otra persona
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal para reasignar equipos a nueva persona */}
+      {reasignarModalOpen && postFirmaUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div className="bg-green-50 text-green-700 px-4 py-3 rounded-t-lg border-b border-green-100 font-semibold">
+              👤 Reasignar equipos a nueva persona
+            </div>
+            <div className="p-4 space-y-4">
+              <div>
+                <p className="text-sm text-muted-foreground">Dueño actual</p>
+                <p className="text-base font-semibold">{postFirmaUser.userName}</p>
+                <p className="text-sm text-muted-foreground">Sucursal: {postFirmaUser.branch || '-'}</p>
+              </div>
+
+              <div>
+                <label className="text-sm font-medium">Nueva persona responsable</label>
+                <select
+                  className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                  value={newPersonId}
+                  onChange={(e) => setNewPersonId(e.target.value)}
+                >
+                  <option value="">Seleccione una persona...</option>
+                  {people
+                    .filter((p: any) => String(p.id) !== String(postFirmaUser.userId))
+                    .map((p: any) => (
+                      <option key={p.id} value={p.id}>{`${p.firstName} ${p.lastName}`}</option>
+                    ))}
+                </select>
+                {reasignarError && (
+                  <div className="mt-2 text-xs rounded border border-red-200 bg-red-50 text-red-700 px-3 py-2">
+                    {reasignarError}
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Equipos a reasignar ({postFirmaUser.devices?.length || 0})</p>
+                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
+                  {(postFirmaUser.devices || []).map((d: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 shadow-sm"
+                    >
+                      {d.code || 'SIN-CODIGO'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setReasignarModalOpen(false);
+                    setPostFirmaUser(null);
+                    loadData();
+                  }} 
+                  disabled={reasignarSaving}
+                >
+                  Cancelar
+                </Button>
+                <Button 
+                  variant="default"
+                  className="bg-green-600 hover:bg-green-700"
+                  disabled={reasignarSaving || !newPersonId}
+                  onClick={async () => {
+                    if (!newPersonId) {
+                      setReasignarError('Selecciona una persona válida');
+                      return;
+                    }
+
+                    const targetPerson = people.find((p: any) => String(p.id) === String(newPersonId));
+                    if (!targetPerson) {
+                      setReasignarError('Selecciona una persona válida');
+                      return;
+                    }
+
+                    // Validar que el nuevo dueño no tenga asignaciones activas actuales
+                    const targetActive = userAssignments.find(
+                      (u: any) => String(u.userId) === String(newPersonId) && u.devices && u.devices.length > 0
+                    );
+                    if (targetActive) {
+                      setReasignarError('No se puede reasignar: la persona seleccionada ya tiene asignaciones activas.');
+                      return;
+                    }
+
+                    const branchId = targetPerson.branchId ?? targetPerson.branch?.id;
+                    const devicesToMove = postFirmaUser.devices || [];
+
+                    try {
+                      setReasignarSaving(true);
+                      const now = new Date().toISOString();
+
+                      for (const d of devicesToMove) {
+                        // 1) Cerrar asignación actual
+                        await assignmentsApi.update(String(d.assignmentId), {
+                          returnDate: now,
+                          returnCondition: 'good',
+                          returnNotes: 'Transferencia a nuevo responsable por firma de acta de recepción',
+                        });
+
+                        // 2) Crear nueva asignación al nuevo dueño
+                        await assignmentsApi.create({
+                          assetId: d.assetId,
+                          personId: Number(newPersonId),
+                          branchId: branchId !== undefined ? Number(branchId) : undefined,
+                          assignmentDate: now,
+                          deliveryCondition: 'good',
+                          deliveryNotes: 'Transferencia de dueño por firma de acta de recepción',
+                        });
+                      }
+
+                      toast({ title: 'Éxito', description: `Equipos reasignados correctamente a ${targetPerson.firstName} ${targetPerson.lastName}` });
+                      setReasignarModalOpen(false);
+                      setPostFirmaUser(null);
+                      loadData();
+                    } catch (err) {
+                      console.error('Error reasignando equipos:', err);
+                      setReasignarError(err instanceof Error ? err.message : 'No se pudo reasignar los equipos');
+                    } finally {
+                      setReasignarSaving(false);
+                    }
+                  }}
+                >
+                  {reasignarSaving ? 'Guardando...' : 'Confirmar reasignación'}
                 </Button>
               </div>
             </div>
