@@ -29,9 +29,9 @@ const Index = () => {
   const [devices, setDevices] = useState<any[]>([]);
   const [userAssignments, setUserAssignments] = useState<any[]>([]);
   const [page, setPage] = useState<number>(1);
-  const [limit, setLimit] = useState<number>(5);
+  const [limit, setLimit] = useState<number>(15);
   const [pageByPerson, setPageByPerson] = useState<number>(1);
-  const [limitByPerson, setLimitByPerson] = useState<number>(5);
+  const [limitByPerson, setLimitByPerson] = useState<number>(20);
   const [loading, setLoading] = useState(false);
   const [summaryOpen, setSummaryOpen] = useState(false);
   const [summaryCodes, setSummaryCodes] = useState<any[]>([]);
@@ -1009,7 +1009,7 @@ const Index = () => {
                   onPageChange={(p) => setPageByPerson(p)}
                   limit={limitByPerson}
                   onLimitChange={(l) => { setLimitByPerson(l); setPageByPerson(1); }}
-                  limits={[5,10,15,20]}
+                  limits={[10,15,20,30,50]}
                 />
               </div>
             </div>
