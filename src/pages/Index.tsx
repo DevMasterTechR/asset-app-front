@@ -712,7 +712,7 @@ const Index = () => {
                 onPageChange={(p) => setPage(p)}
                 limit={limit}
                 onLimitChange={(l) => { setLimit(l); setPage(1); }}
-                limits={[5,10,15,20]}
+                limits={[10,15,20,30,50]}
               />
             </div>
           </TabsContent>
@@ -1139,7 +1139,7 @@ const Index = () => {
                       onPageChange={(p) => setPageHistorial(p)}
                       limit={limitHistorial}
                       onLimitChange={(l) => { setLimitHistorial(l); setPageHistorial(1); }}
-                      limits={[5,10,15,20]}
+                      limits={[10,15,20,30,50]}
                     />
                   </div>
                 </div>
