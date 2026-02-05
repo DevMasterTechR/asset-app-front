@@ -268,7 +268,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       ];
 
       const isLaptop = /laptop|notebook|ultrabook/i.test(typeLabel);
-      const isCelular = /celular|cellphone|phone/i.test(typeLabel);
+      const isCelular = /celular|cellphone|móvil|tablet/i.test(typeLabel);
       const isDesktop = /desktop|pc|computadora/i.test(typeLabel);
       const isIPPhone = /ip-phone|ipphone|teléfono ip|telefono ip/i.test(typeLabel);
       const isPrinter = /printer|impresora/i.test(typeLabel);
@@ -281,10 +281,10 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       const laptopLines = isLaptop
         ? [
             `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
-            `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Memoria RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
             `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "ssd", "hdd", "disk"])}`,
             `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
-            `Maletín: ${resolveField(d, ["hasBag", "bagIncluded", "bag", "maletin"], true)}`,
+            `Maletín/Bolso: ${resolveField(d, ["hasBag", "bagIncluded", "bag", "maletin"], true)}`,
           ]
         : [];
 
@@ -292,16 +292,16 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
         ? [
             `Número Celular: ${resolveField(d, ["chipNumber", "phoneNumber", "phone", "number", "telefono", "numeroCelular", "celular"])}`,
             `Operadora: ${resolveField(d, ["operator", "operadora", "carrier"])}`,
-            `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Memoria RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
             `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
-            `IMEI: ${resolveField(d, ["imeis", "imei", "imei1"], false, true)}`,
+            `Código IMEI: ${resolveField(d, ["imeis", "imei", "imei1"], false, true)}`,
             `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
             `Color: ${resolveField(d, ["color"])}`,
-            `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
-            `Cable de carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
-            `Estuche/Case: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
-            `Mica: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
-            `Chip: ${resolveField(d, ["hasChip", "chip"], true)}`,
+            `Cargador Cel: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Cable de Carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
+            `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
+            `Protector Pantalla: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
+            `Chip Telefónico: ${resolveField(d, ["hasChip", "chip"], true)}`,
           ]
         : [];
 
@@ -321,19 +321,19 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
 
       const ipPhoneLines = isIPPhone
         ? [
-            `Extensión: ${resolveField(d, ["extension"])}`,
-            `Número: ${resolveField(d, ["phoneNumber", "number"])}`,
-            `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
+            `Extensión Telefónica: ${resolveField(d, ["extension"])}`,
+            `Número Telefónico: ${resolveField(d, ["phoneNumber", "number"])}`,
+            `Cargador Incluido: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
           ]
         : [];
 
       const printerLines = isPrinter
         ? [
-            `Tipo: ${resolveField(d, ["printerType", "tipo"])}`,
-            `Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
-            `IP: ${resolveField(d, ["ipAddress", "ip"])}`,
-            `Escáner: ${resolveField(d, ["hasScanner", "scanner"], true)}`,
-            `Imprime a Color: ${resolveField(d, ["colorPrinting", "color"], true)}`,
+            `Tipo de Impresora: ${resolveField(d, ["printerType", "tipo"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+            `Dirección IP: ${resolveField(d, ["ipAddress", "ip"])}`,
+            `Función Escáner: ${resolveField(d, ["hasScanner", "scanner"], true)}`,
+            `Impresión a Color: ${resolveField(d, ["colorPrinting", "color"], true)}`,
             `Cable de Poder: ${resolveField(d, ["hasPowerCable", "powerCable"], true)}`,
             `Cable USB: ${resolveField(d, ["hasUSBCable", "usbCable"], true)}`,
           ]
@@ -432,12 +432,12 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       // Monitor
       const monitorLines = isMonitor
         ? [
-            `Tamaño (pulgadas): ${resolveField(d, ["screenSize"])}`,
+            `Tamaño de Pantalla (pulgadas): ${resolveField(d, ["screenSize"])}`,
             `Resolución: ${resolveField(d, ["resolution"])}`,
-            `Tipo de panel: ${resolveField(d, ["panelType"])}`,
-            `HDMI: ${resolveField(d, ["hasHDMI"], true)}`,
-            `VGA: ${resolveField(d, ["hasVGA"], true)}`,
-            `Cable de poder: ${resolveField(d, ["hasPowerCable"], true)}`,
+            `Tipo de Panel: ${resolveField(d, ["panelType"])}`,
+            `Puerto HDMI: ${resolveField(d, ["hasHDMI"], true)}`,
+            `Puerto VGA: ${resolveField(d, ["hasVGA"], true)}`,
+            `Cable de Poder: ${resolveField(d, ["hasPowerCable"], true)}`,
           ]
         : [];
 
@@ -445,12 +445,12 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       const tabletLines = isTablet && !isCelular
         ? [
             `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
-            `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Memoria RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
             `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
             `Color: ${resolveField(d, ["color"])}`,
             `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
-            `Cable de carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
-            `Estuche/Case: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
+            `Cable de Carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
+            `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
           ]
         : [];
 
@@ -553,7 +553,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       };
 
       const isLaptop = (d: any) => /laptop|notebook|ultrabook/i.test((d?.assetType || d?.type || '') as string);
-      const isCelular = (d: any) => /celular|cellphone|phone|telefono/i.test((d?.assetType || d?.type || '') as string);
+      const isCelular = (d: any) => /celular|cellphone|móvil|tablet/i.test((d?.assetType || d?.type || '') as string);
 
       const laptop = takeAndRemove(original, isLaptop);
       const celular = takeAndRemove(original, isCelular);
