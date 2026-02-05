@@ -292,7 +292,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
 
       const ipPhoneLines = isIPPhone
         ? [
-            `Número: ${resolveField(d, ["phoneNumber", "number", "extension"])}`,
+            `Extensión: ${resolveField(d, ["extension"])}`,
+            `Número: ${resolveField(d, ["phoneNumber", "number"])}`,
             `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
           ]
         : [];
@@ -309,7 +310,79 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
           ]
         : [];
 
-      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines];
+      // Cables de carga
+      const isCargaCable = /cable-carga|cable carga|charging cable|charging.cable/i.test(typeLabel);
+      const cableLines = isCargaCable
+        ? [
+            `Color: ${resolveField(d, ["color"])}`,
+            `Longitud (cm): ${resolveField(d, ["length", "longitud"])}`,
+            `Tipo de Conector: ${resolveField(d, ["connectorType", "connector", "tipoConector"])}`,
+          ]
+        : [];
+
+      // Soportes
+      const isSoporte = /soporte|stand|support/i.test(typeLabel);
+      const soporteLines = isSoporte
+        ? [
+            `Material: ${resolveField(d, ["material"])}`,
+            `Color: ${resolveField(d, ["color"])}`,
+          ]
+        : [];
+
+      // Mousepad
+      const isMousepad = /mousepad|mouse pad/i.test(typeLabel);
+      const mousepadLines = isMousepad
+        ? [
+            `Color: ${resolveField(d, ["color"])}`,
+          ]
+        : [];
+
+      // Hub
+      const isHub = /hub/i.test(typeLabel);
+      const hubLines = isHub
+        ? [
+            `Modelo: ${resolveField(d, ["model"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+          ]
+        : [];
+
+      // Adaptador de Memoria
+      const isAdapterMemory = /adaptador-memoria|memory adapter|adaptador memoria/i.test(typeLabel);
+      const adapterMemoryLines = isAdapterMemory
+        ? [
+            `Color: ${resolveField(d, ["color"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+          ]
+        : [];
+
+      // Adaptador de Red
+      const isAdapterNetwork = /adaptador-red|network adapter|adaptador red/i.test(typeLabel);
+      const adapterNetworkLines = isAdapterNetwork
+        ? [
+            `Color: ${resolveField(d, ["color"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+          ]
+        : [];
+
+      // Cargador Laptop
+      const isChargerLaptop = /cargador-laptop|cargador laptop|laptop charger/i.test(typeLabel);
+      const chargerLaptopLines = isChargerLaptop
+        ? [
+            `Potencia (W): ${resolveField(d, ["wattage"])}`,
+            `Tipo de Conector: ${resolveField(d, ["connectorType", "connector"])}`,
+          ]
+        : [];
+
+      // Cargador Celular
+      const isChargerCell = /cargador-celular|cargador celular|cell charger|celular charger/i.test(typeLabel);
+      const chargerCellLines = isChargerCell
+        ? [
+            `Potencia (W): ${resolveField(d, ["wattage"])}`,
+            `Tipo de Conector: ${resolveField(d, ["connectorType", "connector"])}`,
+          ]
+        : [];
+
+      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...hubLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines];
       
       const filteredLines = allLines.filter(line => {
         if (line.includes(': -')) return false;
