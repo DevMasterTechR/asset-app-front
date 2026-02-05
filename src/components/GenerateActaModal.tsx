@@ -54,7 +54,8 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     if (open) {
       // Generar observaciones dinámicas desde las notas de cada asignación
       const autoObservations = generateObservationsFromDevices();
-      setObservations(autoObservations);
+      // Si no hay observaciones, automáticamente poner "Ninguna"
+      setObservations(autoObservations && autoObservations.trim() ? autoObservations : "Ninguna");
       
       console.log("Usuario en GenerateActaModal:", user);
       if (user?.devices) {

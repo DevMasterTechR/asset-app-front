@@ -97,14 +97,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   };
 
   const handleGeneratePDF = async () => {
-    if (!observations.trim()) {
-      toast({
-        title: "Error",
-        description: "Las observaciones son obligatorias",
-        variant: "destructive",
-      });
-      return;
-    }
+    // Las observaciones ahora pueden estar vacías, se rellenarán con "Ninguna" automáticamente
+    const finalObservations = observations && observations.trim() ? observations : "Ninguna";
 
     const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
@@ -597,8 +591,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
-    const observationsText = observations && observations.trim() ? observations : "Ninguna";
-    const splitObs = doc.splitTextToSize(observationsText, 180);
+    const splitObs = doc.splitTextToSize(finalObservations, 180);
     doc.text(splitObs, 15, currentY + 4);
     currentY += splitObs.length * 4 + 10;
 
