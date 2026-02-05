@@ -543,7 +543,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     };
 
     // Dibujar dispositivos en pares (dos por fila)
-    // Reordenar para que los dos primeros siempre sean Laptop y Celular.
+    // Reordenar para que los primeros siempre sean Laptop y Celular (si existen).
     const devices = (() => {
       const original = Array.isArray(user.devices) ? [...user.devices] : [];
       const takeAndRemove = (arr: any[], predicate: (d: any) => boolean) => {
@@ -555,10 +555,13 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       const isLaptop = (d: any) => /laptop|notebook|ultrabook/i.test((d?.assetType || d?.type || '') as string);
       const isCelular = (d: any) => /celular|cellphone|phone|telefono/i.test((d?.assetType || d?.type || '') as string);
 
-      const laptop = takeAndRemove(original, isLaptop) || { code: 'SIN-CODIGO', assetType: 'Laptop' };
-      const celular = takeAndRemove(original, isCelular) || { code: 'SIN-CODIGO', assetType: 'Celular' };
+      const laptop = takeAndRemove(original, isLaptop);
+      const celular = takeAndRemove(original, isCelular);
 
-      return [laptop, celular, ...original];
+      const result = [];
+      if (laptop) result.push(laptop);
+      if (celular) result.push(celular);
+      return [...result, ...original];
     })();
 
     for (let i = 0; i < devices.length; i += 2) {
