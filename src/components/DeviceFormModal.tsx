@@ -11,6 +11,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import SearchableSelect from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -153,6 +163,8 @@ export default function DeviceFormModal({
   const [pendingReceived, setPendingReceived] = useState(false);
   const [deliveryDateAuto, setDeliveryDateAuto] = useState<string>('');
   const [serverError, setServerError] = useState<string | null>(null);
+  const [assignToPersonChecked, setAssignToPersonChecked] = useState(false);
+  const [pendingAssignment, setPendingAssignment] = useState<{ deviceCode: string; deviceName: string; personName: string; deviceId: string; personId: string } | null>(null);
 
   useEffect(() => {
     if (open) reloadAvailableAccessories();
@@ -223,6 +235,8 @@ export default function DeviceFormModal({
         attributesJson: {},
       });
       setDeliveryDateAuto('');
+      setAssignToPersonChecked(false);
+      setPendingAssignment(null);
     }
   }, [device, mode, open, fixedType]);
 
@@ -338,6 +352,39 @@ export default function DeviceFormModal({
 
         await onSave(cleanData);
       }
+
+      // Si se debe asignar a una persona, mostrar alert después de guardar
+      if (assignToPersonChecked && mode === 'create' && quantity === 1) {
+        // Obtener el dispositivo recién creado para obtener su ID
+        try {
+          const res = await devicesApi.getAll(undefined, 1, 100);
+          const devices = extractArray<any>(res) || [];
+          const newDevice = devices.find((d: any) => d.assetCode === (uniqueCodes[0] || formData.assetCode));
+          
+          if (newDevice && formData.assignedPersonId) {
+            // Obtener información de la persona
+            const allPeople = await fetch('/api/people').then(r => r.json()).catch(() => []);
+            const person = Array.isArray(allPeople) ? allPeople.find((p: any) => String(p.id) === String(formData.assignedPersonId)) : null;
+            
+            if (person) {
+              const deviceName = `${formData.brand || ''} ${formData.model || ''}`.trim();
+              const personName = `${person.firstName || ''} ${person.lastName || ''}`.trim();
+              
+              setPendingAssignment({
+                deviceCode: uniqueCodes[0] || formData.assetCode,
+                deviceName: deviceName || formData.assetType,
+                personName: personName,
+                deviceId: String(newDevice.id),
+                personId: String(formData.assignedPersonId)
+              });
+              return; // No cerrar el modal, esperar a que el usuario responda el alert
+            }
+          }
+        } catch (e) {
+          console.error('Error preparing assignment:', e);
+        }
+      }
+
       onOpenChange(false);
     } catch (error: any) {
       console.error('Error al guardar:', error);
@@ -960,6 +1007,7 @@ export default function DeviceFormModal({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
@@ -1116,6 +1164,20 @@ export default function DeviceFormModal({
             </div>
           )}
 
+          {/* Checkbox para asignar a persona */}
+          {mode === 'create' && quantity === 1 && formData.assignedPersonId && (
+            <div className="flex items-center space-x-2 border rounded-lg p-3 bg-blue-50">
+              <Checkbox 
+                id="assignToPerson" 
+                checked={assignToPersonChecked} 
+                onCheckedChange={(c) => setAssignToPersonChecked(c === true)}
+              />
+              <Label htmlFor="assignToPerson" className="cursor-pointer font-medium">
+                ¿Deseas asignarle a una persona de manera inmediata?
+              </Label>
+            </div>
+          )}
+
           <DialogFooter>
             {serverError && <div className="w-full text-center text-sm text-rose-700 mb-2">{serverError}</div>}
             <Button type="button" onClick={() => onOpenChange(false)} disabled={loading} className="bg-white border border-gray-300 text-gray-900 hover:bg-gray-100">
@@ -1195,5 +1257,54 @@ export default function DeviceFormModal({
         )}
       </DialogContent>
     </Dialog>
+
+    {/* Alert para confirmar asignación */}
+    {pendingAssignment && (
+      <AlertDialog open={true} onOpenChange={(open) => {
+        if (!open) {
+          setPendingAssignment(null);
+          onOpenChange(false);
+        }
+      }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Confirmar Asignación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Deseas asignar el dispositivo <strong>{pendingAssignment.deviceCode} - {pendingAssignment.deviceName}</strong> a <strong>{pendingAssignment.personName}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => {
+              setPendingAssignment(null);
+              onOpenChange(false);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={async () => {
+              try {
+                // Asignar el dispositivo
+                await assignmentsApi.create({
+                  assetId: pendingAssignment.deviceId,
+                  personId: pendingAssignment.personId,
+                  branchId: formData.branchId || '',
+                  assignmentDate: new Date().toISOString(),
+                  deliveryCondition: 'good',
+                  deliveryNotes: 'Asignación automática durante creación de dispositivo',
+                });
+                
+                setPendingAssignment(null);
+                onOpenChange(false);
+              } catch (error) {
+                console.error('Error asignando dispositivo:', error);
+                alert('Error al asignar el dispositivo');
+              }
+            }}>
+              Confirmar Asignación
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    )}
+    </>
   );
 }
