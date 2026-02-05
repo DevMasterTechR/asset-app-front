@@ -245,6 +245,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
       const isDesktop = /desktop|pc|computadora/i.test(typeLabel);
       const isIPPhone = /ip-phone|ipphone|teléfono ip|telefono ip/i.test(typeLabel);
       const isPrinter = /printer|impresora/i.test(typeLabel);
+      const isMonitor = /monitor/i.test(typeLabel);
+      const isTablet = /tablet/i.test(typeLabel);
       
       const purchaseDateValue = d?.purchaseDate || d?.attributesJson?.purchaseDate;
       const purchaseYear = purchaseDateValue ? new Date(purchaseDateValue).getFullYear() : '-';
@@ -381,19 +383,71 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             `Tipo de Conector: ${resolveField(d, ["connectorType", "connector"])}`,
           ]
         : [];
+      // Mouse
+      const isMouse = /mouse|ratón|raton/i.test(typeLabel);
+      const mouseLines = isMouse
+        ? [
+            `Color: ${resolveField(d, ["color"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+          ]
+        : [];
 
-      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...hubLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines];
+      // Teclado
+      const isTeclado = /teclado|keyboard/i.test(typeLabel);
+      const tecladoLines = isTeclado
+        ? [
+            `Color: ${resolveField(d, ["color"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+          ]
+        : [];
+
+      // Monitor
+      const monitorLines = isMonitor
+        ? [
+            `Tamaño (pulgadas): ${resolveField(d, ["screenSize"])}`,
+            `Resolución: ${resolveField(d, ["resolution"])}`,
+            `Tipo de panel: ${resolveField(d, ["panelType"])}`,
+            `HDMI: ${resolveField(d, ["hasHDMI"], true)}`,
+            `VGA: ${resolveField(d, ["hasVGA"], true)}`,
+            `Cable de poder: ${resolveField(d, ["hasPowerCable"], true)}`,
+          ]
+        : [];
+
+      // Tablet (similar a celular pero con menos campos)
+      const tabletLines = isTablet && !isCelular
+        ? [
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
+            `RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
+            `Color: ${resolveField(d, ["color"])}`,
+            `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Cable de carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
+            `Estuche/Case: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
+          ]
+        : [];
+      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...hubLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines, ...mouseLines, ...tecladoLines, ...monitorLines, ...tabletLines];
       
-      const filteredLines = allLines.filter(line => {
+      // Separar baseLines de atributos específicos
+      const baseLineCount = baseLines.length;
+      const specificAttributeLines = allLines.filter((_, idx) => idx >= baseLineCount);
+      
+      // Filtrar solo las líneas específicas que tienen datos (no vacías ni "No")
+      const filteredSpecificLines = specificAttributeLines.filter(line => {
+        // Eliminar líneas que terminan en ": -" o que son ": No"
         if (line.includes(': -')) return false;
         if (line.endsWith(': No')) return false;
         return true;
       });
       
-      let displayLines = filteredLines;
-      if (filteredLines.length <= 4) {
+      // Las baseLines siempre se muestran (sin filtrado)
+      const baseLinesToShow = baseLines.filter(line => !line.includes(': -'));
+      
+      let displayLines = [...baseLinesToShow, ...filteredSpecificLines];
+      
+      // Si no hay atributos específicos después de baseLines, mostrar mensaje
+      if (filteredSpecificLines.length === 0) {
         displayLines = [
-          ...baseLines.filter(l => !l.includes(': -')),
+          ...baseLinesToShow,
           `[Sin atributos específicos registrados]`
         ];
       }
