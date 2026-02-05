@@ -54,21 +54,39 @@ export default function SearchableSelect({
 }: Props) {
   const [query, setQuery] = React.useState("");
   const [internalOptions, setInternalOptions] = React.useState<Option[]>(options);
+  const [cachedOptions, setCachedOptions] = React.useState<Option[]>(options);
   const [loading, setLoading] = React.useState(false);
   const triggerRef = React.useRef<HTMLElement | null>(null);
   const prevOptionsRef = React.useRef<Option[]>(options);
 
+  // Actualizar cache cuando se obtienen nuevas opciones
+  React.useEffect(() => {
+    setCachedOptions(prev => {
+      const combined = [...prev];
+      for (const opt of internalOptions) {
+        if (!combined.find(o => o.value === opt.value)) {
+          combined.push(opt);
+        }
+      }
+      return combined;
+    });
+  }, [internalOptions]);
+
   // Buscar la etiqueta del valor actual en las opciones, o usar initialLabel si no se encuentra
   const selectedLabel = React.useMemo(() => {
     if (!value) return undefined;
+    // Buscar en options originales primero
     const found = options.find(o => o.value === value);
     if (found?.label) return found.label;
-    // También buscar en internalOptions por si vino de búsqueda remota
+    // Buscar en opciones internas (búsqueda remota)
     const foundInternal = internalOptions.find(o => o.value === value);
     if (foundInternal?.label) return foundInternal.label;
+    // Buscar en cache de todas las opciones vistas
+    const foundCached = cachedOptions.find(o => o.value === value);
+    if (foundCached?.label) return foundCached.label;
     // Usar initialLabel como fallback
     return initialLabel;
-  }, [value, options, internalOptions, initialLabel]);
+  }, [value, options, internalOptions, cachedOptions, initialLabel]);
 
   // Keep options in sync when parent changes static options (solo si cambian de verdad)
   React.useEffect(() => {

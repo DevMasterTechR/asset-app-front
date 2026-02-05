@@ -220,8 +220,14 @@ export default function AssignmentFormModal({
               searchPlaceholder="Buscar activo (por código, marca o modelo)"
               initialLabel={initialAssetLabel}
               options={(() => {
-                // Siempre incluir la opción seleccionada aunque no esté en el listado actual
-                const opts = sortedAssets.map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }));
+                // Construir opciones con información completa del asset
+                const opts = sortedAssets.map(a => {
+                  const codeDisplay = a.code && a.code.trim() ? a.code : a.assetCode || '';
+                  const label = codeDisplay && a.name 
+                    ? `${codeDisplay} - ${a.name}`
+                    : a.name || codeDisplay || String(a.id);
+                  return { label, value: String(a.id) };
+                });
                 if (formData.assetId && !opts.find(o => o.value === String(formData.assetId))) {
                   opts.unshift({ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) });
                 }
@@ -233,7 +239,14 @@ export default function AssignmentFormModal({
                   const list = Array.isArray(res) ? res : res.data;
                   const opts = (list as any[])
                     .filter(a => (a.status || '') === 'available' && a.assetType !== 'security')
-                    .map(a => ({ label: `${a.assetCode || a.assetCode} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
+                    .map(a => {
+                      const codeDisplay = a.code || a.assetCode || '';
+                      const brandModel = `${(a.brand || '').trim()} ${(a.model || '').trim()}`.trim();
+                      const label = codeDisplay && brandModel 
+                        ? `${codeDisplay} - ${brandModel}`
+                        : brandModel || codeDisplay || String(a.id);
+                      return { label, value: String(a.id) };
+                    });
                   // Siempre incluir la opción seleccionada
                   if (formData.assetId && !opts.find(o => o.value === String(formData.assetId))) {
                     opts.unshift({ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) });

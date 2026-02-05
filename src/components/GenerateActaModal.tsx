@@ -644,7 +644,8 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
-    const splitObs = doc.splitTextToSize(observations, 180);
+    const observationsText = observations && observations.trim() ? observations : "Ninguna";
+    const splitObs = doc.splitTextToSize(observationsText, 180);
     doc.text(splitObs, 15, currentY + 4);
     currentY += splitObs.length * 4 + 6; // Separación de 6 puntos después de observaciones
 
