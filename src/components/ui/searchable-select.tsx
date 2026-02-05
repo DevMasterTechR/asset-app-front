@@ -186,12 +186,16 @@ export default function SearchableSelect({
         )}
       </SelectTrigger>
 
-      <SelectContent side="bottom" align="start" sideOffset={6}>
-        <div className="px-2 py-2">
+      <SelectContent side="bottom" align="start" sideOffset={6} onCloseAutoFocus={(e) => e.preventDefault()}>
+        <div className="px-2 py-2" onKeyDown={(e) => e.stopPropagation()}>
           <input
+            autoFocus
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            onKeyUp={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.stopPropagation()}
             placeholder={searchPlaceholder}
             className="h-9 w-full rounded-md border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring"
           />
