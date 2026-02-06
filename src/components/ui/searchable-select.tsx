@@ -17,7 +17,7 @@ type Option = {
 
 type Props = {
   value?: string;
-  onValueChange?: (value: string) => void;
+  onValueChange?: (value: string, label?: string) => void;
   placeholder?: string;
   searchPlaceholder?: string;
   disabled?: boolean;
@@ -194,8 +194,14 @@ export default function SearchableSelect({
   };
 
   return (
-    <Select value={value} onValueChange={(v) => onValueChange?.(v)} onOpenChange={handleOpenChange}>
-      <SelectTrigger ref={triggerRef as any} className={cn("w-full", className)} disabled={disabled}>
+    <Select 
+      value={value} 
+      onValueChange={(v) => {
+        const selectedOption = internalOptions.find(o => o.value === v) || options.find(o => o.value === v);
+        onValueChange?.(v, selectedOption?.label);
+      }} 
+      onOpenChange={handleOpenChange}
+    >      <SelectTrigger ref={triggerRef as any} className={cn("w-full", className)} disabled={disabled}>
         {/* Mostrar etiqueta del valor seleccionado inmediatamente si existe */}
         {selectedLabel ? (
           <span className="truncate">{selectedLabel}</span>

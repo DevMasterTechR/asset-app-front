@@ -69,6 +69,7 @@ export default function AssignmentFormModal({
   const [showAgeWarning, setShowAgeWarning] = useState(false)
   const [pendingFormData, setPendingFormData] = useState<CreateAssignmentDto | null>(null)
   const [selectedAssetData, setSelectedAssetData] = useState<{ code: string; purchaseDate?: string } | null>(null)
+  const [selectedAssetLabel, setSelectedAssetLabel] = useState<string | undefined>(undefined)
   const [formData, setFormData] = useState<CreateAssignmentDto>({
     assetId: "",
     personId: "",
@@ -180,6 +181,11 @@ export default function AssignmentFormModal({
 
   // Etiquetas iniciales para mostrar inmediatamente en modo edición o cuando hay valor seleccionado
   const initialAssetLabel = useMemo(() => {
+    // Si tenemos un label cacheado del activo seleccionado, usarlo
+    if (selectedAssetLabel && formData.assetId) {
+      return selectedAssetLabel;
+    }
+    
     // Primero intentar obtener del assignment (modo edición)
     if (assignment) {
       const a = (assignment as any).asset;
@@ -200,7 +206,7 @@ export default function AssignmentFormModal({
     }
     
     return undefined;
-  }, [assignment, assets, formData.assetId]);
+  }, [selectedAssetLabel, assignment, assets, formData.assetId]);
 
   const initialPersonLabel = useMemo(() => {
     if (!assignment) return undefined;
@@ -229,7 +235,10 @@ export default function AssignmentFormModal({
             </Label>
             <SearchableSelect
               value={String(formData.assetId)}
-              onValueChange={(value) => handleChange('assetId', value)}
+              onValueChange={(value, label) => {
+                handleChange('assetId', value);
+                if (label) setSelectedAssetLabel(label);
+              }}
               placeholder="Selecciona activo"
               searchPlaceholder="Buscar activo (por código, marca o modelo)"
               initialLabel={initialAssetLabel}

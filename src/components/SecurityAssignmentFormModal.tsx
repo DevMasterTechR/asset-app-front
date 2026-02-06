@@ -80,6 +80,7 @@ export default function SecurityAssignmentFormModal({
   branches,
 }: SecurityAssignmentFormModalProps) {
   const [loading, setLoading] = useState(false)
+  const [selectedAssetLabel, setSelectedAssetLabel] = useState<string | undefined>(undefined)
   const [formData, setFormData] = useState<CreateAssignmentDto>({
     assetId: "",
     personId: "",
@@ -116,6 +117,11 @@ export default function SecurityAssignmentFormModal({
 
   // Calcular el label inicial del activo seleccionado dinámicamente
   const initialAssetLabel = useMemo(() => {
+    // Si tenemos un label cacheado del activo seleccionado, usarlo
+    if (selectedAssetLabel && formData.assetId) {
+      return selectedAssetLabel;
+    }
+    
     if (assignment) {
       const a = (assignment as any).asset;
       if (a) return `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`;
@@ -134,7 +140,7 @@ export default function SecurityAssignmentFormModal({
     }
     
     return undefined;
-  }, [assignment, assets, formData.assetId]);
+  }, [selectedAssetLabel, assignment, assets, formData.assetId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -177,7 +183,10 @@ export default function SecurityAssignmentFormModal({
             </Label>
             <SearchableSelect
               value={String(formData.assetId)}
-              onValueChange={(value) => setFormData({ ...formData, assetId: value })}
+              onValueChange={(value, label) => {
+                setFormData({ ...formData, assetId: value });
+                if (label) setSelectedAssetLabel(label);
+              }}
               placeholder="Selecciona dispositivo"
               searchPlaceholder="Buscar dispositivo (código, marca o modelo)"
               initialLabel={initialAssetLabel}
