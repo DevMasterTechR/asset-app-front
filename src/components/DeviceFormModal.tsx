@@ -274,6 +274,30 @@ export default function DeviceFormModal({
     setPendingReceived(!formData.receivedDate);
   }, [formData.receivedDate]);
 
+  const normalizeLocalToUTCISOString = (localDateTime?: string) => {
+    if (!localDateTime || !localDateTime.trim()) return undefined;
+    if (/[zZ]$/.test(localDateTime) || /[+-]\d{2}:\d{2}$/.test(localDateTime)) return localDateTime;
+
+    const hasTime = localDateTime.includes('T');
+    let year = 0;
+    let month = 0;
+    let day = 0;
+    let hour = 0;
+    let minute = 0;
+
+    if (hasTime) {
+      const [datePart, timePart] = localDateTime.split('T');
+      [year, month, day] = datePart.split('-').map(Number);
+      [hour, minute] = timePart.split(':').map(Number);
+    } else {
+      [year, month, day] = localDateTime.split('-').map(Number);
+    }
+
+    const localDate = new Date(year, month - 1, day, hour, minute);
+    const utcMillis = localDate.getTime() - localDate.getTimezoneOffset() * 60000;
+    return new Date(utcMillis).toISOString();
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -343,9 +367,9 @@ export default function DeviceFormModal({
           status: formData.status || 'available',
           branchId: formData.branchId || undefined,
           assignedPersonId: formData.assignedPersonId || undefined,
-          purchaseDate: formData.purchaseDate || undefined,
-          deliveryDate: deliveryDateAuto || formData.deliveryDate || undefined,
-          receivedDate: formData.receivedDate || undefined,
+          purchaseDate: normalizeLocalToUTCISOString(formData.purchaseDate),
+          deliveryDate: normalizeLocalToUTCISOString(deliveryDateAuto || formData.deliveryDate),
+          receivedDate: normalizeLocalToUTCISOString(formData.receivedDate),
           notes: formData.notes || undefined,
           attributesJson: Object.keys(formData.attributesJson || {}).length > 0 ? formData.attributesJson : undefined,
         };
