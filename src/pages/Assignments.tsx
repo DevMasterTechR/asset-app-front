@@ -145,7 +145,7 @@ export default function Assignments() {
       // Mostrar únicamente activos disponibles para asignación, excluyendo dispositivos de seguridad
       setAssets(sortAssetsByName((assetsArray || [])
         .filter((a: any) => (a.status || '').toString() === 'available' && a.assetType !== 'security')
-        .map((a: any) => ({ id: String(a.id), code: a.code || a.assetCode, name: `${a.brand || ''} ${a.model || ''}`.trim(), brand: a.brand, model: a.model, purchaseDate: a.purchaseDate, assetCode: a.assetCode })),
+        .map((a: any) => ({ id: String(a.id), code: a.assetCode || a.code, name: `${a.brand || ''} ${a.model || ''}`.trim(), brand: a.brand, model: a.model, purchaseDate: a.purchaseDate, assetCode: a.assetCode })),
       ));
       setBranches(sortBranchesByName((branchesArray || []).map((b: any) => ({ id: Number(b.id), name: b.name }))));
     } catch (error) {

@@ -30,7 +30,7 @@ interface SecurityAssignmentFormModalProps {
   onSave: (data: CreateAssignmentDto) => Promise<void>
   assignment?: Assignment | null
   mode: "create" | "edit"
-  assets: Array<{ id: string; code: string; name: string }>
+  assets: Array<{ id: string; code: string; name: string; brand?: string; model?: string; assetCode?: string; purchaseDate?: string; attributesJson?: Record<string, any> }>
   people: Array<{ id: string; firstName: string; lastName: string }>
   branches: Array<{ id: number; name: string }>
 }
@@ -45,11 +45,28 @@ function getLocalDateTimeString(date = new Date()): string {
   return `${year}-${month}-${day}T${hours}:${minutes}`
 }
 
-function formatDateToISO(dateString: string): string {
-  // Convierte el valor de datetime-local a ISO-8601
-  if (!dateString) return new Date().toISOString()
-  const date = new Date(dateString + ':00')
-  return date.toISOString()
+function convertLocalToUTCISOString(localDateTime: string): string {
+  if (!localDateTime || !localDateTime.trim()) return new Date().toISOString();
+  if (/[zZ]$/.test(localDateTime) || /[+-]\d{2}:\d{2}$/.test(localDateTime)) return localDateTime;
+
+  const hasTime = localDateTime.includes('T');
+  let year = 0;
+  let month = 0;
+  let day = 0;
+  let hour = 0;
+  let minute = 0;
+
+  if (hasTime) {
+    const [datePart, timePart] = localDateTime.split('T');
+    [year, month, day] = datePart.split('-').map(Number);
+    [hour, minute] = timePart.split(':').map(Number);
+  } else {
+    [year, month, day] = localDateTime.split('-').map(Number);
+  }
+
+  const localDate = new Date(year, month - 1, day, hour, minute);
+  const utcMillis = localDate.getTime() - localDate.getTimezoneOffset() * 60000;
+  return new Date(utcMillis).toISOString();
 }
 
 export default function SecurityAssignmentFormModal({
@@ -97,6 +114,28 @@ export default function SecurityAssignmentFormModal({
   const sortedAssets = useMemo(() => sortByString(assets || [], (a: any) => `${a.code ? a.code + ' - ' : ''}${a.name || ''}`.trim()), [assets])
   const sortedPeople = useMemo(() => sortByString(people || [], (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()), [people])
 
+  // Calcular el label inicial del activo seleccionado dinámicamente
+  const initialAssetLabel = useMemo(() => {
+    if (assignment) {
+      const a = (assignment as any).asset;
+      if (a) return `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`;
+      const found = assets.find(x => x.id === String(assignment.assetId));
+      if (found) return `${found.code || found.assetCode || ''} - ${found.name}`;
+    }
+    
+    if (formData.assetId) {
+      const found = assets.find(x => x.id === String(formData.assetId));
+      if (found) {
+        const codeDisplay = found.code && found.code.trim() ? found.code : found.assetCode || '';
+        return codeDisplay && found.name 
+          ? `${codeDisplay} - ${found.name}`
+          : found.name || codeDisplay || String(found.id);
+      }
+    }
+    
+    return undefined;
+  }, [assignment, assets, formData.assetId]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
@@ -107,10 +146,9 @@ export default function SecurityAssignmentFormModal({
 
     setLoading(true)
     try {
-      // Convertir la fecha al formato ISO-8601 antes de enviar
       const dataToSend = {
         ...formData,
-        assignmentDate: formatDateToISO(formData.assignmentDate)
+        assignmentDate: convertLocalToUTCISOString(formData.assignmentDate)
       }
       await onSave(dataToSend)
     } finally {
@@ -141,18 +179,28 @@ export default function SecurityAssignmentFormModal({
               value={String(formData.assetId)}
               onValueChange={(value) => setFormData({ ...formData, assetId: value })}
               placeholder="Selecciona dispositivo"
-              options={sortedAssets
-                .filter(a => a.type === 'seguridad' || a.assetType === 'seguridad' || a.isSecurity)
-                .map(a => ({ label: `${a.code} - ${a.name}`, value: a.id }))}
+              searchPlaceholder="Buscar dispositivo (código, marca o modelo)"
+              initialLabel={initialAssetLabel}
+              options={(() => {
+                const opts = sortedAssets.map(a => ({ label: `${a.code || a.assetCode || ''} - ${a.name}`, value: String(a.id) }));
+                if (formData.assetId && !opts.find(o => o.value === String(formData.assetId))) {
+                  opts.unshift({ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) });
+                }
+                return opts;
+              })()}
               onSearch={async (q) => {
                 try {
                   const res = await devicesApi.getAll(q, 1, 20);
                   const list = Array.isArray(res) ? res : res.data;
-                  return (list as any[])
+                  const opts = (list as any[])
                     .filter(a => (a.status || '') === 'available' && (a.assetType === 'seguridad' || a.type === 'seguridad' || a.isSecurity))
                     .map(a => ({ label: `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`, value: String(a.id) }));
+                  if (formData.assetId && !opts.find(o => o.value === String(formData.assetId))) {
+                    opts.unshift({ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) });
+                  }
+                  return opts;
                 } catch (err) {
-                  return [];
+                  return formData.assetId ? [{ label: initialAssetLabel || String(formData.assetId), value: String(formData.assetId) }] : [];
                 }
               }}
             />
@@ -160,18 +208,18 @@ export default function SecurityAssignmentFormModal({
             {(() => {
               const selected = sortedAssets.find(a => String(a.id) === String(formData.assetId));
               const attrs = selected && selected.attributesJson ? selected.attributesJson : null;
-              if (!selected || !(selected.type === 'seguridad' || selected.assetType === 'seguridad' || selected.isSecurity) || !attrs) return null;
+              if (!selected || !attrs) return null;
               return (
                 <div className="mt-2 border rounded p-3 bg-muted">
                   <div className="text-xs font-semibold mb-2 text-muted-foreground">Atributos del dispositivo</div>
                   <div className="grid grid-cols-1 gap-2">
-                    <div><b>Categoría:</b> {attrs.categoria || '-'}</div>
-                    <div><b>Cantidad:</b> {attrs.cantidad || '-'}</div>
-                    <div><b>Ubicación:</b> {attrs.ubicacion || '-'}</div>
-                    <div><b>Estado:</b> {attrs.estado || '-'}</div>
-                    <div><b>Sucursal:</b> {attrs.sucursal || '-'}</div>
-                    <div><b>Imagen:</b> {attrs.imagen ? <a href={attrs.imagen} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver imagen</a> : '-'}</div>
-                    <div><b>Observación:</b> {attrs.observacion || '-'}</div>
+                    {attrs.categoria && <div><b>Categoría:</b> {attrs.categoria}</div>}
+                    {attrs.cantidad && <div><b>Cantidad:</b> {attrs.cantidad}</div>}
+                    {attrs.ubicacion && <div><b>Ubicación:</b> {attrs.ubicacion}</div>}
+                    {attrs.estado && <div><b>Estado:</b> {attrs.estado}</div>}
+                    {attrs.sucursal && <div><b>Sucursal:</b> {attrs.sucursal}</div>}
+                    {attrs.imagen && <div><b>Imagen:</b> <a href={attrs.imagen} target="_blank" rel="noopener noreferrer" className="text-blue-600 underline">Ver imagen</a></div>}
+                    {attrs.observacion && <div><b>Observación:</b> {attrs.observacion}</div>}
                   </div>
                 </div>
               );

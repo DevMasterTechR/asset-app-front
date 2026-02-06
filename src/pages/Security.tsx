@@ -792,6 +792,7 @@ function SecurityPage() {
           model: d.model,
           purchaseDate: d.purchaseDate,
           assetCode: d.assetCode,
+          attributesJson: d.attributesJson,
         }))}
         people={people}
         branches={branches}

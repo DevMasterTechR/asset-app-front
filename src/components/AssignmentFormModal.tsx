@@ -178,15 +178,29 @@ export default function AssignmentFormModal({
   const sortedAssets = useMemo(() => sortByString(assets || [], (a: any) => `${a.code ? a.code + ' - ' : ''}${a.name || ''}`.trim()), [assets])
   const sortedBranches = useMemo(() => sortBranchesByName(branches || []), [branches])
 
-  // Etiquetas iniciales para mostrar inmediatamente en modo edición
+  // Etiquetas iniciales para mostrar inmediatamente en modo edición o cuando hay valor seleccionado
   const initialAssetLabel = useMemo(() => {
-    if (!assignment) return undefined;
-    const a = (assignment as any).asset;
-    if (a) return `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`;
-    const found = assets.find(x => x.id === String(assignment.assetId));
-    if (found) return `${found.code} - ${found.name}`;
+    // Primero intentar obtener del assignment (modo edición)
+    if (assignment) {
+      const a = (assignment as any).asset;
+      if (a) return `${a.assetCode || a.code || ''} - ${((a.brand || '') + ' ' + (a.model || '')).trim()}`;
+      const found = assets.find(x => x.id === String(assignment.assetId));
+      if (found) return `${found.code} - ${found.name}`;
+    }
+    
+    // Si hay un assetId seleccionado actualmente, obtener su label del array de activos
+    if (formData.assetId) {
+      const found = assets.find(x => x.id === String(formData.assetId));
+      if (found) {
+        const codeDisplay = found.code && found.code.trim() ? found.code : found.assetCode || '';
+        return codeDisplay && found.name 
+          ? `${codeDisplay} - ${found.name}`
+          : found.name || codeDisplay || String(found.id);
+      }
+    }
+    
     return undefined;
-  }, [assignment, assets]);
+  }, [assignment, assets, formData.assetId]);
 
   const initialPersonLabel = useMemo(() => {
     if (!assignment) return undefined;
