@@ -19,6 +19,7 @@ import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Downlo
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from '@/hooks/use-toast';
+import SearchableSelect from '@/components/ui/searchable-select';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
@@ -1440,19 +1441,36 @@ const Index = () => {
               </div>
 
               <div>
-                <label className="text-sm font-medium">Nueva persona responsable</label>
-                <select
-                  className="mt-1 w-full rounded-md border px-3 py-2 text-sm"
+                <label className="text-sm font-medium mb-2 block">Nueva persona responsable</label>
+                <SearchableSelect
                   value={newPersonId}
-                  onChange={(e) => setNewPersonId(e.target.value)}
-                >
-                  <option value="">Seleccione una persona...</option>
-                  {people
+                  onValueChange={(value) => {
+                    setNewPersonId(value);
+                    setReasignarError("");
+                  }}
+                  placeholder="Seleccione una persona..."
+                  searchPlaceholder="Buscar por nombre..."
+                  options={people
                     .filter((p: any) => String(p.id) !== String(postFirmaUser.userId))
-                    .map((p: any) => (
-                      <option key={p.id} value={p.id}>{`${p.firstName} ${p.lastName}`}</option>
-                    ))}
-                </select>
+                    .map((p: any) => ({
+                      label: `${p.firstName} ${p.lastName}`,
+                      value: String(p.id)
+                    }))}
+                  onSearch={async (q) => {
+                    try {
+                      const res = await peopleApi.getAll(1, 999999, q);
+                      const list = Array.isArray(res) ? res : res.data;
+                      return (list as any[])
+                        .filter((p: any) => String(p.id) !== String(postFirmaUser.userId))
+                        .map((p: any) => ({
+                          label: `${p.firstName} ${p.lastName}`,
+                          value: String(p.id)
+                        }));
+                    } catch (err) {
+                      return [];
+                    }
+                  }}
+                />
                 {reasignarError && (
                   <div className="mt-2 text-xs rounded border border-red-200 bg-red-50 text-red-700 px-3 py-2">
                     {reasignarError}
