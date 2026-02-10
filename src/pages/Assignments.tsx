@@ -125,7 +125,8 @@ export default function Assignments() {
       const [data, peopleList, assetList, branchList] = await Promise.all([
         assignmentsApi.getAll(),
         peopleApi.getAll(undefined, 999999),
-        devicesApi.getAll(),
+        // Request a large page to include all available assets for the select dropdown
+        devicesApi.getAll(undefined, 1, 99999),
         getBranches(),
       ]);
       // Normalizar respuestas: pueden venir como array o como { data, total, ... }

@@ -258,7 +258,8 @@ export default function AssignmentFormModal({
               })()}
               onSearch={async (q) => {
                 try {
-                  const res = await devicesApi.getAll(q, 1, 20);
+                  // Request more results for the typeahead to improve match coverage
+                  const res = await devicesApi.getAll(q, 1, 100);
                   const list = Array.isArray(res) ? res : res.data;
                   const opts = (list as any[])
                     .filter(a => (a.status || '') === 'available' && a.assetType !== 'security')
