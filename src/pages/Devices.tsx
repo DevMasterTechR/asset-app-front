@@ -337,6 +337,17 @@ function DevicesPage() {
     // tokens: require ALL tokens to match at least one field (reduces false positives)
     const tokens = search.split(/\s+/).filter(Boolean);
 
+    // special shortcuts: numeric-only search => search only in `assetCode`
+    const codeOnlyMatch = search.match(/^\s*(?:code:)??\s*([0-9]+)\s*$/i);
+    if (codeOnlyMatch) {
+      const q = codeOnlyMatch[1].replace(/[^0-9]/g, '');
+      const normCode = normalize(device.assetCode);
+      return normCode.includes(q);
+    }
+
+    // prefix type: => search only in assetType
+    const typePrefix = search.match(/^\s*type:\s*(.+)$/i);
+    
     const fields = [
       device.assetCode,
       device.brand,
@@ -351,8 +362,12 @@ function DevicesPage() {
       device.receivedDate,
       device.purchaseDate,
     ].map(f => (f || '').toString().toLowerCase());
-
     const normalizedFields = fields.map(f => f.replace(/[^a-z0-9]/g, ''));
+
+    if (typePrefix) {
+      const q = typePrefix[1].toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      return normalize(device.assetType).includes(q);
+    }
 
     return tokens.every((t) => {
       const normT = t.replace(/[^a-z0-9]/g, '');

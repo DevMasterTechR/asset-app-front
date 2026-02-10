@@ -112,6 +112,21 @@ const UserDashboard = () => {
     if (!search) return true;
 
     const tokens = search.split(/\s+/).filter(Boolean);
+
+    // if query is numeric-only or prefixed with code:, search only assetCode
+    const codeOnlyMatch = search.match(/^\s*(?:code:)??\s*([0-9]+)\s*$/i);
+    if (codeOnlyMatch) {
+      const q = codeOnlyMatch[1].replace(/[^0-9]/g, '');
+      return (a.assetCode || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '').includes(q);
+    }
+
+    // support type: prefix to search only by type
+    const typePrefix = search.match(/^\s*type:\s*(.+)$/i);
+    if (typePrefix) {
+      const q = typePrefix[1].toLowerCase().trim().replace(/[^a-z0-9]/g, '');
+      return (a.type || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '').includes(q);
+    }
+
     const fields = [
       a.assetCode,
       a.type,
