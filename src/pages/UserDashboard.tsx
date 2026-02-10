@@ -103,16 +103,27 @@ const UserDashboard = () => {
     loadData();
   }, [user?.id]);
 
+  // Use tokens + normalization for assignments search as well
   const filteredAssignments = myAssignments.filter((a) => {
     const hasReturn = !!a.returnDate;
     const matchesView = viewMode === 'active' ? !hasReturn : hasReturn;
-    const search = searchTerm.toLowerCase();
-    const matchesSearch = search === '' ||
-      a.assetCode.toLowerCase().includes(search) ||
-      a.type.toLowerCase().includes(search) ||
-      a.brand.toLowerCase().includes(search) ||
-      a.model.toLowerCase().includes(search);
-    return matchesView && matchesSearch;
+    const search = (searchTerm || '').toString().trim().toLowerCase();
+    if (!matchesView) return false;
+    if (!search) return true;
+
+    const tokens = search.split(/\s+/).filter(Boolean);
+    const fields = [
+      a.assetCode,
+      a.type,
+      a.brand,
+      a.model,
+    ].map(f => (f || '').toString().toLowerCase());
+    const normalizedFields = fields.map(f => f.replace(/[^a-z0-9]/g, ''));
+
+    return tokens.every((t) => {
+      const normT = t.replace(/[^a-z0-9]/g, '');
+      return fields.some(f => f.includes(t)) || normalizedFields.some(f => f.includes(normT));
+    });
   });
 
   const displayedAssignments = filteredAssignments.slice((page - 1) * limit, page * limit);

@@ -321,29 +321,43 @@ function DevicesPage() {
     }
   };
 
+  // Improved filtering: tokenized AND search + normalization (remove non-alphanum)
+  const normalize = (v?: any) => (v || '').toString().toLowerCase().replace(/[^a-z0-9]/g, '');
+
   const filteredDevices = devices.filter((device) => {
-    const search = searchTerm.toLowerCase().trim();
+    const search = (searchTerm || '').toString().trim().toLowerCase();
     if (!search) return true;
-    const statusKey = getStatus(device);
-    const statusLabel = statusLabelMap[statusKey as keyof typeof statusLabelMap] || statusKey;
+
+    const statusKey = (getStatus(device) || '').toString();
+    const statusLabel = (statusLabelMap[statusKey as keyof typeof statusLabelMap] || statusKey).toString();
     const branchName = branches.find(b => b.id === device.branchId)?.name || '';
     const person = people.find(p => Number(p.id) === device.assignedPersonId);
     const personName = person ? `${person.firstName} ${person.lastName}` : '';
 
-    return (
-      (device.assetCode || '').toLowerCase().includes(search) ||
-      (device.brand || '').toLowerCase().includes(search) ||
-      (device.model || '').toLowerCase().includes(search) ||
-      (device.serialNumber || '').toLowerCase().includes(search) ||
-      (device.assetType || '').toLowerCase().includes(search) ||
-      statusKey.toLowerCase().includes(search) ||
-      statusLabel.toLowerCase().includes(search) ||
-      branchName.toLowerCase().includes(search) ||
-      personName.toLowerCase().includes(search) ||
-      (device.deliveryDate || '').toLowerCase().includes(search) ||
-      (device.receivedDate || '').toLowerCase().includes(search) ||
-      (device.purchaseDate || '').toLowerCase().includes(search)
-    );
+    // tokens: require ALL tokens to match at least one field (reduces false positives)
+    const tokens = search.split(/\s+/).filter(Boolean);
+
+    const fields = [
+      device.assetCode,
+      device.brand,
+      device.model,
+      device.serialNumber,
+      device.assetType,
+      statusKey,
+      statusLabel,
+      branchName,
+      personName,
+      device.deliveryDate,
+      device.receivedDate,
+      device.purchaseDate,
+    ].map(f => (f || '').toString().toLowerCase());
+
+    const normalizedFields = fields.map(f => f.replace(/[^a-z0-9]/g, ''));
+
+    return tokens.every((t) => {
+      const normT = t.replace(/[^a-z0-9]/g, '');
+      return fields.some(f => f.includes(t)) || normalizedFields.some(f => f.includes(normT));
+    });
   });
   const sort = useSort();
 
