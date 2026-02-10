@@ -396,10 +396,12 @@ function DevicesPage() {
     },
   });
 
-  let displayedDevices = sortedByUi;
-  if (devices.length > limit && devices.length === totalItems) {
-    displayedDevices = sortedByUi.slice((page - 1) * limit, page * limit);
-  }
+  // Paginar siempre en cliente según el conjunto filtrado/ordenado
+  const computedTotalPages = Math.max(1, Math.ceil(sortedByUi.length / limit));
+  // Ajustar página actual si queda fuera del rango después de filtrar/limitar
+  if (page > computedTotalPages) setPage(computedTotalPages);
+
+  const displayedDevices = sortedByUi.slice((page - 1) * limit, page * limit);
   const handleCreate = () => {
     const prioritizedFilteredWithStatus = [...filteredDevices].sort(
       (a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate))
