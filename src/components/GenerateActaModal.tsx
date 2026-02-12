@@ -549,7 +549,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       const original = Array.isArray(user.devices) ? [...user.devices] : [];
       const typeOf = (d: any) => String(d?.assetType || d?.type || '').toLowerCase();
 
-      const isLaptop = (t: string) => /laptop|notebook|ultrabook/.test(t);
+      const isLaptop = (t: string) => /laptop|notebook|ultrabook|portatil|portátil/.test(t);
       const isLaptopCharger = (t: string) => /cargador-laptop|cargador laptop|laptop charger/.test(t);
       const isMouse = (t: string) => /mouse|ratón|raton/.test(t);
       const isTeclado = (t: string) => /teclado|keyboard/.test(t);
