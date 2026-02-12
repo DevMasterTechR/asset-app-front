@@ -493,65 +493,54 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     };
 
     // Dibujar dispositivos en pares
-    // Laptop y Celular SIEMPRE en la primera fila (si existen), luego sus accesorios
+    // Orden: equipo general (laptop y accesorios) -> celular y accesorios -> otros (impresora, telefono IP, etc.)
     const devices = (() => {
       const original = Array.isArray(user.devices) ? [...user.devices] : [];
-      const takeAndRemove = (arr: any[], predicate: (d: any) => boolean) => {
-        const idx = arr.findIndex(predicate);
-        if (idx === -1) return null;
-        return arr.splice(idx, 1)[0];
+      const typeOf = (d: any) => String(d?.assetType || d?.type || '').toLowerCase();
+
+      const isLaptop = (t: string) => /laptop|notebook|ultrabook/.test(t);
+      const isLaptopCharger = (t: string) => /cargador-laptop|cargador laptop|laptop charger/.test(t);
+      const isMouse = (t: string) => /mouse|ratón|raton/.test(t);
+      const isTeclado = (t: string) => /teclado|keyboard/.test(t);
+      const isMousepad = (t: string) => /mousepad|mouse pad/.test(t);
+      const isAdapterMemory = (t: string) => /adaptador-memoria|memory adapter|adaptador memoria/.test(t);
+      const isAdapterNetwork = (t: string) => /adaptador-red|network adapter|adaptador red/.test(t);
+      const isHub = (t: string) => /hub/.test(t);
+      const isSoporte = (t: string) => /soporte|stand|support/.test(t);
+
+      const isCelular = (t: string) => /celular|cellphone|móvil|tablet/.test(t);
+      const isCellCharger = (t: string) => /cargador-celular|cargador celular|cell charger/.test(t);
+      const isChargingCable = (t: string) => /cable-carga|cable carga|charging cable/.test(t);
+
+      const isPrinter = (t: string) => /printer|impresora/.test(t);
+      const isIpPhone = (t: string) => /ip-phone|ipphone|teléfono ip|telefono ip/.test(t);
+
+      const getPriority = (d: any) => {
+        const t = typeOf(d);
+        if (isLaptop(t)) return 10;
+        if (isLaptopCharger(t)) return 20;
+        if (isMouse(t)) return 30;
+        if (isTeclado(t)) return 40;
+        if (isMousepad(t)) return 50;
+        if (isAdapterMemory(t)) return 60;
+        if (isAdapterNetwork(t)) return 65;
+        if (isHub(t)) return 70;
+        if (isSoporte(t)) return 80;
+
+        if (isCelular(t)) return 100;
+        if (isCellCharger(t)) return 110;
+        if (isChargingCable(t)) return 120;
+
+        if (isPrinter(t)) return 200;
+        if (isIpPhone(t)) return 210;
+
+        return 900;
       };
 
-      const isLaptop = (d: any) => /laptop|notebook|ultrabook/i.test((d?.assetType || d?.type || '') as string);
-      const isCelular = (d: any) => /celular|cellphone|móvil|tablet/i.test((d?.assetType || d?.type || '') as string);
-      const isLaptopCharger = (d: any) => /cargador-laptop|cargador laptop|laptop charger/i.test((d?.assetType || d?.type || '') as string);
-      const isMouse = (d: any) => /mouse|ratón|raton/i.test((d?.assetType || d?.type || '') as string);
-      const isTeclado = (d: any) => /teclado|keyboard/i.test((d?.assetType || d?.type || '') as string);
-      const isCellCharger = (d: any) => /cargador-celular|cargador celular|cell charger/i.test((d?.assetType || d?.type || '') as string);
-      const isChargingCable = (d: any) => /cable-carga|cable carga|charging cable/i.test((d?.assetType || d?.type || '') as string);
-
-      const laptop = takeAndRemove(original, isLaptop);
-      const celular = takeAndRemove(original, isCelular);
-
-      const result = [];
-      // Agregar Laptop y Celular PRIMERO (para la primera fila)
-      if (laptop) result.push(laptop);
-      if (celular) result.push(celular);
-      
-      // Agregar accesorios del laptop DESPUÉS de la primera fila
-      if (laptop) {
-        while (true) {
-          const charger = takeAndRemove(original, isLaptopCharger);
-          if (charger) result.push(charger);
-          else break;
-        }
-        while (true) {
-          const mouse = takeAndRemove(original, isMouse);
-          if (mouse) result.push(mouse);
-          else break;
-        }
-        while (true) {
-          const teclado = takeAndRemove(original, isTeclado);
-          if (teclado) result.push(teclado);
-          else break;
-        }
-      }
-      
-      // Agregar accesorios del celular DESPUÉS
-      if (celular) {
-        while (true) {
-          const charger = takeAndRemove(original, isCellCharger);
-          if (charger) result.push(charger);
-          else break;
-        }
-        while (true) {
-          const cable = takeAndRemove(original, isChargingCable);
-          if (cable) result.push(cable);
-          else break;
-        }
-      }
-
-      return [...result, ...original];
+      return original
+        .map((d, idx) => ({ d, idx, priority: getPriority(d) }))
+        .sort((a, b) => a.priority - b.priority || a.idx - b.idx)
+        .map((item) => item.d);
     })();
     
     for (let i = 0; i < devices.length; i += 2) {
