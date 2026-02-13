@@ -235,7 +235,9 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
         for (const word of words) {
           doc.setFont("helvetica", token.bold ? "bold" : "normal");
           const wordWidth = doc.getTextWidth(word);
-          const spaceWidth = doc.getTextWidth(" ");
+          const baseSpaceWidth = doc.getTextWidth(" ");
+          const fallbackSpaceWidth = Math.max(doc.getTextWidth("M") * 0.25, 0.8);
+          const spaceWidth = Math.max(baseSpaceWidth, fallbackSpaceWidth);
           const hasLeadingSpace = needsSpace && currentX > 15;
           const projectedWidth = currentX + (hasLeadingSpace ? spaceWidth : 0) + wordWidth;
 
