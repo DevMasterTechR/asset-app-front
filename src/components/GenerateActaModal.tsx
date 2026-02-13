@@ -243,14 +243,14 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     
     // Construir el párrafo parte por parte
     writeText(`En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `);
-    writeText(subscriberName, true);
+    writeText(`${subscriberName} `, true);
     writeText(`, portador de la cédula de identidad N.° `);
-    writeText(subscriberCI, true);
-    writeText(` procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a  `);
-    writeText(collaboratorName, true);
-    writeText(`  con cédula de identidad N.° `);
-    writeText(collaboratorCI, true);
-    writeText(` conforme al siguiente detalle:`);
+    writeText(`${subscriberCI} `, true);
+    writeText(`procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a `);
+    writeText(`${collaboratorName} `, true);
+    writeText(`con cédula de identidad N.° `);
+    writeText(`${collaboratorCI} `, true);
+    writeText(`conforme al siguiente detalle:`);
 
     let currentY = currentLineY + 8;
 
