@@ -234,18 +234,21 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
         const words = token.text.split(/\s+/).filter(Boolean);
         for (const word of words) {
           doc.setFont("helvetica", token.bold ? "bold" : "normal");
-          const textWithSpace = needsSpace && currentX > 15 ? ` ${word}` : word;
-          const textWidth = doc.getTextWidth(textWithSpace);
+          const wordWidth = doc.getTextWidth(word);
+          const spaceWidth = doc.getTextWidth(" ");
+          const hasLeadingSpace = needsSpace && currentX > 15;
+          const projectedWidth = currentX + (hasLeadingSpace ? spaceWidth : 0) + wordWidth;
 
           // Si el texto se sale del margen, saltar a la siguiente línea
-          if (currentX + textWidth > pageWidth - 15) {
+          if (projectedWidth > pageWidth - 15) {
             currentLineY += 4;
             currentX = 15;
+          } else if (hasLeadingSpace) {
+            currentX += spaceWidth;
           }
 
-          const finalText = currentX > 15 && needsSpace ? ` ${word}` : word;
-          doc.text(finalText, currentX, currentLineY);
-          currentX += doc.getTextWidth(finalText);
+          doc.text(word, currentX, currentLineY);
+          currentX += wordWidth;
           needsSpace = true;
         }
       }
