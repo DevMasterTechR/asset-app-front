@@ -226,31 +226,46 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     let currentLineY = 47;
     let currentX = 15;
     
-    // Función helper para escribir texto con control de ancho
-    const writeText = (text: string, isBold: boolean = false) => {
-      doc.setFont("helvetica", isBold ? "bold" : "normal");
-      const textWidth = doc.getTextWidth(text);
-      
-      // Si el texto se sale del margen, saltar a la siguiente línea
-      if (currentX + textWidth > pageWidth - 15) {
-        currentLineY += 4;
-        currentX = 15;
+    // Función helper para escribir texto con control de ancho y espacios consistentes
+    const writeTokens = (tokens: Array<{ text: string; bold?: boolean }>) => {
+      let needsSpace = false;
+
+      for (const token of tokens) {
+        const words = token.text.split(/\s+/).filter(Boolean);
+        for (const word of words) {
+          doc.setFont("helvetica", token.bold ? "bold" : "normal");
+          const wordWidth = doc.getTextWidth(word);
+          const spaceWidth = doc.getTextWidth(" ");
+          const projectedWidth = currentX + (needsSpace && currentX > 15 ? spaceWidth : 0) + wordWidth;
+
+          // Si el texto se sale del margen, saltar a la siguiente línea
+          if (projectedWidth > pageWidth - 15) {
+            currentLineY += 4;
+            currentX = 15;
+          } else if (needsSpace && currentX > 15) {
+            doc.text(" ", currentX, currentLineY);
+            currentX += spaceWidth;
+          }
+
+          doc.text(word, currentX, currentLineY);
+          currentX += wordWidth;
+          needsSpace = true;
+        }
       }
-      
-      doc.text(text, currentX, currentLineY);
-      currentX += textWidth;
     };
     
     // Construir el párrafo parte por parte
-    writeText(`En la ciudad de Quito, en fecha ${formattedDate}, el suscrito `);
-    writeText(`${subscriberName} `, true);
-    writeText(`, portador de la cédula de identidad N.° `);
-    writeText(`${subscriberCI} `, true);
-    writeText(`procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a `);
-    writeText(`${collaboratorName} `, true);
-    writeText(`con cédula de identidad N.° `);
-    writeText(`${collaboratorCI} `, true);
-    writeText(`conforme al siguiente detalle:`);
+    writeTokens([
+      { text: `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito` },
+      { text: subscriberName, bold: true },
+      { text: `, portador de la cédula de identidad N.°` },
+      { text: subscriberCI, bold: true },
+      { text: `procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a` },
+      { text: collaboratorName, bold: true },
+      { text: `con cédula de identidad N.°` },
+      { text: collaboratorCI, bold: true },
+      { text: `conforme al siguiente detalle:` },
+    ]);
 
     let currentY = currentLineY + 8;
 
