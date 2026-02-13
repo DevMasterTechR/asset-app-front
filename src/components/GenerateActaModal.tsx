@@ -248,7 +248,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
     writeText(subscriberCI, true);
     writeText(` procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources a  `);
     writeText(collaboratorName, true);
-    writeText(` con cédula de identidad N.° `);
+    writeText(`  con cédula de identidad N.° `);
     writeText(collaboratorCI, true);
     writeText(` conforme al siguiente detalle:`);
 
