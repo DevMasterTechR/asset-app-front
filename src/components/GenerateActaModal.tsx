@@ -814,14 +814,14 @@ g) Modificación física sin autorización.`;
     currentY += 5;
 
     // Texto de aceptación más compacto
-    doc.setFontSize(6.5);
+    doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
     // Línea de firma más larga después de 'Yo,'
     const acceptanceText = `Yo, __________________________________________________________________________________, con C.I. No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados. Me comprometo a hacer uso adecuado de los mismos y acepto que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos o liquidación final.`;
     
     const splitAcceptance = doc.splitTextToSize(acceptanceText, 180);
     doc.text(splitAcceptance, 15, currentY);
-    currentY += splitAcceptance.length * 2.5 + 8;
+    currentY += splitAcceptance.length * 3.2 + 8;
 
     // Sección de firmas en dos columnas más compacta
     const colWidth = (pageWidth - 30) / 2;
