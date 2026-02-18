@@ -115,7 +115,7 @@ const CODE_PREFIXES: Record<string, string> = {
   soporte: 'SPLP - ',
   monitor: 'MONT - ',
   teclado: 'TECLA - ',
-  desktop: 'DESK - ',
+  desktop: 'PC - ',
   tablet: 'TAB - ',
   server: 'SERV - ',
   printer: 'IMPR - ',
