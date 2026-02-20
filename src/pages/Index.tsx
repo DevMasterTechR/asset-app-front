@@ -71,6 +71,7 @@ const Index = () => {
   const [newPersonId, setNewPersonId] = useState<string>("");
   const [reasignarSaving, setReasignarSaving] = useState(false);
   const [reasignarError, setReasignarError] = useState<string>("");
+  const [selectedDevicesToReasign, setSelectedDevicesToReasign] = useState<Set<string>>(new Set());
 
   const parseDateSafe = (value?: string) => {
     if (!value) return null;
@@ -1411,11 +1412,14 @@ const Index = () => {
                   variant="default"
                   className="bg-green-600 hover:bg-green-700"
                   onClick={() => {
-                    // Abrir modal de reasignación
+                    // Abrir modal de reasignación e inicializar todos los dispositivos como seleccionados
                     setPostFirmaModalOpen(false);
                     setReasignarModalOpen(true);
                     setNewPersonId("");
                     setReasignarError("");
+                    // Seleccionar todos los dispositivos por defecto
+                    const allDeviceIds = new Set((postFirmaUser?.devices || []).map((d: any) => String(d.assignmentId)));
+                    setSelectedDevicesToReasign(allDeviceIds);
                   }}
                 >
                   Reasignar a otra persona
@@ -1479,16 +1483,59 @@ const Index = () => {
               </div>
 
               <div>
-                <p className="text-sm font-medium mb-2">Equipos a reasignar ({postFirmaUser.devices?.length || 0})</p>
-                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto">
-                  {(postFirmaUser.devices || []).map((d: any, idx: number) => (
-                    <span
-                      key={idx}
-                      className="inline-flex items-center rounded-full border border-green-200 bg-green-50 px-3 py-1 text-xs font-semibold text-green-700 shadow-sm"
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-sm font-medium">Equipos a reasignar ({selectedDevicesToReasign.size} de {postFirmaUser.devices?.length || 0} seleccionados)</p>
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const allIds = new Set((postFirmaUser.devices || []).map((d: any) => String(d.assignmentId)));
+                        setSelectedDevicesToReasign(allIds);
+                      }}
                     >
-                      {d.code || 'SIN-CODIGO'}
-                    </span>
-                  ))}
+                      Todos
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setSelectedDevicesToReasign(new Set())}
+                    >
+                      Ninguno
+                    </Button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 max-h-40 overflow-y-auto border rounded p-2">
+                  {(postFirmaUser.devices || []).map((d: any, idx: number) => {
+                    const isSelected = selectedDevicesToReasign.has(String(d.assignmentId));
+                    return (
+                      <label
+                        key={idx}
+                        className={`flex items-center gap-2 p-2 rounded cursor-pointer transition-colors ${
+                          isSelected ? 'bg-green-50 border border-green-200' : 'bg-gray-50 border border-gray-200'
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            const newSet = new Set(selectedDevicesToReasign);
+                            if (e.target.checked) {
+                              newSet.add(String(d.assignmentId));
+                            } else {
+                              newSet.delete(String(d.assignmentId));
+                            }
+                            setSelectedDevicesToReasign(newSet);
+                          }}
+                          className="w-4 h-4"
+                        />
+                        <span className="text-sm font-medium">{d.code || 'SIN-CODIGO'}</span>
+                        <span className="text-xs text-muted-foreground">- {d.type || d.assetType || 'Dispositivo'}</span>
+                      </label>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1498,6 +1545,7 @@ const Index = () => {
                   onClick={() => {
                     setReasignarModalOpen(false);
                     setPostFirmaUser(null);
+                    setSelectedDevicesToReasign(new Set());
                     loadData();
                   }} 
                   disabled={reasignarSaving}
@@ -1507,10 +1555,15 @@ const Index = () => {
                 <Button 
                   variant="default"
                   className="bg-green-600 hover:bg-green-700"
-                  disabled={reasignarSaving || !newPersonId}
+                  disabled={reasignarSaving || !newPersonId || selectedDevicesToReasign.size === 0}
                   onClick={async () => {
                     if (!newPersonId) {
                       setReasignarError('Selecciona una persona válida');
+                      return;
+                    }
+
+                    if (selectedDevicesToReasign.size === 0) {
+                      setReasignarError('Selecciona al menos un dispositivo para reasignar');
                       return;
                     }
 
@@ -1530,7 +1583,10 @@ const Index = () => {
                     }
 
                     const branchId = targetPerson.branchId ?? targetPerson.branch?.id;
-                    const devicesToMove = postFirmaUser.devices || [];
+                    // Solo reasignar los dispositivos seleccionados
+                    const devicesToMove = (postFirmaUser.devices || []).filter(
+                      (d: any) => selectedDevicesToReasign.has(String(d.assignmentId))
+                    );
 
                     try {
                       setReasignarSaving(true);
@@ -1555,9 +1611,10 @@ const Index = () => {
                         });
                       }
 
-                      toast({ title: 'Éxito', description: `Equipos reasignados correctamente a ${targetPerson.firstName} ${targetPerson.lastName}` });
+                      toast({ title: 'Éxito', description: `${devicesToMove.length} equipo(s) reasignado(s) correctamente a ${targetPerson.firstName} ${targetPerson.lastName}` });
                       setReasignarModalOpen(false);
                       setPostFirmaUser(null);
+                      setSelectedDevicesToReasign(new Set());
                       loadData();
                     } catch (err) {
                       console.error('Error reasignando equipos:', err);
@@ -1567,7 +1624,7 @@ const Index = () => {
                     }
                   }}
                 >
-                  {reasignarSaving ? 'Guardando...' : 'Confirmar reasignación'}
+                  {reasignarSaving ? 'Guardando...' : `Confirmar reasignación (${selectedDevicesToReasign.size})`}
                 </Button>
               </div>
             </div>
