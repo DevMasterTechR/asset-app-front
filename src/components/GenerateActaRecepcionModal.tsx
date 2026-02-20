@@ -535,15 +535,15 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
         if (isAdapterMemory(t)) return 60;
         if (isAdapterNetwork(t)) return 65;
         if (isHub(t)) return 70;
-        if (isUsb(t)) return 75;
         if (isSoporte(t)) return 80;
 
         if (isCelular(t)) return 100;
         if (isCellCharger(t)) return 110;
         if (isChargingCable(t)) return 120;
 
-        if (isPrinter(t)) return 200;
-        if (isIpPhone(t)) return 210;
+        if (isUsb(t)) return 200;
+        if (isPrinter(t)) return 210;
+        if (isIpPhone(t)) return 220;
 
         return 900;
       };
