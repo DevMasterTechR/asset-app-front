@@ -13,9 +13,10 @@ import {
 } from '@/components/ui/dialog';
 import { Person } from '@/data/mockDataExtended';
 import { CreatePersonDto, UpdatePersonDto } from '@/api/people';
+import { assignmentsApi } from '@/api/assignments';
 import { sortByString, sortBranchesByName } from '@/lib/sort';
 import { useMemo } from 'react';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
 
 interface PersonFormModalProps {
   open: boolean;
@@ -40,6 +41,10 @@ export default function PersonFormModal({
 }: PersonFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [activeAssignments, setActiveAssignments] = useState<any[]>([]);
+  const [showStatusWarning, setShowStatusWarning] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<string | null>(null);
+  const [finalizingAssignments, setFinalizingAssignments] = useState(false);
 
   const [formData, setFormData] = useState<CreatePersonDto>({
     firstName: '',
@@ -86,6 +91,21 @@ export default function PersonFormModal({
         branchId: person.branchId ? Number(person.branchId) : undefined,
         status: person.status
       });
+      // Cargar asignaciones activas de la persona
+      const loadActiveAssignments = async () => {
+        try {
+          const allAssignments = await assignmentsApi.getAll();
+          const assignmentsList = Array.isArray(allAssignments) ? allAssignments : (allAssignments as any)?.data || [];
+          const active = assignmentsList.filter(
+            (a: any) => String(a.personId) === String(person.id) && !a.returnDate
+          );
+          setActiveAssignments(active);
+        } catch (err) {
+          console.error('Error cargando asignaciones activas:', err);
+          setActiveAssignments([]);
+        }
+      };
+      loadActiveAssignments();
     } else if (mode === 'create') {
       setFormData({
         firstName: '',
@@ -98,7 +118,11 @@ export default function PersonFormModal({
         branchId: undefined,
         status: 'active'
       });
+      setActiveAssignments([]);
     }
+    // Reset warning states when modal opens/closes
+    setShowStatusWarning(false);
+    setPendingStatus(null);
   }, [person, mode, open]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -155,6 +179,54 @@ export default function PersonFormModal({
 
   const handleChange = (field: keyof CreatePersonDto, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Manejar cambio de estado con verificación de asignaciones activas
+  const handleStatusChange = (newStatus: string) => {
+    // Si el nuevo estado no es 'active' y hay asignaciones activas, mostrar alerta
+    if (newStatus !== 'active' && activeAssignments.length > 0) {
+      setPendingStatus(newStatus);
+      setShowStatusWarning(true);
+    } else {
+      // Si el estado es 'active' o no hay asignaciones activas, aplicar directamente
+      handleChange('status', newStatus as any);
+    }
+  };
+
+  // Confirmar cambio de estado y finalizar asignaciones
+  const confirmStatusChange = async () => {
+    if (!pendingStatus) return;
+
+    setFinalizingAssignments(true);
+    try {
+      const now = new Date().toISOString();
+      // Finalizar todas las asignaciones activas
+      const finishPromises = activeAssignments.map((a: any) =>
+        assignmentsApi.update(String(a.id), {
+          returnDate: now,
+          returnCondition: 'good',
+          returnNotes: `Asignación finalizada por cambio de estado de persona a ${pendingStatus === 'inactive' ? 'Inactivo' : 'Suspendido'}`,
+        })
+      );
+      await Promise.all(finishPromises);
+
+      // Aplicar el cambio de estado
+      handleChange('status', pendingStatus as any);
+      setActiveAssignments([]); // Limpiar las asignaciones activas
+      setShowStatusWarning(false);
+      setPendingStatus(null);
+    } catch (error) {
+      console.error('Error finalizando asignaciones:', error);
+      alert('Error al finalizar las asignaciones. Por favor intente de nuevo.');
+    } finally {
+      setFinalizingAssignments(false);
+    }
+  };
+
+  // Cancelar cambio de estado
+  const cancelStatusChange = () => {
+    setShowStatusWarning(false);
+    setPendingStatus(null);
   };
 
   const departmentOptions = useMemo(() => sortByString(departments, d => d.name).map((dept) => ({ label: dept.name, value: dept.id.toString() })), [departments]);
@@ -297,10 +369,15 @@ export default function PersonFormModal({
               <Label htmlFor="status">Estado <span className="text-destructive">*</span></Label>
               <SearchableSelect
                 value={formData.status}
-                onValueChange={(value) => handleChange('status', value as any)}
+                onValueChange={(value) => handleStatusChange(value)}
                 placeholder="Selecciona estado"
                 options={statusOptions}
               />
+              {mode === 'edit' && activeAssignments.length > 0 && (
+                <p className="text-xs text-amber-600">
+                  ⚠️ Esta persona tiene {activeAssignments.length} asignación(es) activa(s)
+                </p>
+              )}
             </div>
           </div>
 
@@ -327,6 +404,62 @@ export default function PersonFormModal({
           </DialogFooter>
         </form>
       </DialogContent>
+
+      {/* Modal de confirmación para cambio de estado con asignaciones activas */}
+      {showStatusWarning && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4">
+          <div className="w-full max-w-lg rounded-lg bg-white shadow-xl">
+            <div className="bg-amber-50 text-amber-700 px-4 py-3 rounded-t-lg border-b border-amber-100 font-semibold flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              ADVERTENCIA: Asignaciones Activas
+            </div>
+            <div className="p-4 space-y-4">
+              <div className="rounded border border-amber-200 bg-amber-50 text-amber-800 px-4 py-3 text-sm">
+                <p className="font-semibold mb-2">Esta persona tiene {activeAssignments.length} asignación(es) activa(s):</p>
+                <div className="flex flex-wrap gap-2 max-h-24 overflow-y-auto mb-3">
+                  {activeAssignments.map((a: any, idx: number) => (
+                    <span
+                      key={idx}
+                      className="inline-flex items-center rounded-full border border-amber-300 bg-amber-100 px-3 py-1 text-xs font-semibold text-amber-800"
+                    >
+                      {a.asset?.assetCode || a.assetId || 'Dispositivo'}
+                    </span>
+                  ))}
+                </div>
+                <p className="font-bold text-red-700">
+                  Si cambia el estado a "{pendingStatus === 'inactive' ? 'Inactivo' : 'Suspendido'}", todas las asignaciones serán FINALIZADAS automáticamente y los equipos quedarán disponibles.
+                </p>
+              </div>
+
+              <p className="text-sm text-center font-medium">¿Está de acuerdo con esto?</p>
+
+              <div className="flex justify-center gap-3 pt-2">
+                <Button
+                  variant="outline"
+                  onClick={cancelStatusChange}
+                  disabled={finalizingAssignments}
+                >
+                  No, cancelar
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={confirmStatusChange}
+                  disabled={finalizingAssignments}
+                >
+                  {finalizingAssignments ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Finalizando...
+                    </>
+                  ) : (
+                    'Sí, finalizar asignaciones'
+                  )}
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </Dialog>
   );
 }

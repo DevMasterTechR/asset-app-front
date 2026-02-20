@@ -13,7 +13,7 @@ import {
 } from '@/components/ui/dialog';
 import SearchableSelect from '@/components/ui/searchable-select';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Eye, EyeOff } from 'lucide-react';
+import { Loader2, Eye, EyeOff, Plus, X } from 'lucide-react';
 import { Credential, CreateCredentialDto, type SystemType } from '@/api/credentials';
 import { Person } from '@/data/mockDataExtended';
 
@@ -43,6 +43,7 @@ export default function CredentialFormModal({
 }: CredentialFormModalProps) {
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
+  const [phoneNumbers, setPhoneNumbers] = useState<string[]>(['']);
   const [formData, setFormData] = useState<CreateCredentialDto>({
     personId: 0,
     username: '',
@@ -52,9 +53,24 @@ export default function CredentialFormModal({
     notes: '',
   });
 
+  // Función para parsear los números telefónicos desde el string guardado
+  const parsePhoneNumbers = (phoneString: string): string[] => {
+    if (!phoneString || !phoneString.trim()) return [''];
+    // Separar por " / " o "/" y filtrar vacíos
+    const numbers = phoneString.split(/\s*\/\s*/).map(n => n.trim()).filter(n => n);
+    return numbers.length > 0 ? numbers : [''];
+  };
+
+  // Función para combinar los números en un string
+  const combinePhoneNumbers = (numbers: string[]): string => {
+    return numbers.filter(n => n.trim()).join(' / ');
+  };
+
   useEffect(() => {
     if (open) {
       if (credential && mode === 'edit') {
+        const parsedPhones = parsePhoneNumbers(credential.phone || '');
+        setPhoneNumbers(parsedPhones);
         setFormData({
           personId: credential.personId,
           username: credential.username || '',
@@ -64,6 +80,7 @@ export default function CredentialFormModal({
           notes: credential.notes || '',
         });
       } else {
+        setPhoneNumbers(['']);
         setFormData({
           personId: 0,
           username: '',
@@ -77,6 +94,27 @@ export default function CredentialFormModal({
     }
   }, [credential, mode, open]);
 
+  // Handlers para números telefónicos
+  const handlePhoneChange = (index: number, value: string) => {
+    const newPhones = [...phoneNumbers];
+    newPhones[index] = value;
+    setPhoneNumbers(newPhones);
+    // Actualizar formData.phone con el string combinado
+    setFormData(prev => ({ ...prev, phone: combinePhoneNumbers(newPhones) }));
+  };
+
+  const addPhoneNumber = () => {
+    setPhoneNumbers(prev => [...prev, '']);
+  };
+
+  const removePhoneNumber = (index: number) => {
+    const newPhones = phoneNumbers.filter((_, i) => i !== index);
+    // Asegurar que al menos haya un campo vacío
+    const finalPhones = newPhones.length > 0 ? newPhones : [''];
+    setPhoneNumbers(finalPhones);
+    setFormData(prev => ({ ...prev, phone: combinePhoneNumbers(finalPhones) }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
@@ -86,9 +124,12 @@ export default function CredentialFormModal({
     }
 
     // Validación extra en frontend (opcional pero recomendado)
-    if (formData.system === 'tefl' && !formData.phone?.trim()) {
-      alert('El número telefónico es obligatorio para TEFL');
-      return;
+    if (formData.system === 'tefl') {
+      const validPhones = phoneNumbers.filter(n => n.trim());
+      if (validPhones.length === 0) {
+        alert('Debes ingresar al menos un número telefónico para TEFL');
+        return;
+      }
     }
 
     if (formData.system !== 'tefl') {
@@ -176,6 +217,7 @@ export default function CredentialFormModal({
                   handleChange('password', '');
                 } else {
                   handleChange('phone', '');
+                  setPhoneNumbers(['']); // Limpiar array de números
                 }
               }}
               placeholder="Selecciona el sistema..."
@@ -185,18 +227,51 @@ export default function CredentialFormModal({
           {/* Teléfono - solo TEFL */}
           {isTefl && (
             <div className="space-y-2">
-              <Label htmlFor="phone">
-                Número telefónico <span className="text-red-500">*</span>
-              </Label>
-              <Input
-                id="phone"
-                value={formData.phone}
-                onChange={(e) => handleChange('phone', e.target.value)}
-                placeholder="Ej: +593991234567 o 0962598491"
-                className="w-full"
-                type="tel"
-                maxLength={20}
-              />
+              <div className="flex items-center justify-between">
+                <Label>
+                  Números telefónicos <span className="text-red-500">*</span>
+                </Label>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={addPhoneNumber}
+                  className="h-7 px-2 text-xs"
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  Agregar número
+                </Button>
+              </div>
+              <div className="space-y-2">
+                {phoneNumbers.map((phone, index) => (
+                  <div key={index} className="flex items-center gap-2">
+                    <Input
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(index, e.target.value)}
+                      placeholder={`Número ${index + 1}: +593991234567`}
+                      className="flex-1"
+                      type="tel"
+                      maxLength={20}
+                    />
+                    {phoneNumbers.length > 1 && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => removePhoneNumber(index)}
+                        className="h-9 w-9 text-red-500 hover:text-red-700 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              {phoneNumbers.length > 1 && (
+                <p className="text-xs text-muted-foreground">
+                  Los números se guardarán separados por " / "
+                </p>
+              )}
             </div>
           )}
 
