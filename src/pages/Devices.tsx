@@ -33,6 +33,7 @@ import {
   Phone,
   Printer,
   Download,
+  Usb,
 } from 'lucide-react';
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { peopleApi } from '@/api/people';
@@ -310,6 +311,8 @@ function DevicesPage() {
         return <Phone className="h-4 w-4" />;
       case 'mousepad':
         return <Square className="h-4 w-4" />;
+      case 'usb':
+        return <Usb className="h-4 w-4" />;
       case 'cable-carga':
       case 'cable':
         return <Cable className="h-4 w-4" />;
