@@ -1027,6 +1027,31 @@ export default function DeviceFormModal({
           </>
         );
 
+      case 'usb':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tipo de entrada</Label>
+              <SearchableSelect
+                value={String(getAttrValue('connectionType') || 'none')}
+                onValueChange={value => handleAttributeChange('connectionType', value === 'none' ? '' : value)}
+                placeholder="Selecciona tipo"
+                options={[
+                  { label: 'Ninguno', value: 'none' },
+                  { label: 'USB-A', value: 'USB-A' },
+                  { label: 'USB-C', value: 'USB-C' },
+                  { label: 'USB 3.0', value: 'USB 3.0' },
+                  { label: 'USB 2.0', value: 'USB 2.0' },
+                ]}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Capacidad (GB)</Label>
+              <Input type="number" value={Number(getAttrValue('capacityGB')) || ''} onChange={e => handleAttributeChange('capacityGB', e.target.value ? Number(e.target.value) : 0)} placeholder="32" />
+            </div>
+          </>
+        );
+
       default:
         return null;
     }
