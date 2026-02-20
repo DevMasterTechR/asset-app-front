@@ -342,6 +342,15 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
           ]
         : [];
 
+      // USB
+      const isUsb = /^usb$/i.test(typeLabel);
+      const usbLines = isUsb
+        ? [
+            `Tipo de Entrada: ${resolveField(d, ["connectionType", "connection"])}`,
+            `Capacidad (GB): ${resolveField(d, ["capacityGB", "capacity"])}`,
+          ]
+        : [];
+
       // Adaptador de Memoria
       const isAdapterMemory = /adaptador-memoria|memory adapter|adaptador memoria/i.test(typeLabel);
       const adapterMemoryLines = isAdapterMemory
@@ -419,7 +428,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
           ]
         : [];
-      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...hubLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines, ...mouseLines, ...tecladoLines, ...monitorLines, ...tabletLines];
+      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...hubLines, ...usbLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines, ...mouseLines, ...tecladoLines, ...monitorLines, ...tabletLines];
       
       // Separar baseLines de atributos específicos
       const baseLineCount = baseLines.length;
@@ -506,6 +515,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
       const isAdapterMemory = (t: string) => /adaptador-memoria|memory adapter|adaptador memoria/.test(t);
       const isAdapterNetwork = (t: string) => /adaptador-red|network adapter|adaptador red/.test(t);
       const isHub = (t: string) => /hub/.test(t);
+      const isUsb = (t: string) => /^usb$/.test(t);
       const isSoporte = (t: string) => /soporte|stand|support/.test(t);
 
       const isCelular = (t: string) => /celular|cellphone|móvil|tablet/.test(t);
@@ -525,6 +535,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
         if (isAdapterMemory(t)) return 60;
         if (isAdapterNetwork(t)) return 65;
         if (isHub(t)) return 70;
+        if (isUsb(t)) return 75;
         if (isSoporte(t)) return 80;
 
         if (isCelular(t)) return 100;
