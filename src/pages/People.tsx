@@ -231,6 +231,7 @@ export default function People() {
       (person.lastName || '').toLowerCase().includes(search) ||
       (person.nationalId || '').toLowerCase().includes(search) ||
       (person.username || '').toLowerCase().includes(search) ||
+      (person.observation || '').toLowerCase().includes(search) ||
       departmentName.toLowerCase().includes(search) ||
       roleName.toLowerCase().includes(search) ||
       branchName.toLowerCase().includes(search) ||
@@ -342,6 +343,8 @@ export default function People() {
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('role')}>Rol {sort.key === 'role' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('status')}>Estado {sort.key === 'status' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead>Observación</TableHead>
+                  <TableHead>T.I.</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
@@ -371,6 +374,16 @@ export default function People() {
                       <Badge variant={statusVariantMap[person.status]}>
                         {statusLabelMap[person.status]}
                       </Badge>
+                    </TableCell>
+                    <TableCell className="text-sm max-w-[200px] truncate" title={person.observation || '-'}>
+                      {person.observation || '-'}
+                    </TableCell>
+                    <TableCell>
+                      {person.tiAssetIds && person.tiAssetIds.length > 0 ? (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          {person.tiAssetIds.length} activo{person.tiAssetIds.length > 1 ? 's' : ''}
+                        </Badge>
+                      ) : '-'}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">

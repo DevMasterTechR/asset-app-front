@@ -14,9 +14,11 @@ import {
 import { Person } from '@/data/mockDataExtended';
 import { CreatePersonDto, UpdatePersonDto } from '@/api/people';
 import { assignmentsApi } from '@/api/assignments';
+import { devicesApi, Device } from '@/api/devices';
 import { sortByString, sortBranchesByName } from '@/lib/sort';
 import { useMemo } from 'react';
-import { Loader2, Eye, EyeOff, AlertTriangle } from 'lucide-react';
+import { Loader2, Eye, EyeOff, AlertTriangle, X } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
 
 interface PersonFormModalProps {
   open: boolean;
@@ -45,6 +47,8 @@ export default function PersonFormModal({
   const [showStatusWarning, setShowStatusWarning] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
   const [finalizingAssignments, setFinalizingAssignments] = useState(false);
+  const [availableAssets, setAvailableAssets] = useState<Device[]>([]);
+  const [tiAssets, setTiAssets] = useState<Device[]>([]);
 
   const [formData, setFormData] = useState<CreatePersonDto>({
     firstName: '',
@@ -55,7 +59,9 @@ export default function PersonFormModal({
     departmentId: undefined,
     roleId: undefined,
     branchId: undefined,
-    status: 'active'
+    status: 'active',
+    observation: '',
+    tiAssetIds: []
   });
 
     // Autogenerar username cuando se escriben nombre y apellido (solo en modo 'create')
@@ -79,6 +85,35 @@ export default function PersonFormModal({
     }, [formData.firstName, formData.lastName, mode]);
 
   useEffect(() => {
+    // Cargar activos disponibles y T.I.
+    const loadAssets = async () => {
+      try {
+        const allAssetsRes = await devicesApi.getAll();
+        const allAssets = Array.isArray(allAssetsRes) ? allAssetsRes : (allAssetsRes as any)?.data || [];
+        // Activos disponibles para seleccionar
+        const available = allAssets.filter((a: Device) => a.status === 'available');
+        setAvailableAssets(available);
+        
+        // Si estamos editando, cargar los activos T.I. actuales de esta persona
+        if (person && mode === 'edit' && person.tiAssetIds && person.tiAssetIds.length > 0) {
+          const currentTiAssets = allAssets.filter((a: Device) => 
+            person.tiAssetIds?.includes(a.id) && a.status === 'ti'
+          );
+          setTiAssets(currentTiAssets);
+        } else {
+          setTiAssets([]);
+        }
+      } catch (err) {
+        console.error('Error cargando activos:', err);
+        setAvailableAssets([]);
+        setTiAssets([]);
+      }
+    };
+    
+    if (open) {
+      loadAssets();
+    }
+
     if (person && mode === 'edit') {
       setFormData({
         firstName: person.firstName,
@@ -89,7 +124,9 @@ export default function PersonFormModal({
         departmentId: person.departmentId ? Number(person.departmentId) : undefined,
         roleId: person.roleId ? Number(person.roleId) : undefined,
         branchId: person.branchId ? Number(person.branchId) : undefined,
-        status: person.status
+        status: person.status,
+        observation: person.observation || '',
+        tiAssetIds: person.tiAssetIds || []
       });
       // Cargar asignaciones activas de la persona
       const loadActiveAssignments = async () => {
@@ -116,9 +153,12 @@ export default function PersonFormModal({
         departmentId: undefined,
         roleId: undefined,
         branchId: undefined,
-        status: 'active'
+        status: 'active',
+        observation: '',
+        tiAssetIds: []
       });
       setActiveAssignments([]);
+      setTiAssets([]);
     }
     // Reset warning states when modal opens/closes
     setShowStatusWarning(false);
@@ -160,6 +200,38 @@ export default function PersonFormModal({
         cleanedData.branchId = Number(formData.branchId);
       }
 
+      if (formData.observation !== undefined) {
+        cleanedData.observation = formData.observation?.trim() || undefined;
+      }
+
+      // Agregar IDs de activos T.I.
+      cleanedData.tiAssetIds = tiAssets.map(a => a.id);
+
+      // Actualizar el estado de los activos antes de guardar
+      const currentTiAssetIds = person?.tiAssetIds || [];
+      const newTiAssetIds = tiAssets.map(a => a.id);
+      
+      // Activos que se quitan de T.I. (vuelven a disponible)
+      const removedFromTi = currentTiAssetIds.filter(id => !newTiAssetIds.includes(id));
+      // Activos que se agregan a T.I.
+      const addedToTi = newTiAssetIds.filter(id => !currentTiAssetIds.includes(id));
+      
+      // Actualizar estados de activos
+      for (const assetId of removedFromTi) {
+        try {
+          await devicesApi.update(assetId, { status: 'available' });
+        } catch (err) {
+          console.error(`Error actualizando activo ${assetId} a disponible:`, err);
+        }
+      }
+      for (const assetId of addedToTi) {
+        try {
+          await devicesApi.update(assetId, { status: 'ti' });
+        } catch (err) {
+          console.error(`Error actualizando activo ${assetId} a T.I.:`, err);
+        }
+      }
+
       console.log('📦 Datos del formulario antes de enviar:', cleanedData);
 
       if (mode === 'create') {
@@ -179,6 +251,24 @@ export default function PersonFormModal({
 
   const handleChange = (field: keyof CreatePersonDto, value: string | number | undefined) => {
     setFormData(prev => ({ ...prev, [field]: value }));
+  };
+
+  // Agregar un activo a T.I.
+  const handleAddTiAsset = (assetId: number) => {
+    const asset = availableAssets.find(a => a.id === assetId);
+    if (asset) {
+      setTiAssets(prev => [...prev, asset]);
+      setAvailableAssets(prev => prev.filter(a => a.id !== assetId));
+    }
+  };
+
+  // Quitar un activo de T.I.
+  const handleRemoveTiAsset = (assetId: number) => {
+    const asset = tiAssets.find(a => a.id === assetId);
+    if (asset) {
+      setTiAssets(prev => prev.filter(a => a.id !== assetId));
+      setAvailableAssets(prev => [...prev, asset]);
+    }
   };
 
   // Manejar cambio de estado con verificación de asignaciones activas
@@ -379,6 +469,64 @@ export default function PersonFormModal({
                 </p>
               )}
             </div>
+          </div>
+
+          {/* Observación */}
+          <div className="space-y-2">
+            <Label htmlFor="observation">Observación</Label>
+            <Input
+              id="observation"
+              value={formData.observation || ''}
+              onChange={(e) => handleChange('observation', e.target.value)}
+              placeholder="Notas adicionales sobre la persona"
+            />
+          </div>
+
+          {/* Activos en T.I. */}
+          <div className="space-y-2">
+            <Label>Activos en T.I.</Label>
+            <p className="text-xs text-muted-foreground">
+              Selecciona activos disponibles que están actualmente en el área de T.I. con esta persona
+            </p>
+            
+            {/* Selector de activos disponibles */}
+            {availableAssets.length > 0 && (
+              <SearchableSelect
+                value=""
+                onValueChange={(value) => value && handleAddTiAsset(Number(value))}
+                placeholder="Agregar activo disponible..."
+                options={availableAssets.map(a => ({
+                  label: `${a.assetCode} - ${a.brand || ''} ${a.model || ''} (${a.assetType})`,
+                  value: a.id.toString()
+                }))}
+              />
+            )}
+            
+            {/* Lista de activos seleccionados en T.I. */}
+            {tiAssets.length > 0 && (
+              <div className="flex flex-wrap gap-2 mt-2">
+                {tiAssets.map(asset => (
+                  <Badge 
+                    key={asset.id} 
+                    variant="outline" 
+                    className="flex items-center gap-1 px-2 py-1"
+                  >
+                    <span>{asset.assetCode} - {asset.brand || ''} {asset.model || ''}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveTiAsset(asset.id)}
+                      className="ml-1 hover:text-destructive"
+                    >
+                      <X size={14} />
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            )}
+            
+            {availableAssets.length === 0 && tiAssets.length === 0 && (
+              <p className="text-sm text-muted-foreground">No hay activos disponibles</p>
+            )}
           </div>
 
           {/* Botones */}

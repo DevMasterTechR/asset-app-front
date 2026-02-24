@@ -24,7 +24,7 @@ export const assetsApi = {
   },
 };
 
-export type DeviceStatus = 'available' | 'assigned' | 'maintenance' | 'decommissioned';
+export type DeviceStatus = 'available' | 'assigned' | 'loaned' | 'maintenance' | 'decommissioned' | 'ti';
 
 // ActaStatus ahora está en AssignmentHistory, no en Device
 export type ActaStatus = 'no_generada' | 'acta_generada' | 'firmada';

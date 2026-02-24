@@ -30,6 +30,8 @@ export interface Person {
   departmentId: number;
   roleId: number;
   branchId: number;
+  observation?: string;
+  tiAssetIds?: number[];
 }
 
 export interface AssetAttributes {
@@ -52,7 +54,7 @@ export interface Asset {
   brand: string;
   model: string;
   purchasePrice?: number;
-  status: 'available' | 'assigned' | 'maintenance' | 'decommissioned';
+  status: 'available' | 'assigned' | 'loaned' | 'maintenance' | 'decommissioned' | 'ti';
   branchId: number;
   assignedPersonId?: string;
   purchaseDate?: string;

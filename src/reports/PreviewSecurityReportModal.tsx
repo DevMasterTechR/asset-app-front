@@ -40,15 +40,19 @@ const convertImgurUrl = (url: string): string => {
 const statusVariantMap = {
   available: 'success' as const,
   assigned: 'default' as const,
+  loaned: 'secondary' as const,
   maintenance: 'warning' as const,
   decommissioned: 'destructive' as const,
+  ti: 'outline' as const,
 };
 
 const statusLabelMap = {
   available: 'Disponible',
   assigned: 'Asignado',
+  loaned: 'Prestado',
   maintenance: 'Mantenimiento',
   decommissioned: 'Dado de baja',
+  ti: 'T.I.',
 };
 
 interface Device {

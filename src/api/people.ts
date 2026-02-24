@@ -28,6 +28,8 @@ export interface CreatePersonDto {
   departmentId?: number;
   roleId?: number;
   branchId?: number;
+  observation?: string;
+  tiAssetIds?: number[];
 }
 
 export interface UpdatePersonDto {
@@ -40,6 +42,8 @@ export interface UpdatePersonDto {
   departmentId?: number;
   roleId?: number;
   branchId?: number;
+  observation?: string;
+  tiAssetIds?: number[];
 }
 
 // ============= PEOPLE API =============
@@ -86,6 +90,12 @@ export const peopleApi = {
     if (data.branchId !== undefined && data.branchId !== null) {
       cleanedData.branchId = Number(data.branchId);
     }
+    if (data.observation !== undefined) {
+      cleanedData.observation = data.observation.trim() || undefined;
+    }
+    if (data.tiAssetIds !== undefined) {
+      cleanedData.tiAssetIds = data.tiAssetIds;
+    }
 
 
     const response = await apiFetch(`${API_URL}/people`, { method: 'POST', body: JSON.stringify(cleanedData) });
@@ -111,6 +121,12 @@ export const peopleApi = {
     }
     if (data.branchId !== undefined && data.branchId !== null) {
       cleanedData.branchId = Number(data.branchId);
+    }
+    if (data.observation !== undefined) {
+      cleanedData.observation = data.observation?.trim() || undefined;
+    }
+    if (data.tiAssetIds !== undefined) {
+      cleanedData.tiAssetIds = data.tiAssetIds;
     }
 
 

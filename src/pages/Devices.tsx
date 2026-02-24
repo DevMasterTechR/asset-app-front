@@ -65,6 +65,7 @@ const statusVariantMap = {
   loaned: 'secondary' as const,
   maintenance: 'warning' as const,
   decommissioned: 'destructive' as const,
+  ti: 'outline' as const,
 };
 
 const statusLabelMap = {
@@ -73,6 +74,7 @@ const statusLabelMap = {
   loaned: 'Prestado',
   maintenance: 'Mantenimiento',
   decommissioned: 'Dado de baja',
+  ti: 'T.I.',
 };
 
 const parseDateSafe = (value?: string) => {
