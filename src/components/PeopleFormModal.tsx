@@ -88,7 +88,7 @@ export default function PersonFormModal({
     // Cargar activos disponibles y T.I.
     const loadAssets = async () => {
       try {
-        const allAssetsRes = await devicesApi.getAll();
+        const allAssetsRes = await devicesApi.getAll(undefined, 1, 999999);
         const allAssets = Array.isArray(allAssetsRes) ? allAssetsRes : (allAssetsRes as any)?.data || [];
         // Activos disponibles para seleccionar
         const available = allAssets.filter((a: Device) => a.status === 'available');
