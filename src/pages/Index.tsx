@@ -104,7 +104,7 @@ const Index = () => {
     setLoading(true);
     try {
       const [devicesRes, assignmentsRes, peopleRes, credentialsRes, loansRes] = await Promise.all([
-        devicesApi.getAll(),
+        devicesApi.getAll(undefined, 1, 999999),
         assignmentsApi.getAll(),
         peopleApi.getAll(undefined, 999999),
         credentialsApi.getAll(),
@@ -557,9 +557,32 @@ const Index = () => {
     return () => window.removeEventListener('hashchange', checkHash);
   }, []);
 
-  const filteredDevices = devices.filter((d) =>
-    Object.values(d).join(" ").toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const normalize = (value: unknown) =>
+    String(value ?? '')
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .toLowerCase()
+      .trim();
+
+  const filteredDevices = devices.filter((d) => {
+    const search = normalize(searchTerm);
+    if (!search) return true;
+
+    const fields = [
+      d.assetCode,
+      d.type,
+      d.brand,
+      d.model,
+      d.serialNumber,
+      d.status,
+      d.assignedTo,
+      d.id,
+    ].map(normalize);
+
+    const haystack = fields.join(' ');
+    const tokens = search.split(/\s+/).filter(Boolean);
+    return tokens.every((token) => haystack.includes(token));
+  });
 
   const totalPages = Math.max(1, Math.ceil(filteredDevices.length / limit));
   const orderedDevices = [...filteredDevices].sort((a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate)));

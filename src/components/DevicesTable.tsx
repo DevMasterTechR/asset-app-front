@@ -2,7 +2,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { Laptop, Monitor, Keyboard, Mouse, Smartphone, Server, PlugZap, Cable, Plug, Square, Phone, Printer } from "lucide-react";
 
-export type DeviceStatus = "available" | "assigned" | "maintenance" | "retired";
+export type DeviceStatus = "available" | "assigned" | "loaned" | "maintenance" | "retired" | "decommissioned" | "ti";
 
 export interface Device {
   id: string;
@@ -75,6 +75,9 @@ const getStatusBadge = (status?: string) => {
   if (normalized.includes("loaned") || normalized.includes("prestado") || normalized === "loan") {
     label = "Prestado";
     className = "bg-secondary text-secondary-foreground";
+  } else if (normalized === "ti" || normalized.includes("t i") || normalized.includes("tecnologia") || normalized.includes("tecnología")) {
+    label = "T.I.";
+    className = "bg-blue-100 text-blue-700";
   } else if (normalized.includes("available") || normalized.includes("disponibl")) {
     label = "Disponible";
     className = "bg-success text-success-foreground";
