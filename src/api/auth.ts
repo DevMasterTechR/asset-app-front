@@ -22,12 +22,11 @@ export interface AuthUser {
  */
 export const authApi = {
   login: async (credentials: LoginCredentials): Promise<{ message: string; user?: AuthUser; access_token?: string }> => {
-    const response = await fetch(`${API_URL}/auth/login`, {
+    const response = await apiFetch('/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      credentials: 'include', // Importante: permite enviar/recibir cookies
       body: JSON.stringify(credentials),
     });
 
@@ -66,9 +65,8 @@ export const authApi = {
    */
   logout: async (): Promise<void> => {
     try {
-      const response = await fetch(`${API_URL}/auth/logout`, {
+      const response = await apiFetch('/auth/logout', {
         method: 'POST',
-        credentials: 'include', // Envía la cookie con el JWT
       });
 
       if (!response.ok) {

@@ -1,5 +1,9 @@
 // src/lib/fetchClient.ts
-import { API_URL } from './config';
+import { API_TIMEOUT_MS, API_URL } from './config';
+
+type ApiRequestInit = RequestInit & {
+  timeoutMs?: number;
+};
 
 function normalizeHeaders(init?: RequestInit): Record<string, string> {
   const headers: Record<string, string> = {};
@@ -17,7 +21,7 @@ function normalizeHeaders(init?: RequestInit): Record<string, string> {
   return headers;
 }
 
-export async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<Response> {
+export async function apiFetch(input: RequestInfo, init?: ApiRequestInit): Promise<Response> {
   let url = typeof input === 'string' ? input : (input as Request).url;
 
   // Si el path empieza por '/', prefixear con API_URL
@@ -52,7 +56,32 @@ export async function apiFetch(input: RequestInfo, init?: RequestInit): Promise<
   // Asegurar envio de cookies por defecto (cookie HttpOnly es el método principal)
   (merged as any).credentials = (merged as any).credentials ?? 'include';
 
-  return fetch(url, merged);
+  const timeoutMs = init?.timeoutMs ?? API_TIMEOUT_MS;
+  const controller = new AbortController();
+  const externalSignal = init?.signal;
+  let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+  if (externalSignal) {
+    if (externalSignal.aborted) {
+      controller.abort((externalSignal as any).reason);
+    } else {
+      externalSignal.addEventListener('abort', () => controller.abort((externalSignal as any).reason), { once: true });
+    }
+  }
+
+  if (timeoutMs > 0) {
+    timeoutId = setTimeout(() => {
+      controller.abort(new Error(`Timeout de API tras ${timeoutMs}ms`));
+    }, timeoutMs);
+  }
+
+  merged.signal = controller.signal;
+
+  try {
+    return await fetch(url, merged);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
 }
 
 export default apiFetch;

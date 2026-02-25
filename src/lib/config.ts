@@ -1,5 +1,6 @@
 // Central API configuration
 const rawApiUrl = import.meta.env.VITE_API_URL;
+const rawApiTimeoutMs = import.meta.env.VITE_API_TIMEOUT_MS;
 
 if (!rawApiUrl) {
 	// eslint-disable-next-line no-console
@@ -7,3 +8,6 @@ if (!rawApiUrl) {
 }
 
 export const API_URL: string = (rawApiUrl || '').replace(/\/+$/, '');
+
+const parsedTimeout = Number(rawApiTimeoutMs);
+export const API_TIMEOUT_MS: number = Number.isFinite(parsedTimeout) && parsedTimeout > 0 ? parsedTimeout : 15000;
