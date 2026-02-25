@@ -527,8 +527,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
 
       const getPriority = (d: any) => {
         const t = typeOf(d);
-        if (isLaptop(t)) return 10;
         if (isLaptopCharger(t)) return 20;
+        if (isLaptop(t)) return 10;
         if (isMouse(t)) return 30;
         if (isTeclado(t)) return 40;
         if (isMousepad(t)) return 50;
