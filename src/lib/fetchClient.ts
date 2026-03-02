@@ -1,5 +1,5 @@
 // src/lib/fetchClient.ts
-import { API_TIMEOUT_MS, API_URL } from './config';
+import { API_TIMEOUT_MS, API_URL, SEND_BEARER_TOKEN } from './config';
 
 type ApiRequestInit = RequestInit & {
   timeoutMs?: number;
@@ -41,14 +41,17 @@ export async function apiFetch(input: RequestInfo, init?: ApiRequestInit): Promi
     headers['Content-Type'] = 'application/json';
   }
 
-  try {
-    // Intentar obtener token de sessionStorage (fallback/redundancia)
-    const token = sessionStorage.getItem('auth_token');
-    if (token) {
-      headers['Authorization'] = `Bearer ${token}`;
+  if (SEND_BEARER_TOKEN) {
+    try {
+      // Fallback opcional: solo enviar Bearer si está habilitado explícitamente.
+      // Por defecto usamos cookie httpOnly para evitar cierres por token en sessionStorage desactualizado.
+      const token = sessionStorage.getItem('auth_token');
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+    } catch (e) {
+      // Ignorar errores de sessionStorage
     }
-  } catch (e) {
-    // Ignorar errores de sessionStorage
   }
 
   merged.headers = headers;
