@@ -408,11 +408,7 @@ function DevicesPage() {
 
   const displayedDevices = sortedByUi.slice((page - 1) * limit, page * limit);
   const handleCreate = () => {
-    const prioritizedFilteredWithStatus = [...filteredDevices].sort(
-      (a, b) => Number(isOlderThanFiveYears(b.purchaseDate)) - Number(isOlderThanFiveYears(a.purchaseDate))
-    );
-
-    const hasOldInFiltered = prioritizedFilteredWithStatus.some((d) => isOlderThanFiveYears(d.purchaseDate));
+    setSelectedDevice(null);
     setFormMode('create');
     setFormModalOpen(true);
   };
@@ -426,6 +422,14 @@ function DevicesPage() {
   const handleDeleteClick = (device: Device) => {
     setSelectedDevice(device);
     setDeleteModalOpen(true);
+  };
+
+  const handleFormModalOpenChange = (open: boolean) => {
+    setFormModalOpen(open);
+    if (!open) {
+      setSelectedDevice(null);
+      setFormMode('create');
+    }
   };
 
   const handleSave = async (data: CreateDeviceDto) => {
@@ -683,7 +687,7 @@ function DevicesPage() {
 
       <DeviceFormModal
         open={formModalOpen}
-        onOpenChange={setFormModalOpen}
+        onOpenChange={handleFormModalOpenChange}
         onSave={handleSave}
         device={selectedDevice}
         mode={formMode}
