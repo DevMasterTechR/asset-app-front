@@ -636,8 +636,8 @@ export default function Assignments() {
         const returnDate = new Date().toISOString();
         await assignmentsApi.update(currentAssignment.id, {
           returnDate,
-          receivedCondition: 'excellent',
-          receivedNotes: '⚠️ Asignación retornada para reasignación a otro usuario',
+           returnCondition: 'excellent',
+           returnNotes: '⚠️ Asignación retornada para reasignación a otro usuario',
         });
 
         // Recargar assignments después de devolver
