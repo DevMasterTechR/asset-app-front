@@ -31,9 +31,10 @@ import {
 } from "@/components/ui/alert-dialog"
 import type { Assignment } from "@/data/mockDataExtended"
 import type { CreateAssignmentDto } from "@/api/assignments"
-import { Loader2, AlertTriangle } from "lucide-react"
+import { Loader2, AlertTriangle, X } from "lucide-react"
 import { useMemo } from 'react'
 import { sortAssetsByName, sortBranchesByName, sortByString } from '@/lib/sort'
+import { Badge } from "@/components/ui/badge"
 
 interface AssignmentFormModalProps {
   open: boolean
@@ -70,6 +71,8 @@ export default function AssignmentFormModal({
   const [pendingFormData, setPendingFormData] = useState<CreateAssignmentDto | null>(null)
   const [selectedAssetData, setSelectedAssetData] = useState<{ code: string; purchaseDate?: string } | null>(null)
   const [selectedAssetLabel, setSelectedAssetLabel] = useState<string | undefined>(undefined)
+  const [tempPersonId, setTempPersonId] = useState<string>("")
+  const [selectedPersonIds, setSelectedPersonIds] = useState<string[]>([])
   const [formData, setFormData] = useState<CreateAssignmentDto>({
     assetId: "",
     personId: "",
@@ -98,6 +101,8 @@ export default function AssignmentFormModal({
         deliveryCondition: assignment.deliveryCondition,
         deliveryNotes: assignment.deliveryNotes || "",
       })
+      // En modo edición, mantener el personId seleccionado como array
+      setSelectedPersonIds([assignment.personId])
     } else if (mode === "create") {
       setFormData({
         assetId: "",
@@ -107,11 +112,19 @@ export default function AssignmentFormModal({
         deliveryCondition: "good",
         deliveryNotes: "",
       })
+      setSelectedPersonIds([])
     }
+    setTempPersonId("")
   }, [assignment, mode, open])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    
+    // Validar que hay al menos una persona seleccionada
+    if (selectedPersonIds.length === 0) {
+      alert("Por favor selecciona al menos una persona para la asignación")
+      return
+    }
     
     // Verificar si el equipo tiene ≥5 años de antigüedad
     if (formData.assetId) {
@@ -146,7 +159,14 @@ export default function AssignmentFormModal({
     setLoading(true)
 
     try {
-      await onSave(dataToSave)
+      // Si hay múltiples personas, pasar personIds como parte del objeto
+      const dataWithPersonIds = {
+        ...dataToSave,
+        personId: selectedPersonIds.length === 1 ? selectedPersonIds[0] : (selectedPersonIds[0] || ""),
+        personIds: selectedPersonIds,
+      } as any
+      
+      await onSave(dataWithPersonIds)
       onOpenChange(false)
     } catch (error) {
       console.error("Error al guardar:", error)
@@ -283,37 +303,85 @@ export default function AssignmentFormModal({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="personId">
-              Persona <span className="text-destructive">*</span>
-            </Label>
-            <SearchableSelect
-              value={String(formData.personId)}
-              onValueChange={(value) => handleChange('personId', value)}
-              placeholder="Selecciona persona"
-              searchPlaceholder="Buscar persona..."
-              initialLabel={initialPersonLabel}
-              options={(() => {
-                const opts = sortedPeople.map(p => ({ label: `${p.firstName} ${p.lastName}`, value: p.id }));
-                if (formData.personId && !opts.find(o => o.value === String(formData.personId))) {
-                  opts.unshift({ label: initialPersonLabel || String(formData.personId), value: String(formData.personId) });
-                }
-                return opts;
-              })()}
-              onSearch={async (q) => {
-                try {
-                  const res = await peopleApi.getAll(1, 999999, q);
-                  const list = Array.isArray(res) ? res : res.data;
-                  const opts = (list as any[]).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }));
-                  if (formData.personId && !opts.find(o => o.value === String(formData.personId))) {
-                    opts.unshift({ label: initialPersonLabel || String(formData.personId), value: String(formData.personId) });
-                  }
-                  return opts;
-                } catch (err) {
-                  return formData.personId ? [{ label: initialPersonLabel || String(formData.personId), value: String(formData.personId) }] : [];
-                }
-              }}
-            />
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="personId">
+                Personas <span className="text-destructive">*</span>
+              </Label>
+              <p className="text-sm text-gray-600">Selecciona una o varias personas para asignar el mismo equipo</p>
+              <div className="flex gap-2 items-end">
+                <div className="flex-1 space-y-1">
+                  <SearchableSelect
+                    value={tempPersonId}
+                    onValueChange={(value) => setTempPersonId(value)}
+                    placeholder="Selecciona persona"
+                    searchPlaceholder="Buscar persona..."
+                    options={(() => {
+                      const opts = sortedPeople.map(p => ({ label: `${p.firstName} ${p.lastName}`, value: p.id }));
+                      return opts;
+                    })()}
+                    onSearch={async (q) => {
+                      try {
+                        const res = await peopleApi.getAll(1, 999999, q);
+                        const list = Array.isArray(res) ? res : res.data;
+                        const opts = (list as any[]).map(p => ({ label: `${p.firstName} ${p.lastName}`, value: String(p.id) }));
+                        return opts;
+                      } catch (err) {
+                        return [];
+                      }
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (tempPersonId && !selectedPersonIds.includes(tempPersonId)) {
+                      setSelectedPersonIds([...selectedPersonIds, tempPersonId])
+                      setTempPersonId("")
+                    }
+                  }}
+                  disabled={!tempPersonId || selectedPersonIds.includes(tempPersonId)}
+                  className="whitespace-nowrap"
+                >
+                  Agregar
+                </Button>
+              </div>
+            </div>
+
+            {selectedPersonIds.length > 0 && (
+              <div className="space-y-2">
+                <div>
+                  <Label>Personas seleccionadas</Label>
+                  <div className="flex flex-wrap gap-2 mt-2">
+                    {selectedPersonIds.map((personId) => {
+                      const person = people.find(p => p.id === personId)
+                      const personName = person ? `${person.firstName} ${person.lastName}` : `ID: ${personId}`
+                      return (
+                        <Badge key={personId} variant="secondary" className="flex items-center gap-2 px-3 py-1.5">
+                          {personName}
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPersonIds(selectedPersonIds.filter(id => id !== personId))}
+                            className="ml-1 hover:text-destructive"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </Badge>
+                      )
+                    })}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-blue-50 rounded-md border border-blue-200">
+                  <p className="text-sm font-semibold text-blue-900">
+                    Cantidad de personas: <span className="text-lg">{selectedPersonIds.length}</span>
+                  </p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Se crearán {selectedPersonIds.length} asignación(es) del mismo equipo
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="space-y-2">

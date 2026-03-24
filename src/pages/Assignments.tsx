@@ -164,174 +164,368 @@ export default function Assignments() {
         ...data,
         assignmentDate: convertLocalToUTCISOString(data.assignmentDate)
       };
-      const result = await assignmentsApi.create(converted);
+      
+      // Detectar si hay múltiples personas a asignar
+      const personIds = (data as any).personIds as string[] | undefined;
+      const multiPersonIds = personIds && personIds.length > 1 ? personIds : [data.personId];
+      
+      // Si hay múltiples personas, crear asignaciones para cada una
+      if (multiPersonIds.length > 1) {
+        const allResults = [];
+        
+        for (const personId of multiPersonIds) {
+          const assignmentData = {
+            ...converted,
+            personId
+          };
+          
+          const result = await assignmentsApi.create(assignmentData);
+          allResults.push(result);
+          
+          // Insertar la nueva asignación en el estado local
+          setAssignments((prev) => [result.assignment, ...prev]);
+          
+          // Si el backend devolvió el asset actualizado en la primera asignación, eliminarlo
+          // de la lista de assets disponibles para asignación
+          if (result.asset && allResults.length === 1) {
+            setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
+            // Notificar a otras páginas (Devices) que el asset fue actualizado
+            try {
+              window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+            } catch (e) {
+              // noop
+            }
+          }
+        }
+        
+        // Usar el primer resultado para la lógica de periféricos (puede ser cualquiera)
+        const result = allResults[0];
+        
+        // Asignar periféricos a todas las personas
+        if (result.asset && result.asset.attributesJson) {
+          const {
+            hasMouse, selectedMouseId,
+            hasTeclado, selectedTecladoId,
+            hasMonitor, selectedMonitorId,
+            hasMousepad, selectedMousepadId,
+            hasCharger, selectedChargerId,
+            hasStand, selectedStandId,
+            hasHub, selectedHubId,
+            hasMemoryAdapter, selectedMemoryAdapterId,
+            hasNetworkAdapter, selectedNetworkAdapterId,
+            hasLaptopCharger, selectedLaptopChargerId,
+            hasCellCharger, selectedCellChargerId,
+            hasChargingCable, selectedChargingCableId
+          } = result.asset.attributesJson;
+          
+          // Para cada persona seleccionada, asignar los periféricos también
+          for (const personId of multiPersonIds) {
+            const perifAssignments = [];
+            
+            // Mouse
+            if (hasMouse && selectedMouseId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedMouseId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Teclado
+            if (hasTeclado && selectedTecladoId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedTecladoId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Monitor
+            if (hasMonitor && selectedMonitorId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedMonitorId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Mousepad
+            if (hasMousepad && selectedMousepadId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedMousepadId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Soporte
+            if (hasStand && selectedStandId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedStandId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // HUB
+            if (hasHub && selectedHubId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedHubId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Adaptador Memoria
+            if (hasMemoryAdapter && selectedMemoryAdapterId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedMemoryAdapterId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Adaptador Red
+            if (hasNetworkAdapter && selectedNetworkAdapterId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedNetworkAdapterId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
 
-      // Insertar la nueva asignación en el estado local
-      setAssignments((prev) => [result.assignment, ...prev]);
+            // Siempre asignar cargador de laptop si existe y es laptop/server
+            if ((result.asset.assetType === 'laptop' || result.asset.assetType === 'server') && selectedLaptopChargerId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedLaptopChargerId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+              }));
+            }
+            // Siempre asignar cargador y cable si es celular/tablet
+            if ((result.asset.assetType === 'celular' || result.asset.assetType === 'tablet')) {
+              if (selectedCellChargerId) {
+                perifAssignments.push(assignmentsApi.create({
+                  assetId: selectedCellChargerId,
+                  personId,
+                  branchId: converted.branchId,
+                  assignmentDate: converted.assignmentDate,
+                  deliveryCondition: converted.deliveryCondition,
+                  deliveryNotes: 'Asignación automática junto con celular/tablet',
+                }));
+              }
+              if (selectedChargingCableId) {
+                perifAssignments.push(assignmentsApi.create({
+                  assetId: selectedChargingCableId,
+                  personId,
+                  branchId: converted.branchId,
+                  assignmentDate: converted.assignmentDate,
+                  deliveryCondition: converted.deliveryCondition,
+                  deliveryNotes: 'Asignación automática junto con celular/tablet',
+                }));
+              }
+            }
+            if (perifAssignments.length > 0) {
+              await Promise.all(perifAssignments);
+            }
+          }
+        }
+        
+        toast({
+          title: "Éxito",
+          description: `Se crearon ${multiPersonIds.length} asignaciones correctamente`
+        });
+      } else {
+        // Comportamiento original para una sola persona
+        const result = await assignmentsApi.create(converted);
 
-      // Si el backend devolvió el asset actualizado (ahora asignado), eliminarlo
-      // de la lista de assets disponibles para asignación
-      if (result.asset) {
-        setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
-        // Notificar a otras páginas (Devices) que el asset fue actualizado
-        try {
-          window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
-        } catch (e) {
-          // noop
-        }
-      }
+        // Insertar la nueva asignación en el estado local
+        setAssignments((prev) => [result.assignment, ...prev]);
 
-
-      // --- Lógica para asignar todos los periféricos solicitados ---
-      if (result.asset && result.asset.attributesJson) {
-        const {
-          hasMouse, selectedMouseId,
-          hasTeclado, selectedTecladoId,
-          hasMonitor, selectedMonitorId,
-          hasMousepad, selectedMousepadId,
-          hasCharger, selectedChargerId,
-          hasStand, selectedStandId,
-          hasHub, selectedHubId,
-          hasMemoryAdapter, selectedMemoryAdapterId,
-          hasNetworkAdapter, selectedNetworkAdapterId,
-          hasLaptopCharger, selectedLaptopChargerId,
-          hasCellCharger, selectedCellChargerId,
-          hasChargingCable, selectedChargingCableId
-        } = result.asset.attributesJson;
-        const perifAssignments = [];
-        // Mouse
-        if (hasMouse && selectedMouseId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedMouseId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Teclado
-        if (hasTeclado && selectedTecladoId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedTecladoId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Monitor
-        if (hasMonitor && selectedMonitorId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedMonitorId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Mousepad
-        if (hasMousepad && selectedMousepadId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedMousepadId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Soporte
-        if (hasStand && selectedStandId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedStandId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // HUB
-        if (hasHub && selectedHubId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedHubId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Adaptador Memoria
-        if (hasMemoryAdapter && selectedMemoryAdapterId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedMemoryAdapterId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Adaptador Red
-        if (hasNetworkAdapter && selectedNetworkAdapterId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedNetworkAdapterId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
+        // Si el backend devolvió el asset actualizado (ahora asignado), eliminarlo
+        // de la lista de assets disponibles para asignación
+        if (result.asset) {
+          setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
+          // Notificar a otras páginas (Devices) que el asset fue actualizado
+          try {
+            window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+          } catch (e) {
+            // noop
+          }
         }
 
-        // Siempre asignar cargador de laptop si existe y es laptop/server
-        if ((result.asset.assetType === 'laptop' || result.asset.assetType === 'server') && selectedLaptopChargerId) {
-          perifAssignments.push(assignmentsApi.create({
-            assetId: selectedLaptopChargerId,
-            personId: converted.personId,
-            branchId: converted.branchId,
-            assignmentDate: converted.assignmentDate,
-            deliveryCondition: converted.deliveryCondition,
-            deliveryNotes: 'Asignación automática junto con laptop',
-          }));
-        }
-        // Siempre asignar cargador y cable si es celular/tablet
-        if ((result.asset.assetType === 'celular' || result.asset.assetType === 'tablet')) {
-          if (selectedCellChargerId) {
+
+        // --- Lógica para asignar todos los periféricos solicitados ---
+        if (result.asset && result.asset.attributesJson) {
+          const {
+            hasMouse, selectedMouseId,
+            hasTeclado, selectedTecladoId,
+            hasMonitor, selectedMonitorId,
+            hasMousepad, selectedMousepadId,
+            hasCharger, selectedChargerId,
+            hasStand, selectedStandId,
+            hasHub, selectedHubId,
+            hasMemoryAdapter, selectedMemoryAdapterId,
+            hasNetworkAdapter, selectedNetworkAdapterId,
+            hasLaptopCharger, selectedLaptopChargerId,
+            hasCellCharger, selectedCellChargerId,
+            hasChargingCable, selectedChargingCableId
+          } = result.asset.attributesJson;
+          const perifAssignments = [];
+          // Mouse
+          if (hasMouse && selectedMouseId) {
             perifAssignments.push(assignmentsApi.create({
-              assetId: selectedCellChargerId,
+              assetId: selectedMouseId,
               personId: converted.personId,
               branchId: converted.branchId,
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
-              deliveryNotes: 'Asignación automática junto con celular/tablet',
+              deliveryNotes: 'Asignación automática junto con laptop',
             }));
           }
-          if (selectedChargingCableId) {
+          // Teclado
+          if (hasTeclado && selectedTecladoId) {
             perifAssignments.push(assignmentsApi.create({
-              assetId: selectedChargingCableId,
+              assetId: selectedTecladoId,
               personId: converted.personId,
               branchId: converted.branchId,
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
-              deliveryNotes: 'Asignación automática junto con celular/tablet',
+              deliveryNotes: 'Asignación automática junto con laptop',
             }));
           }
-        }
-        if (perifAssignments.length > 0) {
-          await Promise.all(perifAssignments);
-        }
-      }
-      // --- Fin lógica periféricos ---
+          // Monitor
+          if (hasMonitor && selectedMonitorId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedMonitorId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
+          // Mousepad
+          if (hasMousepad && selectedMousepadId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedMousepadId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
+          // Soporte
+          if (hasStand && selectedStandId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedStandId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
+          // HUB
+          if (hasHub && selectedHubId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedHubId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
+          // Adaptador Memoria
+          if (hasMemoryAdapter && selectedMemoryAdapterId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedMemoryAdapterId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
+          // Adaptador Red
+          if (hasNetworkAdapter && selectedNetworkAdapterId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedNetworkAdapterId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
 
-      toast({
-        title: "Éxito",
-        description: "Asignación creada correctamente"
-      });
+          // Siempre asignar cargador de laptop si existe y es laptop/server
+          if ((result.asset.assetType === 'laptop' || result.asset.assetType === 'server') && selectedLaptopChargerId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedLaptopChargerId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+            }));
+          }
+          // Siempre asignar cargador y cable si es celular/tablet
+          if ((result.asset.assetType === 'celular' || result.asset.assetType === 'tablet')) {
+            if (selectedCellChargerId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedCellChargerId,
+                personId: converted.personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con celular/tablet',
+              }));
+            }
+            if (selectedChargingCableId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedChargingCableId,
+                personId: converted.personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con celular/tablet',
+              }));
+            }
+          }
+          if (perifAssignments.length > 0) {
+            await Promise.all(perifAssignments);
+          }
+        }
+        // --- Fin lógica periféricos ---
+
+        toast({
+          title: "Éxito",
+          description: "Asignación creada correctamente"
+        });
+      }
     } catch (error) {
       toast({
         title: "Error",
