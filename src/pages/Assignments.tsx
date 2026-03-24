@@ -171,38 +171,81 @@ export default function Assignments() {
       
       // Si hay múltiples personas, crear asignaciones para cada una
       if (multiPersonIds.length > 1) {
-        const allResults = [];
+        let mainAssetResult: any = null;
+        let successCount = 0;
         
-        for (const personId of multiPersonIds) {
-          const assignmentData = {
-            ...converted,
-            personId
-          };
+        for (let index = 0; index < multiPersonIds.length; index++) {
+          const personId = multiPersonIds[index];
+          const isFirst = index === 0;
           
-          const result = await assignmentsApi.create(assignmentData);
-          allResults.push(result);
+          // Mostrar progreso
+          if (!isFirst) {
+            toast({
+              title: "Creando asignaciones...",
+              description: `${index} de ${multiPersonIds.length}`,
+            });
+          }
+          
+          // Agregar delay entre intentos para evitar que el backend rechace
+          // por activo no disponible
+          if (!isFirst) {
+            await new Promise(resolve => setTimeout(resolve, 600));
+          }
+          
+          let result;
+          let retries = 0;
+          const maxRetries = 3;
+          
+          while (retries < maxRetries) {
+            try {
+              const assignmentData = {
+                ...converted,
+                personId
+              };
+              
+              result = await assignmentsApi.create(assignmentData);
+              successCount++;
+              
+              // Guardar el primer resultado para usar en periféricos
+              if (isFirst) {
+                mainAssetResult = result;
+              }
+              
+              break; // Salir del loop de reintentos si fue exitoso
+            } catch (error: any) {
+              retries++;
+              if (retries < maxRetries) {
+                // Reintentar con delay exponencial
+                await new Promise(resolve => setTimeout(resolve, 800 * retries));
+              } else {
+                throw error; // Lanzar error si se agotan los reintentos
+              }
+            }
+          }
           
           // Insertar la nueva asignación en el estado local
-          setAssignments((prev) => [result.assignment, ...prev]);
-          
-          // Si el backend devolvió el asset actualizado en la primera asignación, eliminarlo
-          // de la lista de assets disponibles para asignación
-          if (result.asset && allResults.length === 1) {
-            setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
-            // Notificar a otras páginas (Devices) que el asset fue actualizado
-            try {
-              window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
-            } catch (e) {
-              // noop
+          if (result) {
+            setAssignments((prev) => [result.assignment, ...prev]);
+            
+            // Si el backend devolvió el asset actualizado en la primera asignación, eliminarlo
+            // de la lista de assets disponibles para asignación
+            if (result.asset && isFirst) {
+              setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
+              // Notificar a otras páginas (Devices) que el asset fue actualizado
+              try {
+                window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+              } catch (e) {
+                // noop
+              }
             }
           }
         }
         
-        // Usar el primer resultado para la lógica de periféricos (puede ser cualquiera)
-        const result = allResults[0];
+        // Usar el primer resultado para la lógica de periféricos
+        const result = mainAssetResult;
         
         // Asignar periféricos a todas las personas
-        if (result.asset && result.asset.attributesJson) {
+        if (result && result.asset && result.asset.attributesJson) {
           const {
             hasMouse, selectedMouseId,
             hasTeclado, selectedTecladoId,
@@ -345,15 +388,23 @@ export default function Assignments() {
                 }));
               }
             }
-            if (perifAssignments.length > 0) {
-              await Promise.all(perifAssignments);
+            
+            // Ejecutar periféricos secuencialmente con pequeños delays
+            for (const perifRequest of perifAssignments) {
+              try {
+                await perifRequest;
+                await new Promise(resolve => setTimeout(resolve, 300)); // Delay entre periféricos
+              } catch (error) {
+                // Log pero no fallar - los periféricos son opcionales
+                console.warn('Error asignando periférico:', error);
+              }
             }
           }
         }
         
         toast({
-          title: "Éxito",
-          description: `Se crearon ${multiPersonIds.length} asignaciones correctamente`
+          title: "✅ Éxito",
+          description: `Se crearon ${successCount}/${multiPersonIds.length} asignaciones correctamente`
         });
       } else {
         // Comportamiento original para una sola persona
@@ -526,12 +577,29 @@ export default function Assignments() {
           description: "Asignación creada correctamente"
         });
       }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "No se pudo crear la asignación",
-        variant: "destructive"
-      });
+    } catch (error: any) {
+      const errorMsg = error?.message || "Error desconocido";
+      
+      // Mostrar toasty de error más informativo
+      if (errorMsg.includes("no está disponible")) {
+        toast({
+          title: "❌ Activo no disponible",
+          description: "El activo ya fue asignado. Intenta de nuevo o selecciona otro.",
+          variant: "destructive"
+        });
+      } else if (errorMsg.includes("timeout") || errorMsg.includes("Timeout")) {
+        toast({
+          title: "⏱️ Timeout",
+          description: "La conexión tardó demasiado. Intenta de nuevo.",
+          variant: "destructive"
+        });
+      } else {
+        toast({
+          title: "❌ Error",
+          description: `No se pudo crear la asignación: ${errorMsg}`,
+          variant: "destructive"
+        });
+      }
       throw error;
     }
   };
