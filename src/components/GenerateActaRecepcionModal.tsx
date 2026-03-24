@@ -595,6 +595,28 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     doc.text(splitObs, 15, currentY + 4);
     currentY += splitObs.length * 4 + 10;
 
+    // ===== SECCIÓN DE NOTA IMPORTANTE: Equipos compartidos =====
+    if (currentY > pageHeight - 50) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    currentY += 3;
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 53, 69);
+    doc.text('⚠ NOTA IMPORTANTE - EQUIPOS COMPARTIDOS', 15, currentY);
+    
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    const sharedNoteTxt = `Si este equipo fue asignado a múltiples personas de forma simultánea (asignación compartida), cada persona responsable deberá completar su propio Acta de Recepción individual. Esta acta solo es válida para el receptor que firma a continuación.`;
+    const sharedNoteLinesList = doc.splitTextToSize(sharedNoteTxt, 180);
+    currentY += 5;
+    doc.text(sharedNoteLinesList, 15, currentY);
+    currentY += sharedNoteLinesList.length * 4 + 5;
+
     // ===== SECCIÓN FINAL: firmas =====
     if (currentY > pageHeight - 50) {
       doc.addPage();

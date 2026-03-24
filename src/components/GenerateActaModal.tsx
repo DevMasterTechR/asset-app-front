@@ -745,6 +745,28 @@ g) Modificación física sin autorización.`;
     doc.text(splitRobo, 15, currentY);
     currentY += splitRobo.length * 4 + 4;
 
+    // = NOTA IMPORTANTE: Equipos compartidos =
+    if (currentY > pageHeight - 50) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'bold');
+    doc.setTextColor(220, 53, 69);
+    const sharedEquipmentNoteTitle = '⚠ NOTA IMPORTANTE - EQUIPOS COMPARTIDOS';
+    doc.text(sharedEquipmentNoteTitle, 15, currentY);
+    
+    doc.setFontSize(7.5);
+    doc.setFont('helvetica', 'normal');
+    doc.setTextColor(60, 60, 60);
+    const sharedNoteText = `Si este equipo ha sido asignado a múltiples personas de forma simultánea (asignación compartida), cada persona responsable deberá completar su propio Acta de Entrega individual. Cada receptor es responsable exclusivamente de los equipos que aparecen en SU acta individual.`;
+    const sharedNoteLines = doc.splitTextToSize(sharedNoteText, 180);
+    currentY += 5;
+    doc.text(sharedNoteLines, 15, currentY);
+    currentY += sharedNoteLines.length * 4;
+    
     // Nota sobre mouse y teclado
     if (currentY > pageHeight - 30) {
       doc.addPage();
