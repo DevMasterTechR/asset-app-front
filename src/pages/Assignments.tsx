@@ -115,6 +115,13 @@ export default function Assignments() {
   const [assignmentToReturn, setAssignmentToReturn] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [assignmentToDelete, setAssignmentToDelete] = useState<string | null>(null);
+  const [reassignmentDialogOpen, setReassignmentDialogOpen] = useState(false);
+  const [pendingReassignmentData, setPendingReassignmentData] = useState<{
+    data: CreateAssignmentDto;
+    converted: any;
+    multiPersonIds: string[];
+  } | null>(null);
+  const [currentReassignmentAttempt, setCurrentReassignmentAttempt] = useState(0);
 
   useEffect(() => {
     loadAssignments();
@@ -580,13 +587,14 @@ export default function Assignments() {
     } catch (error: any) {
       const errorMsg = error?.message || "Error desconocido";
       
-      // Mostrar toasty de error más informativo
+      // Si es error de "no disponible", ofrecer reasignación
       if (errorMsg.includes("no está disponible")) {
-        toast({
-          title: "❌ Activo no disponible",
-          description: "El activo ya fue asignado. Intenta de nuevo o selecciona otro.",
-          variant: "destructive"
+        setPendingReassignmentData({
+          data,
+          converted,
+          multiPersonIds
         });
+        setReassignmentDialogOpen(true);
       } else if (errorMsg.includes("timeout") || errorMsg.includes("Timeout")) {
         toast({
           title: "⏱️ Timeout",
@@ -601,6 +609,136 @@ export default function Assignments() {
         });
       }
       throw error;
+    }
+  };
+
+  // Manejar reasignación forzada - intenta devolver la asignación anterior primero
+  const handleForceReassignment = async () => {
+    if (!pendingReassignmentData) return;
+
+    try {
+      const { data, converted, multiPersonIds } = pendingReassignmentData;
+      
+      toast({
+        title: "⏳ Procesando reasignación...",
+        description: "Devolviendo asignación anterior...",
+      });
+
+      // Encontrar la asignación activa del asset
+      const currentAssignment = assignments.find(
+        (a: any) =>
+          String(a.assetId) === String(data.assetId) &&
+          !a.returnDate
+      );
+
+      if (currentAssignment) {
+        // Devolver la asignación anterior
+        const returnDate = new Date().toISOString();
+        await assignmentsApi.update(currentAssignment.id, {
+          returnDate,
+          receivedCondition: 'excellent',
+          receivedNotes: '⚠️ Asignación retornada para reasignación a otro usuario',
+        });
+
+        // Recargar assignments después de devolver
+        const updatedAssignments = await assignmentsApi.getAll();
+        const assignmentsList = extractArray<any>(updatedAssignments);
+        const assignmentsWithoutSecurity = (assignmentsList || []).filter((a: any) => {
+          const assetType = a.asset?.assetType;
+          return assetType !== 'security';
+        });
+        setAssignments(assignmentsWithoutSecurity as Assignment[]);
+      }
+
+      // Ahora intentar la nueva asignación sin verificar disponibilidad
+      // (el backend debería permitirla después de retornar la anterior)
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Reintentar create
+      let mainAssetResult: any = null;
+      let successCount = 0;
+
+      for (let index = 0; index < multiPersonIds.length; index++) {
+        const personId = multiPersonIds[index];
+        const isFirst = index === 0;
+
+        if (!isFirst) {
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+
+        const assignmentData = {
+          ...converted,
+          personId,
+          deliveryNotes: (converted.deliveryNotes || '') + '\n⚠️ REASIGNACIÓN: Equipo previamente asignado',
+        };
+
+        try {
+          const result = await assignmentsApi.create(assignmentData);
+          successCount++;
+
+          if (isFirst) {
+            mainAssetResult = result;
+          }
+
+          setAssignments((prev) => [result.assignment, ...prev]);
+
+          if (result.asset && isFirst) {
+            setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
+            try {
+              window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+            } catch (e) {
+              // noop
+            }
+          }
+        } catch (retryError: any) {
+          console.error('Error en reintento:', retryError);
+          throw retryError;
+        }
+      }
+
+      // Aquí vendría la lógica de periféricos...
+      if (mainAssetResult && mainAssetResult.asset && mainAssetResult.asset.attributesJson) {
+        const attrs = mainAssetResult.asset.attributesJson;
+        for (const personId of multiPersonIds) {
+          const perifAssignments = [];
+          
+          // Periféricos simplificados - agregar aquí según sea necesario
+          if (attrs.hasMouse && attrs.selectedMouseId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: attrs.selectedMouseId,
+              personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática + Reasignación',
+            }));
+          }
+          
+          for (const req of perifAssignments) {
+            try {
+              await req;
+              await new Promise(resolve => setTimeout(resolve, 300));
+            } catch (err) {
+              console.warn('Error periférico:', err);
+            }
+          }
+        }
+      }
+
+      // Limpiar y mostrar éxito
+      setReassignmentDialogOpen(false);
+      setPendingReassignmentData(null);
+      
+      toast({
+        title: "✅ Éxito",
+        description: `Se reasignaron correctamente ${successCount} equipos`,
+      });
+    } catch (error: any) {
+      toast({
+        title: "❌ Error en reasignación",
+        description: error?.message || "No se pudo completar la reasignación",
+        variant: "destructive"
+      });
     }
   };
 
@@ -1193,6 +1331,39 @@ export default function Assignments() {
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction onClick={handleDelete}>
               Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={reassignmentDialogOpen} onOpenChange={setReassignmentDialogOpen}>
+        <AlertDialogContent className="max-w-md">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-lg">⚠️ Equipo ya asignado</AlertDialogTitle>
+            <AlertDialogDescription className="space-y-3 mt-4">
+              <p>
+                Este equipo ya está asignado a otra persona. 
+              </p>
+              <div className="bg-yellow-50 border border-yellow-200 rounded p-3 text-sm">
+                <p className="font-semibold text-yellow-800">¿Qué deseas hacer?</p>
+                <ul className="list-disc list-inside text-yellow-700 mt-2 space-y-1">
+                  <li>Se devolverá la asignación anterior</li>
+                  <li>El equipo se reasignará al nuevo usuario</li>
+                  <li>Se guardará nota de la reasignación</li>
+                </ul>
+              </div>
+              <p className="text-xs text-gray-500">
+                Esto es útil cuando un equipo se traslada de un usuario a otro.
+              </p>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleForceReassignment}
+              className="bg-amber-600 hover:bg-amber-700"
+            >
+              Sí, reasignar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
