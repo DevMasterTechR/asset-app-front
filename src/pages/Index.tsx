@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Layout from "@/components/Layout";
 import { StatsCard } from "@/components/StatsCard";
 import DevicesSummaryModal from '@/components/DevicesSummaryModal';
 import { DevicesTable } from "@/components/DevicesTable";
 import GenerateActaModal from "@/components/GenerateActaModal";
 import GenerateActaRecepcionModal from "@/components/GenerateActaRecepcionModal";
+import GenerateGroupActaModal, { type GroupActaAsset } from "@/components/GenerateGroupActaModal";
 import Pagination from "@/components/Pagination";
 import { devicesApi } from "@/api/devices";
 import * as consumablesApi from '@/api/consumables';
@@ -60,6 +61,9 @@ const Index = () => {
   const [userToMarkFirmada, setUserToMarkFirmada] = useState<any>(null);
   const [actaRecepcionModalOpen, setActaRecepcionModalOpen] = useState(false);
   const [selectedUserForActaRecepcion, setSelectedUserForActaRecepcion] = useState<any>(null);
+  const [groupActaModalOpen, setGroupActaModalOpen] = useState(false);
+  const [selectedUserForGroupActa, setSelectedUserForGroupActa] = useState<any>(null);
+  const [sharedAssetsForGroupActa, setSharedAssetsForGroupActa] = useState<GroupActaAsset[]>([]);
   const [confirmFirmadaRecepcionOpen, setConfirmFirmadaRecepcionOpen] = useState(false);
   const [userToMarkFirmadaRecepcion, setUserToMarkFirmadaRecepcion] = useState<any>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
@@ -347,6 +351,77 @@ const Index = () => {
       consumables: consumablesReport,
       assignments: assignmentsMode === 'active' ? activeAssignments : assignmentsAll,
     };
+  };
+
+  const peopleById = useMemo(() => {
+    const map = new Map<string, any>();
+    (people || []).forEach((p: any) => map.set(String(p.id), p));
+    return map;
+  }, [people]);
+
+  const activeAssignmentsByAsset = useMemo(() => {
+    const map = new Map<string, any[]>();
+    (activeAssignments || []).forEach((a: any) => {
+      const key = String(a.assetId);
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(a);
+    });
+    return map;
+  }, [activeAssignments]);
+
+  const getSharedAssetsForUser = (u: any): GroupActaAsset[] => {
+    const devices = u?.devices || [];
+    const shared: GroupActaAsset[] = [];
+
+    devices.forEach((d: any) => {
+      const assetId = String(d.assetId || d.id || '');
+      if (!assetId) return;
+
+      const assignmentsForAsset = activeAssignmentsByAsset.get(assetId) || [];
+      if (assignmentsForAsset.length <= 1) return;
+
+      const participantsMap = new Map<string, any>();
+      assignmentsForAsset.forEach((a: any) => {
+        const personId = String(a.personId);
+        if (participantsMap.has(personId)) return;
+        const person = a.person || peopleById.get(personId);
+        const firstName = person?.firstName || '';
+        const lastName = person?.lastName || '';
+        participantsMap.set(personId, {
+          personId,
+          userName: `${firstName} ${lastName}`.trim() || 'Desconocido',
+          nationalId: person?.nationalId || 'No registrada',
+          branch: a.branch?.name || u?.branch || '-',
+          assignmentDate: a.assignmentDate,
+        });
+      });
+
+      shared.push({
+        assetId,
+        code: d.code || d.assetCode || 'SIN-CODIGO',
+        type: d.type || d.assetType || '-',
+        brand: d.brand || '-',
+        model: d.model || '-',
+        serialNumber: d.serialNumber || '-',
+        participants: Array.from(participantsMap.values()),
+      });
+    });
+
+    return shared;
+  };
+
+  const openGroupActa = (u: any) => {
+    const sharedAssets = getSharedAssetsForUser(u);
+    if (sharedAssets.length === 0) {
+      toast({
+        title: 'No aplica',
+        description: 'Este usuario no tiene equipos con asignacion grupal activa.',
+      });
+      return;
+    }
+    setSelectedUserForGroupActa(u);
+    setSharedAssetsForGroupActa(sharedAssets);
+    setGroupActaModalOpen(true);
   };
 
   const downloadReport = () => {
@@ -985,6 +1060,7 @@ const Index = () => {
                               const allEntregaStatuses = u.devices?.map((d: any) => d.actaStatus || 'no_generada') || [];
                               const uniqueEntrega = Array.from(new Set(allEntregaStatuses));
                               const entregaFirmada = uniqueEntrega.length === 1 && uniqueEntrega[0] === 'firmada';
+                              const hasSharedAssets = getSharedAssetsForUser(u).length > 0;
                               
                               return (
                                 <div className="flex gap-2">
@@ -1015,6 +1091,17 @@ const Index = () => {
                                   >
                                     <FileText className="h-4 w-4" />
                                     Recepción
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => openGroupActa(u)}
+                                    className="gap-1"
+                                    title={hasSharedAssets ? "Generar Acta Grupal" : "No hay equipos grupales para este usuario"}
+                                    disabled={!hasSharedAssets}
+                                  >
+                                    <Users className="h-4 w-4" />
+                                    Acta grupal
                                   </Button>
                                 </div>
                               );
@@ -1661,6 +1748,13 @@ const Index = () => {
         onOpenChange={setActaRecepcionModalOpen}
         user={selectedUserForActaRecepcion}
         onActaGenerated={loadData}
+      />
+
+      <GenerateGroupActaModal
+        open={groupActaModalOpen}
+        onOpenChange={setGroupActaModalOpen}
+        user={selectedUserForGroupActa}
+        sharedAssets={sharedAssetsForGroupActa}
       />
     </Layout>
   );
