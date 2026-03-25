@@ -219,7 +219,18 @@ const GenerateGroupActaModal = ({
       const isMonitor = /monitor/i.test(typeLabel);
       const isTablet = /tablet/i.test(typeLabel);
 
-      const purchaseYear = d?.purchaseDate ? new Date(d.purchaseDate).getFullYear() : "-";
+      const getPurchaseYear = () => {
+        if (!d?.purchaseDate) return "-";
+        try {
+          const date = new Date(d.purchaseDate);
+          const year = date.getFullYear();
+          if (isNaN(year) || year < 1900 || year > new Date().getFullYear() + 1) return "-";
+          return String(year);
+        } catch {
+          return "-";
+        }
+      };
+      const purchaseYear = getPurchaseYear();
 
       const laptopLines = isLaptop
         ? [
@@ -347,7 +358,8 @@ const GenerateGroupActaModal = ({
     const calculateBoxHeight = (d: any): number => {
       const { displayLines } = getDeviceLines(d);
       const detailLineHeight = 2.8;
-      return 8 + displayLines.length * detailLineHeight + 3;
+      const calculatedHeight = 8 + displayLines.length * detailLineHeight + 3;
+      return Math.max(calculatedHeight, 35);
     };
 
     for (let i = 0; i < sharedAssets.length; i += 2) {
