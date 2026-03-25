@@ -72,79 +72,180 @@ const GenerateGroupActaModal = ({
       return;
     }
 
-    const doc = new jsPDF();
-    const now = new Date();
+    const doc = new jsPDF("p", "mm", "a4");
     const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const logoUrl = "/images/techinformeencabezado.png";
+    const today = new Date();
+    const formattedDate = today.toLocaleDateString("es-ES", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(16);
-    doc.text("ACTA GRUPAL DE ENTREGA DE EQUIPOS", pageWidth / 2, 18, { align: "center" });
+    // Función para agregar encabezado en cada página
+    const addHeader = () => {
+      const logoWidth = 100;
+      const logoHeight = 16;
+      doc.addImage(logoUrl, "PNG", (pageWidth - logoWidth) / 2, 8, logoWidth, logoHeight);
+    };
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(11);
-    doc.text(`Fecha de emisión: ${now.toLocaleDateString("es-ES")}`, 14, 30);
-    doc.text(`Responsable principal: ${user?.userName || "-"}`, 14, 37);
-    doc.text(`Equipos compartidos: ${sharedAssets.length}`, 14, 44);
-    doc.text(`Participantes unicos: ${totalParticipants}`, 14, 51);
-
-    let y = 60;
-
-    sharedAssets.forEach((asset, index) => {
-      if (index > 0) {
-        doc.addPage();
-        y = 20;
+    const addFooterToAllPages = () => {
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        // Pie de página
+        const footerText = `QUITO – QUITO SUR – GUAYAQUIL – CUENCA – MANTA – MACHALA – AMBATO - STO. DOMINGO – LOJA – IBARRA - EXPRESS SANGOLQUI – CARAPUNGO – PORTOVIEJO\nwww.recursos-tecnologicos.com\nTeléfono: PBX 593 – 02 5133453`;
+        const splitFooter = doc.splitTextToSize(footerText, 180);
+        doc.text(splitFooter, pageWidth / 2, pageHeight - 15, { align: "center" });
+        doc.setTextColor(200, 200, 200);
+        doc.setFont("helvetica", "italic");
+        doc.text(`Generado por: Administrador`, 15, pageHeight - 8);
+        doc.setTextColor(0, 0, 0);
+        doc.setFontSize(7);
+        doc.text(`${i}/${totalPages}`, pageWidth - 15, pageHeight - 8, { align: "right" });
       }
+    };
 
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(13);
-      doc.text(`Equipo compartido ${index + 1} de ${sharedAssets.length}`, 14, y);
+    // PÁGINA 1: Encabezado y tabla de equipos
+    addHeader();
 
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(11);
-      const typeLabel = asset.type || "-";
-      const brandModel = `${asset.brand || ""} ${asset.model || ""}`.trim() || "-";
-      doc.text(`Codigo: ${asset.code || "-"}`, 14, y + 8);
-      doc.text(`Tipo: ${typeLabel}`, 14, y + 15);
-      doc.text(`Marca/Modelo: ${brandModel}`, 14, y + 22);
-      doc.text(`Serial: ${asset.serialNumber || "-"}`, 14, y + 29);
+    // Fecha a la derecha debajo del logo
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    doc.text(`Quito, ${formattedDate}`, pageWidth - 15, 32, { align: "right" });
 
-      doc.setFont("helvetica", "bold");
-      doc.text("Personas asignadas al equipo", 14, y + 40);
+    // Título
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("ACTA GRUPAL DE ENTREGA DE EQUIPOS TECNOLÓGICOS", pageWidth / 2, 40, { align: "center" });
 
-      autoTable(doc, {
-        startY: y + 45,
-        head: [["#", "Nombre completo", "Cedula", "Sucursal", "Fecha asignacion"]],
-        body: asset.participants.map((p, idx) => [
-          String(idx + 1),
-          p.userName || "-",
-          p.nationalId || "No registrada",
-          p.branch || "-",
-          formatDate(p.assignmentDate),
-        ]),
-        theme: "grid",
-        headStyles: { fillColor: [37, 99, 235] },
-        styles: { fontSize: 10 },
-        margin: { left: 14, right: 14 },
+    // Datos del suscrito
+    const subscriberName = "MORETA PAEZ GALO ANIBAL";
+    const subscriberCI = "1723563480";
+
+    // Tabla de equipos a entregar
+    const equipoRows = sharedAssets.map((asset) => [
+      asset.code || "-",
+      asset.type || "-",
+      `${asset.brand || ""} ${asset.model || ""}`.trim() || "-",
+      asset.serialNumber || "-",
+    ]);
+
+    autoTable(doc, {
+      startY: 50,
+      head: [["Código", "Tipo", "Marca/Modelo", "Serial"]],
+      body: equipoRows,
+      theme: "grid",
+      headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontSize: 9 },
+      bodyStyles: { fontSize: 8 },
+      margin: { left: 15, right: 15 },
+    });
+
+    let currentY = (doc as any).lastAutoTable?.finalY || 100;
+
+    // Espacio para observaciones
+    if (currentY > pageHeight - 60) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+
+    currentY += 10;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("OBSERVACIONES:", 15, currentY);
+
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    currentY += 6;
+    doc.line(15, currentY, pageWidth - 15, currentY);
+    currentY += 6;
+    doc.line(15, currentY, pageWidth - 15, currentY);
+
+    // Sección de participantes con líneas para datos
+    currentY += 10;
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "bold");
+    doc.text("PERSONAS RECEPTORAS DE LOS EQUIPOS:", 15, currentY);
+
+    currentY += 8;
+    const colWidth = (pageWidth - 30) / 2;
+    const leftColX = 15;
+    const rightColX = 15 + colWidth + 10;
+
+    // Recopilar todos los participantes únicos
+    const allParticipants: GroupActaParticipant[] = [];
+    const participantMap = new Map<string, GroupActaParticipant>();
+
+    sharedAssets.forEach((asset) => {
+      asset.participants.forEach((p) => {
+        if (!participantMap.has(p.personId)) {
+          participantMap.set(p.personId, p);
+          allParticipants.push(p);
+        }
       });
     });
 
-    const finalY = (doc as any).lastAutoTable?.finalY || 120;
-    const legalTop = finalY + 10;
+    // Crear secciones de firma para cada participante
+    allParticipants.forEach((participant, index) => {
+      if (currentY > pageHeight - 50) {
+        doc.addPage();
+        addHeader();
+        currentY = 35;
+      }
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Clausula de responsabilidad grupal", 14, legalTop);
+      // Mostrar nombre in línea
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "normal");
+      const participantNumber = index + 1;
+      doc.text(`${participantNumber}. Persona:`, leftColX, currentY);
 
-    doc.setFont("helvetica", "normal");
-    const legalText =
-      "Las personas listadas en esta acta reconocen que los equipos descritos se encuentran bajo una asignacion grupal. " +
-      "Cada persona asume responsabilidad individual y solidaria sobre el cuidado, uso adecuado y devolucion de los equipos.";
-    const wrapped = doc.splitTextToSize(legalText, 180);
-    doc.text(wrapped, 14, legalTop + 7);
+      // Línea para nombre
+      const lineY = currentY + 5;
+      doc.line(leftColX + 20, lineY, pageWidth - 15, lineY);
+      doc.setFontSize(7);
+      doc.text(participant.userName || "-", leftColX + 22, lineY + 2);
 
+      // C.I. y Sucursal en la siguiente línea
+      currentY = lineY + 8;
+      doc.setFontSize(8);
+      doc.text("C.I.: ", leftColX, currentY);
+      const ciLine = currentY;
+      doc.line(leftColX + 10, ciLine, leftColX + colWidth - 20, ciLine);
+      doc.setFontSize(7);
+      doc.text(participant.nationalId || "-", leftColX + 12, ciLine + 2);
+
+      doc.setFontSize(8);
+      doc.text("Sucursal: ", leftColX + colWidth - 15, currentY);
+      doc.line(leftColX + colWidth + 5, ciLine, pageWidth - 15, ciLine);
+      doc.setFontSize(7);
+      doc.text(participant.branch || "-", leftColX + colWidth + 7, ciLine + 2);
+
+      // Firma en la siguiente línea
+      currentY += 10;
+      doc.setFontSize(8);
+      doc.text("Firma: ", leftColX, currentY);
+      doc.line(leftColX + 12, currentY, pageWidth - 15, currentY);
+
+      currentY += 8;
+      doc.setFontSize(8);
+      doc.text("Fecha: ____ / ____ / _______", leftColX, currentY);
+
+      currentY += 10;
+    });
+
+    // Pie de página
+    addFooterToAllPages();
+
+    // Formato del nombre del archivo
     const userSafe = (user?.userName || "grupo").replace(/\s+/g, "_");
-    const fileName = `Acta_Grupal_${userSafe}_${now
-      .toISOString()
-      .slice(0, 10)}.pdf`;
+    const day = String(today.getDate()).padStart(2, "0");
+    const month = String(today.getMonth() + 1).padStart(2, "0");
+    const year = today.getFullYear();
+    const hours = String(today.getHours()).padStart(2, "0");
+    const minutes = String(today.getMinutes()).padStart(2, "0");
+    const fileName = `Acta_Grupal_${userSafe}_${day}${month}${year}_${hours}${minutes}.pdf`;
 
     doc.save(fileName);
 
