@@ -378,6 +378,14 @@ const Index = () => {
       if (!assetId) return;
 
       const assignmentsForAsset = activeAssignmentsByAsset.get(assetId) || [];
+      const uniqueParticipantIds = new Set(
+        assignmentsForAsset
+          .map((a: any) => String(a.personId || ''))
+          .filter((personId: string) => personId.length > 0)
+      );
+
+      // Acta grupal aplica solo si el equipo tiene mas de una asignacion activa.
+      if (uniqueParticipantIds.size <= 1) return;
 
       const participantsMap = new Map<string, any>();
       assignmentsForAsset.forEach((a: any) => {
@@ -394,17 +402,6 @@ const Index = () => {
           assignmentDate: a.assignmentDate,
         });
       });
-
-      // Si el equipo no tiene múltiples participantes activos, incluir al usuario actual.
-      if (participantsMap.size === 0 && u?.userId) {
-        participantsMap.set(String(u.userId), {
-          personId: String(u.userId),
-          userName: u?.userName || 'Desconocido',
-          nationalId: u?.nationalId || 'No registrada',
-          branch: u?.branch || '-',
-          assignmentDate: undefined,
-        });
-      }
 
       shared.push({
         assetId,
