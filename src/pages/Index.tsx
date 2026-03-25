@@ -406,13 +406,6 @@ const Index = () => {
         });
       }
 
-      // Buscar purchaseDate desde d, o si no está disponible, desde devicesList
-      let purchaseDate = d.purchaseDate;
-      if (!purchaseDate) {
-        const fullAssetFromList = devicesList.find((dev: any) => String(dev.id) === String(assetId));
-        purchaseDate = fullAssetFromList?.purchaseDate || fullAssetFromList?.purchase_date;
-      }
-
       shared.push({
         assetId,
         code: d.code || d.assetCode || 'SIN-CODIGO',
@@ -420,7 +413,7 @@ const Index = () => {
         brand: d.brand || '-',
         model: d.model || '-',
         serialNumber: d.serialNumber || '-',
-        purchaseDate,
+        purchaseDate: d.purchaseDate || d.purchase_date,
         attributesJson: d.attributesJson || d.attributes || {},
         participants: Array.from(participantsMap.values()),
       });

@@ -518,6 +518,7 @@ const GenerateGroupActaModal = ({
     const leftColX = 15;
     const colWidth = (pageWidth - 30) / 2;
     const midColX = leftColX + colWidth + 10;
+    const isOddParticipants = allParticipants.length % 2 === 1;
 
     // Crear una sección de firma "Aceptado por" - 2 por fila
     doc.setDrawColor(0, 0, 0);
@@ -577,35 +578,76 @@ const GenerateGroupActaModal = ({
         doc.line(midColX + 10, lineY3, midColX + colWidth - 5, lineY3);
 
         doc.text("Fecha: ____ / ____ / _______", midColX, lineY4);
+      } else if (isOddParticipants && i + 1 === allParticipants.length) {
+        // Si es impar y es el último, poner "Entregado por" al lado en lugar de página nueva
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.text("Entregado por:", midColX, currentY);
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.text(subscriberName, midColX, lineY1 - 2);
+        doc.text("Nombre completo del responsable de entrega", midColX, lineY1 + 3);
+        doc.text(`C.I.: ${subscriberCI}`, midColX, lineY2);
+        doc.text("Firma: ", midColX, lineY3);
+        doc.line(midColX + 10, lineY3, midColX + colWidth - 5, lineY3);
+        doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, midColX, lineY4);
       }
 
       currentY += 42;
     }
 
-    // "Entregado por" solo una vez - media fila
-    if (currentY > pageHeight - 40) {
-      doc.addPage();
-      addHeader();
-      currentY = 35;
+    // "Entregado por" solo una vez - media fila (solo si es par o ya se agregó arriba)
+    if (!isOddParticipants && allParticipants.length > 0) {
+      if (currentY > pageHeight - 40) {
+        doc.addPage();
+        addHeader();
+        currentY = 35;
+      }
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("Entregado por:", leftColX, currentY);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      const deliveryLine1 = currentY + 10;
+      const deliveryLine2 = currentY + 18;
+      const deliveryLine3 = currentY + 26;
+      const deliveryLine4 = currentY + 34;
+
+      doc.text(subscriberName, leftColX, deliveryLine1 - 2);
+      doc.text("Nombre completo del responsable de entrega", leftColX, deliveryLine1 + 3);
+      doc.text(`C.I.: ${subscriberCI}`, leftColX, deliveryLine2);
+      doc.text("Firma: ", leftColX, deliveryLine3);
+      doc.line(leftColX + 10, deliveryLine3, leftColX + colWidth - 5, deliveryLine3);
+      doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, deliveryLine4);
+    } else if (!isOddParticipants && allParticipants.length === 0) {
+      // Si no hay participantes, poner "Entregado por" solo
+      if (currentY > pageHeight - 40) {
+        doc.addPage();
+        addHeader();
+        currentY = 35;
+      }
+
+      doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text("Entregado por:", leftColX, currentY);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      const deliveryLine1 = currentY + 10;
+      const deliveryLine2 = currentY + 18;
+      const deliveryLine3 = currentY + 26;
+      const deliveryLine4 = currentY + 34;
+
+      doc.text(subscriberName, leftColX, deliveryLine1 - 2);
+      doc.text("Nombre completo del responsable de entrega", leftColX, deliveryLine1 + 3);
+      doc.text(`C.I.: ${subscriberCI}`, leftColX, deliveryLine2);
+      doc.text("Firma: ", leftColX, deliveryLine3);
+      doc.line(leftColX + 10, deliveryLine3, leftColX + colWidth - 5, deliveryLine3);
+      doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, deliveryLine4);
     }
-
-    doc.setFontSize(8);
-    doc.setFont("helvetica", "bold");
-    doc.text("Entregado por:", leftColX, currentY);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    const deliveryLine1 = currentY + 10;
-    const deliveryLine2 = currentY + 18;
-    const deliveryLine3 = currentY + 26;
-    const deliveryLine4 = currentY + 34;
-
-    doc.text(subscriberName, leftColX, deliveryLine1 - 2);
-    doc.text("Nombre completo del responsable de entrega", leftColX, deliveryLine1 + 3);
-    doc.text(`C.I.: ${subscriberCI}`, leftColX, deliveryLine2);
-    doc.text("Firma: ", leftColX, deliveryLine3);
-    doc.line(leftColX + 10, deliveryLine3, leftColX + colWidth - 5, deliveryLine3);
-    doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, deliveryLine4);
 
     // Pie de página
     addFooterToAllPages();
