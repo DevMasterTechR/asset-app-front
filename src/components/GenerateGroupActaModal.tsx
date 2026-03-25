@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
@@ -9,13 +9,6 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 
 export interface GroupActaParticipant {
@@ -61,27 +54,19 @@ const GenerateGroupActaModal = ({
   sharedAssets,
 }: GenerateGroupActaModalProps) => {
   const { toast } = useToast();
-  const [selectedAssetId, setSelectedAssetId] = useState<string>("");
-
-  useEffect(() => {
-    if (!open) return;
-    if (sharedAssets.length > 0) {
-      setSelectedAssetId(sharedAssets[0].assetId);
-    } else {
-      setSelectedAssetId("");
-    }
-  }, [open, sharedAssets]);
-
-  const selectedAsset = useMemo(
-    () => sharedAssets.find((a) => String(a.assetId) === String(selectedAssetId)),
-    [sharedAssets, selectedAssetId],
-  );
+  const totalParticipants = useMemo(() => {
+    const set = new Set<string>();
+    sharedAssets.forEach((asset) => {
+      (asset.participants || []).forEach((p) => set.add(String(p.personId)));
+    });
+    return set.size;
+  }, [sharedAssets]);
 
   const generatePdf = () => {
-    if (!selectedAsset) {
+    if (!sharedAssets || sharedAssets.length === 0) {
       toast({
         title: "Error",
-        description: "Selecciona un equipo para generar el acta grupal",
+        description: "No hay equipos compartidos para generar el acta grupal",
         variant: "destructive",
       });
       return;
@@ -93,41 +78,54 @@ const GenerateGroupActaModal = ({
 
     doc.setFont("helvetica", "bold");
     doc.setFontSize(16);
-    doc.text("ACTA GRUPAL DE ENTREGA DE EQUIPO", pageWidth / 2, 18, { align: "center" });
+    doc.text("ACTA GRUPAL DE ENTREGA DE EQUIPOS", pageWidth / 2, 18, { align: "center" });
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(11);
     doc.text(`Fecha de emisión: ${now.toLocaleDateString("es-ES")}`, 14, 30);
     doc.text(`Responsable principal: ${user?.userName || "-"}`, 14, 37);
+    doc.text(`Equipos compartidos: ${sharedAssets.length}`, 14, 44);
+    doc.text(`Participantes unicos: ${totalParticipants}`, 14, 51);
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Datos del equipo", 14, 48);
+    let y = 60;
 
-    doc.setFont("helvetica", "normal");
-    const typeLabel = selectedAsset.type || "-";
-    const brandModel = `${selectedAsset.brand || ""} ${selectedAsset.model || ""}`.trim() || "-";
-    doc.text(`Codigo: ${selectedAsset.code || "-"}`, 14, 56);
-    doc.text(`Tipo: ${typeLabel}`, 14, 63);
-    doc.text(`Marca/Modelo: ${brandModel}`, 14, 70);
-    doc.text(`Serial: ${selectedAsset.serialNumber || "-"}`, 14, 77);
+    sharedAssets.forEach((asset, index) => {
+      if (index > 0) {
+        doc.addPage();
+        y = 20;
+      }
 
-    doc.setFont("helvetica", "bold");
-    doc.text("Personas asignadas al equipo", 14, 89);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(13);
+      doc.text(`Equipo compartido ${index + 1} de ${sharedAssets.length}`, 14, y);
 
-    autoTable(doc, {
-      startY: 94,
-      head: [["#", "Nombre completo", "Cedula", "Sucursal", "Fecha asignacion"]],
-      body: selectedAsset.participants.map((p, idx) => [
-        String(idx + 1),
-        p.userName || "-",
-        p.nationalId || "No registrada",
-        p.branch || "-",
-        formatDate(p.assignmentDate),
-      ]),
-      theme: "grid",
-      headStyles: { fillColor: [37, 99, 235] },
-      styles: { fontSize: 10 },
-      margin: { left: 14, right: 14 },
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(11);
+      const typeLabel = asset.type || "-";
+      const brandModel = `${asset.brand || ""} ${asset.model || ""}`.trim() || "-";
+      doc.text(`Codigo: ${asset.code || "-"}`, 14, y + 8);
+      doc.text(`Tipo: ${typeLabel}`, 14, y + 15);
+      doc.text(`Marca/Modelo: ${brandModel}`, 14, y + 22);
+      doc.text(`Serial: ${asset.serialNumber || "-"}`, 14, y + 29);
+
+      doc.setFont("helvetica", "bold");
+      doc.text("Personas asignadas al equipo", 14, y + 40);
+
+      autoTable(doc, {
+        startY: y + 45,
+        head: [["#", "Nombre completo", "Cedula", "Sucursal", "Fecha asignacion"]],
+        body: asset.participants.map((p, idx) => [
+          String(idx + 1),
+          p.userName || "-",
+          p.nationalId || "No registrada",
+          p.branch || "-",
+          formatDate(p.assignmentDate),
+        ]),
+        theme: "grid",
+        headStyles: { fillColor: [37, 99, 235] },
+        styles: { fontSize: 10 },
+        margin: { left: 14, right: 14 },
+      });
     });
 
     const finalY = (doc as any).lastAutoTable?.finalY || 120;
@@ -138,14 +136,13 @@ const GenerateGroupActaModal = ({
 
     doc.setFont("helvetica", "normal");
     const legalText =
-      "Las personas listadas en esta acta reconocen que el equipo descrito se encuentra bajo una asignacion grupal. " +
-      "Cada persona asume responsabilidad individual y solidaria sobre el cuidado, uso adecuado y devolucion del equipo.";
+      "Las personas listadas en esta acta reconocen que los equipos descritos se encuentran bajo una asignacion grupal. " +
+      "Cada persona asume responsabilidad individual y solidaria sobre el cuidado, uso adecuado y devolucion de los equipos.";
     const wrapped = doc.splitTextToSize(legalText, 180);
     doc.text(wrapped, 14, legalTop + 7);
 
     const userSafe = (user?.userName || "grupo").replace(/\s+/g, "_");
-    const codeSafe = (selectedAsset.code || "equipo").replace(/\s+/g, "_");
-    const fileName = `Acta_Grupal_${userSafe}_${codeSafe}_${now
+    const fileName = `Acta_Grupal_${userSafe}_${now
       .toISOString()
       .slice(0, 10)}.pdf`;
 
@@ -165,45 +162,27 @@ const GenerateGroupActaModal = ({
         <DialogHeader>
           <DialogTitle>Generar Acta Grupal</DialogTitle>
           <DialogDescription>
-            Selecciona el equipo compartido para generar un acta con todas las personas asignadas.
+            Esta acta incluira todos los equipos compartidos y sus participantes.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4">
-          <div>
-            <p className="text-sm text-muted-foreground mb-2">Equipo compartido</p>
-            <Select value={selectedAssetId} onValueChange={setSelectedAssetId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Seleccionar equipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {sharedAssets.map((asset) => (
-                  <SelectItem key={asset.assetId} value={asset.assetId}>
-                    {asset.code} - {asset.brand || ""} {asset.model || ""} ({asset.participants.length} personas)
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="rounded border bg-muted/30 p-3 text-sm">
+            <p className="font-medium mb-2">Equipos compartidos incluidos: {sharedAssets.length}</p>
+            <ul className="space-y-1 max-h-56 overflow-y-auto">
+              {sharedAssets.map((asset) => (
+                <li key={asset.assetId}>
+                  {asset.code} - {asset.brand || ""} {asset.model || ""} ({asset.participants.length} personas)
+                </li>
+              ))}
+            </ul>
           </div>
-
-          {selectedAsset && (
-            <div className="rounded border bg-muted/30 p-3 text-sm">
-              <p className="font-medium mb-1">Participantes del equipo:</p>
-              <ul className="space-y-1">
-                {selectedAsset.participants.map((p) => (
-                  <li key={`${selectedAsset.assetId}-${p.personId}`}>
-                    {p.userName} - CI: {p.nationalId || "No registrada"}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
 
           <div className="flex justify-end gap-2 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={generatePdf} disabled={!selectedAsset}>
+            <Button onClick={generatePdf} disabled={sharedAssets.length === 0}>
               Generar PDF
             </Button>
           </div>
