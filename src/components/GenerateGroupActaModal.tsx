@@ -325,7 +325,7 @@ const GenerateGroupActaModal = ({
 
     const drawDeviceDetailBox = (d: any, xOffset: number, boxH: number) => {
       const { displayLines, typeLabel } = getDeviceLines(d);
-      const detailLineHeight = 2.8;
+      const detailLineHeight = 2.2;
 
       doc.setFillColor(248, 250, 252);
       doc.rect(xOffset, currentY, boxWidth, boxH, "F");
@@ -335,18 +335,18 @@ const GenerateGroupActaModal = ({
       doc.rect(xOffset, currentY, boxWidth, boxH);
 
       doc.setFillColor(31, 110, 170);
-      doc.rect(xOffset, currentY, boxWidth, 7, "F");
+      doc.rect(xOffset, currentY, boxWidth, 6, "F");
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(6);
+      doc.setFontSize(5);
       doc.setTextColor(255, 255, 255);
       const titleText = `${d.code || "SIN-CODIGO"} | ${String(typeLabel).toUpperCase()}`;
-      doc.text(titleText, xOffset + 2, currentY + 4.5);
+      doc.text(titleText, xOffset + 2, currentY + 3.8);
 
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(6);
+      doc.setFontSize(5);
       doc.setTextColor(40, 40, 40);
 
-      let ly = currentY + 10;
+      let ly = currentY + 8;
       const contentWidth = boxWidth - 4;
       for (let i = 0; i < displayLines.length; i++) {
         const wrapped = doc.splitTextToSize(displayLines[i], contentWidth);
@@ -357,9 +357,9 @@ const GenerateGroupActaModal = ({
 
     const calculateBoxHeight = (d: any): number => {
       const { displayLines } = getDeviceLines(d);
-      const detailLineHeight = 2.8;
-      const calculatedHeight = 8 + displayLines.length * detailLineHeight + 3;
-      return Math.max(calculatedHeight, 35);
+      const detailLineHeight = 2.2;
+      const calculatedHeight = 6 + displayLines.length * detailLineHeight + 2;
+      return Math.max(calculatedHeight, 24);
     };
 
     for (let i = 0; i < sharedAssets.length; i += 2) {
