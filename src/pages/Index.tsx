@@ -383,7 +383,7 @@ const Index = () => {
       assignmentsForAsset.forEach((a: any) => {
         const personId = String(a.personId);
         if (participantsMap.has(personId)) return;
-        const person = a.person || peopleById.get(personId);
+        const person = people.find((p: any) => String(p.id) === String(personId)) || a.person || peopleById.get(personId);
         const firstName = person?.firstName || '';
         const lastName = person?.lastName || '';
         participantsMap.set(personId, {

@@ -504,19 +504,24 @@ const GenerateGroupActaModal = ({
     currentY += acceptanceLines.length * 3.2 + 8;
 
     const leftColX = 15;
-    const signatureWidth = pageWidth - 30;
+    const colWidth = (pageWidth - 30) / 2;
+    const midColX = leftColX + colWidth + 10;
 
-    // Crear una sección de firma "Aceptado por" por cada participante
-    allParticipants.forEach((participant) => {
-      if (currentY > pageHeight - 45) {
+    // Crear una sección de firma "Aceptado por" - 2 por fila
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.2);
+
+    for (let i = 0; i < allParticipants.length; i += 2) {
+      const participant1 = allParticipants[i];
+      const participant2 = allParticipants[i + 1];
+
+      if (currentY > pageHeight - 50) {
         doc.addPage();
         addHeader();
         currentY = 35;
       }
 
-      doc.setDrawColor(0, 0, 0);
-      doc.setLineWidth(0.2);
-
+      // Columna izquierda: Aceptado por (Participante 1)
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text("Aceptado por:", leftColX, currentY);
@@ -524,34 +529,54 @@ const GenerateGroupActaModal = ({
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
       const lineY1 = currentY + 10;
-      doc.line(leftColX, lineY1, leftColX + signatureWidth, lineY1);
-      doc.text(participant.userName || "Nombre del colaborador", leftColX, lineY1 + 3);
+      doc.line(leftColX, lineY1, leftColX + colWidth - 5, lineY1);
+      doc.text(participant1.userName || "Nombre del colaborador", leftColX, lineY1 + 3);
 
       const lineY2 = currentY + 18;
       doc.text("C.I.: ", leftColX, lineY2);
-      doc.line(leftColX + 8, lineY2, leftColX + signatureWidth, lineY2);
-      doc.text(participant.nationalId || "No especificado", leftColX + 10, lineY2 - 0.8);
+      doc.line(leftColX + 8, lineY2, leftColX + colWidth - 5, lineY2);
+      doc.text(participant1.nationalId || "No especificado", leftColX + 10, lineY2 - 0.8);
 
       const lineY3 = currentY + 26;
       doc.setFontSize(8);
       doc.text("Firma: ", leftColX, lineY3);
-      doc.line(leftColX + 10, lineY3, leftColX + signatureWidth, lineY3);
+      doc.line(leftColX + 10, lineY3, leftColX + colWidth - 5, lineY3);
 
       const lineY4 = currentY + 34;
       doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
 
-      currentY += 42;
-    });
+      // Columna derecha: Aceptado por (Participante 2) - si existe
+      if (participant2) {
+        doc.setFontSize(8);
+        doc.setFont("helvetica", "bold");
+        doc.text("Aceptado por:", midColX, currentY);
 
-    // "Entregado por" solo una vez
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7);
+        doc.line(midColX, lineY1, midColX + colWidth - 5, lineY1);
+        doc.text(participant2.userName || "Nombre del colaborador", midColX, lineY1 + 3);
+
+        doc.text("C.I.: ", midColX, lineY2);
+        doc.line(midColX + 8, lineY2, midColX + colWidth - 5, lineY2);
+        doc.text(participant2.nationalId || "No especificado", midColX + 10, lineY2 - 0.8);
+
+        doc.setFontSize(8);
+        doc.text("Firma: ", midColX, lineY3);
+        doc.line(midColX + 10, lineY3, midColX + colWidth - 5, lineY3);
+
+        doc.text("Fecha: ____ / ____ / _______", midColX, lineY4);
+      }
+
+      currentY += 42;
+    }
+
+    // "Entregado por" solo una vez - media fila
     if (currentY > pageHeight - 40) {
       doc.addPage();
       addHeader();
       currentY = 35;
     }
 
-    doc.setDrawColor(0, 0, 0);
-    doc.setLineWidth(0.2);
     doc.setFontSize(8);
     doc.setFont("helvetica", "bold");
     doc.text("Entregado por:", leftColX, currentY);
@@ -567,7 +592,7 @@ const GenerateGroupActaModal = ({
     doc.text("Nombre completo del responsable de entrega", leftColX, deliveryLine1 + 3);
     doc.text(`C.I.: ${subscriberCI}`, leftColX, deliveryLine2);
     doc.text("Firma: ", leftColX, deliveryLine3);
-    doc.line(leftColX + 10, deliveryLine3, leftColX + signatureWidth, deliveryLine3);
+    doc.line(leftColX + 10, deliveryLine3, leftColX + colWidth - 5, deliveryLine3);
     doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, deliveryLine4);
 
     // Pie de página
