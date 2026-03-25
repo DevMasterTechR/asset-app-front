@@ -91,6 +91,7 @@ export const authApi = {
       const response = await apiFetch('/auth/me', {
         method: 'GET',
         headers: { Accept: 'application/json' },
+        timeoutMs: 60000,
       });
 
       if (!response.ok) {
@@ -103,6 +104,19 @@ export const authApi = {
       console.log('[verifyAuth] Usuario obtenido:', data);
       return data;
     } catch (error) {
+      // Reintento corto para evitar cierres de sesion por cold start o red lenta
+      try {
+        const retry = await apiFetch('/auth/me', {
+          method: 'GET',
+          headers: { Accept: 'application/json' },
+          timeoutMs: 60000,
+        });
+        if (!retry.ok) return null;
+        const data = await retry.json();
+        return data;
+      } catch (_retryError) {
+        // continuar y retornar null
+      }
       console.error('Error verifying auth:', error);
       return null;
     }

@@ -28,9 +28,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const currentUser = await authApi.verifyAuth();
         if (currentUser) {
           setUser(currentUser);
+          try {
+            localStorage.setItem('auth:user', JSON.stringify(currentUser));
+          } catch (e) {
+            // noop
+          }
+        } else {
+          // Fallback: mantener sesion cliente si backend tarda en responder
+          try {
+            const cached = localStorage.getItem('auth:user');
+            if (cached) {
+              const parsed = JSON.parse(cached);
+              if (parsed?.id) setUser(parsed);
+            }
+          } catch (e) {
+            // noop
+          }
         }
       } catch (error) {
         console.error('Error verificando sesión:', error);
+        try {
+          const cached = localStorage.getItem('auth:user');
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed?.id) setUser(parsed);
+          }
+        } catch (e) {
+          // noop
+        }
       } finally {
         setLoading(false);
       }
@@ -49,6 +74,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       sessionStorage.removeItem('auth_token');
       sessionStorage.removeItem('session:keepalive');
+      localStorage.removeItem('auth:user');
       localStorage.setItem('session:logout', String(Date.now()));
       navigate('/', { replace: true });
     }
@@ -83,9 +109,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const currentUser = await authApi.verifyAuth();
     if (currentUser) {
       setUser(currentUser);
+      try {
+        localStorage.setItem('auth:user', JSON.stringify(currentUser));
+      } catch (e) {
+        // noop
+      }
       return currentUser;
     } else if (response.user) {
       setUser(response.user);
+      try {
+        localStorage.setItem('auth:user', JSON.stringify(response.user));
+      } catch (e) {
+        // noop
+      }
       return response.user;
     }
     throw new Error('No se pudo obtener el usuario después del login');
