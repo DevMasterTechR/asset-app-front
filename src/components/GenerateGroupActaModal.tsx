@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import jsPDF from "jspdf";
 import {
   Dialog,
@@ -9,8 +9,10 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
+import { assignmentsApi } from "@/api/assignments";
 
 export interface GroupActaParticipant {
+  assignmentId?: string;
   personId: string;
   userName: string;
   nationalId?: string;
@@ -35,6 +37,7 @@ interface GenerateGroupActaModalProps {
   onOpenChange: (open: boolean) => void;
   user?: any;
   sharedAssets: GroupActaAsset[];
+  onActaGenerated?: () => void;
 }
 
 const formatDate = (value?: string) => {
@@ -53,8 +56,10 @@ const GenerateGroupActaModal = ({
   onOpenChange,
   user,
   sharedAssets,
+  onActaGenerated,
 }: GenerateGroupActaModalProps) => {
   const { toast } = useToast();
+  const [isUpdating, setIsUpdating] = useState(false);
   const totalParticipants = useMemo(() => {
     const set = new Set<string>();
     sharedAssets.forEach((asset) => {
@@ -63,7 +68,50 @@ const GenerateGroupActaModal = ({
     return set.size;
   }, [sharedAssets]);
 
-  const generatePdf = () => {
+  const updateGroupActaStatus = async () => {
+    const assignmentIds = new Set<string>();
+
+    sharedAssets.forEach((asset) => {
+      (asset.participants || []).forEach((participant) => {
+        const assignmentId = String(participant.assignmentId || "").trim();
+        if (assignmentId) {
+          assignmentIds.add(assignmentId);
+        }
+      });
+    });
+
+    if (assignmentIds.size === 0) {
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await Promise.all(
+        Array.from(assignmentIds).map((id) => assignmentsApi.updateActaStatus(id, "acta_generada"))
+      );
+
+      toast({
+        title: "Acta grupal generada",
+        description: "Se actualizo el estado de Acta de Entrega para todos los participantes.",
+      });
+
+      if (onActaGenerated) {
+        onActaGenerated();
+      }
+    } catch (error) {
+      console.error("Error actualizando estado de acta grupal:", error);
+      toast({
+        title: "Error",
+        description: "No se pudo actualizar el estado de acta para todos los participantes.",
+        variant: "destructive",
+      });
+      throw error;
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  const generatePdf = async () => {
     if (!sharedAssets || sharedAssets.length === 0) {
       toast({
         title: "Error",
@@ -663,12 +711,16 @@ const GenerateGroupActaModal = ({
 
     doc.save(fileName);
 
-    toast({
-      title: "Exito",
-      description: "Acta grupal generada correctamente",
-    });
-
-    onOpenChange(false);
+    try {
+      await updateGroupActaStatus();
+      toast({
+        title: "Exito",
+        description: "Acta grupal generada correctamente",
+      });
+      onOpenChange(false);
+    } catch {
+      // El error ya se informa en updateGroupActaStatus.
+    }
   };
 
   return (
@@ -694,11 +746,11 @@ const GenerateGroupActaModal = ({
           </div>
 
           <div className="flex justify-end gap-2 pt-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isUpdating}>
               Cancelar
             </Button>
-            <Button onClick={generatePdf} disabled={sharedAssets.length === 0}>
-              Generar PDF
+            <Button onClick={generatePdf} disabled={sharedAssets.length === 0 || isUpdating}>
+              {isUpdating ? "Actualizando..." : "Generar PDF"}
             </Button>
           </div>
         </div>

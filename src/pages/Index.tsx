@@ -395,6 +395,7 @@ const Index = () => {
         const firstName = person?.firstName || '';
         const lastName = person?.lastName || '';
         participantsMap.set(personId, {
+          assignmentId: a.id,
           personId,
           userName: `${firstName} ${lastName}`.trim() || 'Desconocido',
           nationalId: person?.nationalId || 'No registrada',
@@ -1764,6 +1765,7 @@ const Index = () => {
         onOpenChange={setGroupActaModalOpen}
         user={selectedUserForGroupActa}
         sharedAssets={sharedAssetsForGroupActa}
+        onActaGenerated={loadData}
       />
     </Layout>
   );
