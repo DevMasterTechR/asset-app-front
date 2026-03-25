@@ -1,6 +1,13 @@
 import apiFetch from '@/lib/fetchClient'
 import type { ActaStatus } from '@/api/devices'
 
+const toOptionalPositiveNumber = (value: unknown): number | undefined => {
+  if (value === undefined || value === null || value === '') return undefined
+  const num = Number(value)
+  if (!Number.isFinite(num) || num <= 0) return undefined
+  return num
+}
+
 // Helper para manejar errores de la API (local, igual que en otros módulos)
 const handleApiError = async (response: Response) => {
   if (!response.ok) {
@@ -90,10 +97,11 @@ export const assignmentsApi = {
   },
 
   async create(payload: CreateAssignmentDto): Promise<{ assignment: Assignment; asset?: any }> {
+    const normalizedBranchId = toOptionalPositiveNumber(payload.branchId)
     const body = {
       assetId: Number(payload.assetId),
       personId: Number(payload.personId),
-      branchId: payload.branchId !== undefined ? Number(payload.branchId) : undefined,
+      branchId: normalizedBranchId,
       assignmentDate: payload.assignmentDate,
       deliveryCondition: payload.deliveryCondition,
       deliveryNotes: payload.deliveryNotes,
@@ -113,7 +121,8 @@ export const assignmentsApi = {
     const body: any = {}
     if (payload.assetId !== undefined) body.assetId = Number(payload.assetId)
     if (payload.personId !== undefined) body.personId = Number(payload.personId)
-    if (payload.branchId !== undefined) body.branchId = Number(payload.branchId)
+    const normalizedBranchId = toOptionalPositiveNumber(payload.branchId)
+    if (normalizedBranchId !== undefined) body.branchId = normalizedBranchId
     if (payload.assignmentDate !== undefined) body.assignmentDate = payload.assignmentDate
     if (payload.deliveryCondition !== undefined) body.deliveryCondition = payload.deliveryCondition
     if (payload.deliveryNotes !== undefined) body.deliveryNotes = payload.deliveryNotes
