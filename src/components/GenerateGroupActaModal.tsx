@@ -131,7 +131,7 @@ const GenerateGroupActaModal = ({
     // Título
     doc.setFontSize(11);
     doc.setFont("helvetica", "bold");
-    doc.text("ACTA GRUPAL DE ENTREGA DE EQUIPOS TECNOLÓGICOS", pageWidth / 2, 40, { align: "center" });
+    doc.text("ACTA DE ENTREGA DE EQUIPOS TECNOLÓGICOS", pageWidth / 2, 40, { align: "center" });
 
     // Datos del suscrito
     const subscriberName = "MORETA PAEZ GALO ANIBAL";
@@ -140,9 +140,17 @@ const GenerateGroupActaModal = ({
     // Párrafo introductorio usando el mismo estilo del acta individual
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    const introText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito ${subscriberName}, portador de la cédula de identidad N.° ${subscriberCI}, procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources para uso compartido de ${allParticipants.length} persona(s), conforme al siguiente detalle:`;
+    const introText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito ${subscriberName}, portador de la cédula de identidad N.° ${subscriberCI}, procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources conforme al siguiente detalle:`;
     const introLines = doc.splitTextToSize(introText, pageWidth - 30);
     doc.text(introLines, 15, 47);
+
+    let introY = 47 + introLines.length * 4;
+    allParticipants.forEach((participant) => {
+      const participantText = `A ${String(participant.userName || "DESCONOCIDO").toUpperCase()} con cédula de identidad N.° ${participant.nationalId || "No especificado"}.`;
+      const participantLines = doc.splitTextToSize(participantText, pageWidth - 30);
+      doc.text(participantLines, 15, introY);
+      introY += participantLines.length * 4;
+    });
 
     // Tabla de equipos a entregar
     const equipoRows = sharedAssets.map((asset) => [
@@ -153,7 +161,7 @@ const GenerateGroupActaModal = ({
     ]);
 
     autoTable(doc, {
-      startY: 47 + introLines.length * 4 + 3,
+      startY: introY + 3,
       head: [["Código", "Tipo", "Marca/Modelo", "Serial"]],
       body: equipoRows,
       theme: "grid",
@@ -178,10 +186,108 @@ const GenerateGroupActaModal = ({
 
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
-    currentY += 6;
-    doc.line(15, currentY, pageWidth - 15, currentY);
-    currentY += 6;
-    doc.line(15, currentY, pageWidth - 15, currentY);
+    currentY += 5;
+    doc.text("Ninguna", 15, currentY);
+    currentY += 7;
+
+    const legalText1 = `El receptor de los equipos tecnológicos (en adelante, el/la/los/las colaboradores) es responsable de su uso adecuado y del mantenimiento en condiciones óptimas, conforme a las instrucciones y políticas establecidas por la empresa.`;
+    const splitLegal1 = doc.splitTextToSize(legalText1, 180);
+    if (currentY + splitLegal1.length * 4 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.text(splitLegal1, 15, currentY);
+    currentY += splitLegal1.length * 4;
+
+    const legalText2 = `Será responsabilidad de el/la/los/las colaborador/es/as reportar de manera inmediata cualquier daño, falla, pérdida o incidente que afecte el funcionamiento del equipo, mediante correo electrónico dirigido al Departamento de Tecnología a la dirección`;
+    const splitLegal2 = doc.splitTextToSize(legalText2, 180);
+    if (currentY + splitLegal2.length * 4 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.text(splitLegal2, 15, currentY);
+    currentY += splitLegal2.length * 4;
+
+    doc.setFont("helvetica", "bold");
+    doc.text("dep-sistemas@recursos-tecnologicos.com.", 15, currentY);
+    doc.setFont("helvetica", "normal");
+    currentY += 4;
+
+    const malUsoText = `Se considera mal uso:\na) Manipulación indebida de componentes internos.\nb) Instalación de software no autorizado.\nc) Uso en condiciones ambientales inadecuadas.\nd) Derrame de líquidos.\ne) Uso de fuerza excesiva.\nf) Golpes, caídas o impactos por descuido.\ng) Modificación física sin autorización.`;
+    const splitMalUso = doc.splitTextToSize(malUsoText, 180);
+    if (currentY + splitMalUso.length * 4 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.text(splitMalUso, 15, currentY);
+    currentY += splitMalUso.length * 4 + 2;
+
+    const roboText = `En caso de robo, el colaborador deberá presentar denuncia ante las autoridades:\n• Si la denuncia es presentada y el procesador del equipo tiene hasta 5 años de vigencia, el costo de reposición será 50% colaborador y 50% empresa.\n• Si el procesador del equipo tiene más de 5 años de vigencia, la empresa asume el 100% del costo.\n• Si el usuario no presenta denuncia, el colaborador asume el 100% del costo de reposición.`;
+    const splitRobo = doc.splitTextToSize(roboText, 180);
+    if (currentY + splitRobo.length * 4 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.text(splitRobo, 15, currentY);
+    currentY += splitRobo.length * 4 + 4;
+
+    if (currentY > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.setFont("helvetica", "bold");
+    const notaLabel = "Nota: ";
+    doc.text(notaLabel, 15, currentY);
+    const notaLabelWidth = doc.getTextWidth(notaLabel);
+    doc.setFont("helvetica", "normal");
+    const notaPart1 = "El mouse y el teclado se entregan nuevos, en óptimas condiciones y debidamente probados. Cualquier daño o pérdida será responsabilidad del colaborador, quien deberá asumir el ";
+    const notaPart2Bold = "100% del costo de reposición.";
+    const notaAvailableWidth = pageWidth - 15 - notaLabelWidth - 15;
+    const notaPart1Lines = doc.splitTextToSize(notaPart1, notaAvailableWidth);
+    doc.text(notaPart1Lines[0], 15 + notaLabelWidth, currentY);
+    let notaY = currentY + 4;
+    for (let i = 1; i < notaPart1Lines.length; i++) {
+      doc.text(notaPart1Lines[i], 15, notaY);
+      notaY += 4;
+    }
+    const lastLineText = notaPart1Lines[notaPart1Lines.length - 1] || "";
+    const lastLineWidth = doc.getTextWidth(lastLineText);
+    doc.setFont("helvetica", "bold");
+    const boldPartWidth = doc.getTextWidth(notaPart2Bold);
+    const startX = notaPart1Lines.length === 1 ? 15 + notaLabelWidth + lastLineWidth : 15 + lastLineWidth;
+    if (startX + boldPartWidth < pageWidth - 15) {
+      doc.text(notaPart2Bold, startX + 1, notaY - 4);
+    } else {
+      doc.text(notaPart2Bold, 15, notaY);
+      notaY += 4;
+    }
+    doc.setFont("helvetica", "normal");
+    currentY = notaY + 6;
+
+    const costoText = `El costo de reposición se calculará en función del valor comercial actual de un equipo de características equivalentes al entregado.`;
+    const splitCosto = doc.splitTextToSize(costoText, 180);
+    if (currentY + splitCosto.length * 4 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.text(splitCosto, 15, currentY);
+    currentY += splitCosto.length * 4 + 2;
+
+    const valoresText = `El costo se calcula según el valor comercial actual de un equipo equivalente. Los valores de reposición o reparación serán descontados del rol de pagos o de la liquidación final.`;
+    const splitValores = doc.splitTextToSize(valoresText, 180);
+    if (currentY + splitValores.length * 4 > pageHeight - 30) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+    doc.text(splitValores, 15, currentY);
+    currentY += splitValores.length * 4 + 3;
 
     // Sección de participantes con el mismo formato de acta individual
     currentY += 10;
@@ -192,10 +298,10 @@ const GenerateGroupActaModal = ({
     currentY += 5;
     doc.setFontSize(8.5);
     doc.setFont("helvetica", "normal");
-    const acceptanceText = "Cada persona detallada a continuación declara haber recibido a conformidad los equipos tecnológicos asignados en modalidad compartida, comprometiéndose a su correcto uso y custodia.";
+    const acceptanceText = `Yo, __________________________________________________________________________________, con C.I. No. ________________________, declaro haber recibido a conformidad los equipos tecnológicos detallados. Me comprometo a hacer uso adecuado de los mismos y acepto que, en caso de pérdida, daño o robo atribuible a mi responsabilidad, se realicen los descuentos correspondientes a través de mi rol de pagos o liquidación final.`;
     const acceptanceLines = doc.splitTextToSize(acceptanceText, pageWidth - 30);
     doc.text(acceptanceLines, 15, currentY);
-    currentY += acceptanceLines.length * 3.5 + 5;
+    currentY += acceptanceLines.length * 3.2 + 8;
 
     const colWidth = (pageWidth - 30) / 2;
     const leftColX = 15;
@@ -215,33 +321,25 @@ const GenerateGroupActaModal = ({
       // Columna izquierda: Aceptado por (persona receptora)
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
-      doc.text(`Aceptado por (Persona ${index + 1}):`, leftColX, currentY);
+      doc.text("Aceptado por:", leftColX, currentY);
 
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
       const lineY1 = currentY + 10;
       doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
-      doc.setFontSize(7);
       doc.text(participant.userName || "Nombre del colaborador", leftColX, lineY1 + 3);
 
       const lineY2 = currentY + 18;
       doc.text("C.I.: ", leftColX, lineY2);
       doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
-      doc.setFontSize(7);
       doc.text(participant.nationalId || "No especificado", leftColX + 10, lineY2 - 0.8);
 
-      const lineY2B = currentY + 24;
-      doc.text("Sucursal: ", leftColX, lineY2B);
-      doc.line(leftColX + 14, lineY2B, leftColX + colWidth, lineY2B);
-      doc.setFontSize(7);
-      doc.text(participant.branch || "No especificado", leftColX + 16, lineY2B - 0.8);
-
-      const lineY3 = currentY + 30;
+      const lineY3 = currentY + 26;
       doc.setFontSize(8);
       doc.text("Firma: ", leftColX, lineY3);
       doc.line(leftColX + 10, lineY3, leftColX + colWidth, lineY3);
 
-      const lineY4 = currentY + 38;
+      const lineY4 = currentY + 34;
       doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
 
       // Columna derecha: Entregado por (responsable TechResources)
@@ -258,7 +356,7 @@ const GenerateGroupActaModal = ({
       doc.line(rightColX + 10, lineY3, rightColX + colWidth, lineY3);
       doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
 
-      currentY += 48;
+      currentY += 44;
     });
 
     // Pie de página
