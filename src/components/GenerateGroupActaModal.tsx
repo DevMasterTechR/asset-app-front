@@ -107,7 +107,20 @@ const GenerateGroupActaModal = ({
       }
     };
 
-    // PÁGINA 1: Encabezado y tabla de equipos
+    // Recopilar todos los participantes únicos
+    const allParticipants: GroupActaParticipant[] = [];
+    const participantMap = new Map<string, GroupActaParticipant>();
+    sharedAssets.forEach((asset) => {
+      (asset.participants || []).forEach((p) => {
+        const key = String(p.personId);
+        if (!participantMap.has(key)) {
+          participantMap.set(key, p);
+          allParticipants.push(p);
+        }
+      });
+    });
+
+    // PÁGINA 1: Encabezado, introducción y detalle
     addHeader();
 
     // Fecha a la derecha debajo del logo
@@ -124,6 +137,13 @@ const GenerateGroupActaModal = ({
     const subscriberName = "MORETA PAEZ GALO ANIBAL";
     const subscriberCI = "1723563480";
 
+    // Párrafo introductorio usando el mismo estilo del acta individual
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "normal");
+    const introText = `En la ciudad de Quito, en fecha ${formattedDate}, el suscrito ${subscriberName}, portador de la cédula de identidad N.° ${subscriberCI}, procede a entregar los siguientes equipos tecnológicos de propiedad de TechResources para uso compartido de ${allParticipants.length} persona(s), conforme al siguiente detalle:`;
+    const introLines = doc.splitTextToSize(introText, pageWidth - 30);
+    doc.text(introLines, 15, 47);
+
     // Tabla de equipos a entregar
     const equipoRows = sharedAssets.map((asset) => [
       asset.code || "-",
@@ -133,7 +153,7 @@ const GenerateGroupActaModal = ({
     ]);
 
     autoTable(doc, {
-      startY: 50,
+      startY: 47 + introLines.length * 4 + 3,
       head: [["Código", "Tipo", "Marca/Modelo", "Serial"]],
       body: equipoRows,
       theme: "grid",
@@ -163,76 +183,82 @@ const GenerateGroupActaModal = ({
     currentY += 6;
     doc.line(15, currentY, pageWidth - 15, currentY);
 
-    // Sección de participantes con líneas para datos
+    // Sección de participantes con el mismo formato de acta individual
     currentY += 10;
     doc.setFontSize(9);
     doc.setFont("helvetica", "bold");
-    doc.text("PERSONAS RECEPTORAS DE LOS EQUIPOS:", 15, currentY);
+    doc.text("ACEPTACIÓN EXPRESA", 15, currentY);
 
-    currentY += 8;
+    currentY += 5;
+    doc.setFontSize(8.5);
+    doc.setFont("helvetica", "normal");
+    const acceptanceText = "Cada persona detallada a continuación declara haber recibido a conformidad los equipos tecnológicos asignados en modalidad compartida, comprometiéndose a su correcto uso y custodia.";
+    const acceptanceLines = doc.splitTextToSize(acceptanceText, pageWidth - 30);
+    doc.text(acceptanceLines, 15, currentY);
+    currentY += acceptanceLines.length * 3.5 + 5;
+
     const colWidth = (pageWidth - 30) / 2;
     const leftColX = 15;
-    const rightColX = 15 + colWidth + 10;
+    const rightColX = leftColX + colWidth + 10;
 
-    // Recopilar todos los participantes únicos
-    const allParticipants: GroupActaParticipant[] = [];
-    const participantMap = new Map<string, GroupActaParticipant>();
-
-    sharedAssets.forEach((asset) => {
-      asset.participants.forEach((p) => {
-        if (!participantMap.has(p.personId)) {
-          participantMap.set(p.personId, p);
-          allParticipants.push(p);
-        }
-      });
-    });
-
-    // Crear secciones de firma para cada participante
+    // Crear una sección de firma por cada participante
     allParticipants.forEach((participant, index) => {
-      if (currentY > pageHeight - 50) {
+      if (currentY > pageHeight - 58) {
         doc.addPage();
         addHeader();
         currentY = 35;
       }
 
-      // Mostrar nombre in línea
+      doc.setDrawColor(0, 0, 0);
+      doc.setLineWidth(0.2);
+
+      // Columna izquierda: Aceptado por (persona receptora)
       doc.setFontSize(8);
+      doc.setFont("helvetica", "bold");
+      doc.text(`Aceptado por (Persona ${index + 1}):`, leftColX, currentY);
+
       doc.setFont("helvetica", "normal");
-      const participantNumber = index + 1;
-      doc.text(`${participantNumber}. Persona:`, leftColX, currentY);
-
-      // Línea para nombre
-      const lineY = currentY + 5;
-      doc.line(leftColX + 20, lineY, pageWidth - 15, lineY);
       doc.setFontSize(7);
-      doc.text(participant.userName || "-", leftColX + 22, lineY + 2);
-
-      // C.I. y Sucursal en la siguiente línea
-      currentY = lineY + 8;
-      doc.setFontSize(8);
-      doc.text("C.I.: ", leftColX, currentY);
-      const ciLine = currentY;
-      doc.line(leftColX + 10, ciLine, leftColX + colWidth - 20, ciLine);
+      const lineY1 = currentY + 10;
+      doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
       doc.setFontSize(7);
-      doc.text(participant.nationalId || "-", leftColX + 12, ciLine + 2);
+      doc.text(participant.userName || "Nombre del colaborador", leftColX, lineY1 + 3);
 
-      doc.setFontSize(8);
-      doc.text("Sucursal: ", leftColX + colWidth - 15, currentY);
-      doc.line(leftColX + colWidth + 5, ciLine, pageWidth - 15, ciLine);
+      const lineY2 = currentY + 18;
+      doc.text("C.I.: ", leftColX, lineY2);
+      doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
       doc.setFontSize(7);
-      doc.text(participant.branch || "-", leftColX + colWidth + 7, ciLine + 2);
+      doc.text(participant.nationalId || "No especificado", leftColX + 10, lineY2 - 0.8);
 
-      // Firma en la siguiente línea
-      currentY += 10;
+      const lineY2B = currentY + 24;
+      doc.text("Sucursal: ", leftColX, lineY2B);
+      doc.line(leftColX + 14, lineY2B, leftColX + colWidth, lineY2B);
+      doc.setFontSize(7);
+      doc.text(participant.branch || "No especificado", leftColX + 16, lineY2B - 0.8);
+
+      const lineY3 = currentY + 30;
       doc.setFontSize(8);
-      doc.text("Firma: ", leftColX, currentY);
-      doc.line(leftColX + 12, currentY, pageWidth - 15, currentY);
+      doc.text("Firma: ", leftColX, lineY3);
+      doc.line(leftColX + 10, lineY3, leftColX + colWidth, lineY3);
 
-      currentY += 8;
+      const lineY4 = currentY + 38;
+      doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
+
+      // Columna derecha: Entregado por (responsable TechResources)
       doc.setFontSize(8);
-      doc.text("Fecha: ____ / ____ / _______", leftColX, currentY);
+      doc.setFont("helvetica", "bold");
+      doc.text("Entregado por:", rightColX, currentY);
 
-      currentY += 10;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(7);
+      doc.text(subscriberName, rightColX, lineY1 - 2);
+      doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 3);
+      doc.text(`C.I.: ${subscriberCI}`, rightColX, lineY2);
+      doc.text("Firma: ", rightColX, lineY3);
+      doc.line(rightColX + 10, lineY3, rightColX + colWidth, lineY3);
+      doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
+
+      currentY += 48;
     });
 
     // Pie de página
