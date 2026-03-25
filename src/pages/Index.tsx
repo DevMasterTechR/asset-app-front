@@ -378,7 +378,6 @@ const Index = () => {
       if (!assetId) return;
 
       const assignmentsForAsset = activeAssignmentsByAsset.get(assetId) || [];
-      if (assignmentsForAsset.length <= 1) return;
 
       const participantsMap = new Map<string, any>();
       assignmentsForAsset.forEach((a: any) => {
@@ -396,6 +395,17 @@ const Index = () => {
         });
       });
 
+      // Si el equipo no tiene múltiples participantes activos, incluir al usuario actual.
+      if (participantsMap.size === 0 && u?.userId) {
+        participantsMap.set(String(u.userId), {
+          personId: String(u.userId),
+          userName: u?.userName || 'Desconocido',
+          nationalId: u?.nationalId || 'No registrada',
+          branch: u?.branch || '-',
+          assignmentDate: undefined,
+        });
+      }
+
       shared.push({
         assetId,
         code: d.code || d.assetCode || 'SIN-CODIGO',
@@ -403,6 +413,8 @@ const Index = () => {
         brand: d.brand || '-',
         model: d.model || '-',
         serialNumber: d.serialNumber || '-',
+        purchaseDate: d.purchaseDate,
+        attributesJson: d.attributesJson || {},
         participants: Array.from(participantsMap.values()),
       });
     });

@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
 import {
   Dialog,
   DialogContent,
@@ -26,6 +25,8 @@ export interface GroupActaAsset {
   brand?: string;
   model?: string;
   serialNumber?: string;
+  purchaseDate?: string;
+  attributesJson?: any;
   participants: GroupActaParticipant[];
 }
 
@@ -152,25 +153,224 @@ const GenerateGroupActaModal = ({
       introY += participantLines.length * 4;
     });
 
-    // Tabla de equipos a entregar
-    const equipoRows = sharedAssets.map((asset) => [
-      asset.code || "-",
-      asset.type || "-",
-      `${asset.brand || ""} ${asset.model || ""}`.trim() || "-",
-      asset.serialNumber || "-",
-    ]);
+    // Detalle específico por equipo (mismo enfoque que acta individual)
+    let currentY = introY + 7;
 
-    autoTable(doc, {
-      startY: introY + 3,
-      head: [["Código", "Tipo", "Marca/Modelo", "Serial"]],
-      body: equipoRows,
-      theme: "grid",
-      headStyles: { fillColor: [37, 99, 235], textColor: [255, 255, 255], fontSize: 9 },
-      bodyStyles: { fontSize: 8 },
-      margin: { left: 15, right: 15 },
-    });
+    const resolveField = (obj: any, keys: string[], yesNo = false, skipSerialNumber = false) => {
+      const tryVal = (v: any) => {
+        if (v === undefined || v === null) return undefined;
+        if (Array.isArray(v)) {
+          const filtered = v.filter((item: any) => item !== null && item !== undefined && String(item).trim() !== "");
+          if (filtered.length === 0) return undefined;
+          return filtered.join(", ");
+        }
+        if (typeof v === "object") return JSON.stringify(v);
+        const s = String(v).trim();
+        if (!s) return undefined;
+        if (yesNo) {
+          const low = s.toLowerCase();
+          if (v === true || low === "si" || low === "sí" || low === "true" || low === "yes") return "Sí";
+          if (v === false || low === "no" || low === "false") return "No";
+          return s;
+        }
+        return s;
+      };
 
-    let currentY = (doc as any).lastAutoTable?.finalY || 100;
+      const attrs = obj?.attributesJson || obj?.attributes || {};
+      for (const k of keys) {
+        const val = tryVal(attrs?.[k]);
+        if (val !== undefined) return val;
+      }
+
+      for (const k of keys) {
+        if (skipSerialNumber && k === "serialNumber") continue;
+        const val = tryVal(obj?.[k]);
+        if (val !== undefined) return val;
+      }
+
+      const storage = attrs?.storage || obj?.storage;
+      if (storage && keys.some((k) => ["storage", "almacenamiento", "disk", "ssd", "hdd"].includes(k))) {
+        const capacity = storage.capacity ?? storage.size ?? storage.total;
+        const type = storage.type ?? storage.kind;
+        const capStr = capacity !== undefined ? String(capacity) : undefined;
+        const typeStr = type !== undefined ? String(type) : undefined;
+        if (capStr || typeStr) {
+          return [typeStr, capStr].filter(Boolean).join(" ");
+        }
+      }
+
+      return "-";
+    };
+
+    const getDeviceLines = (d: any) => {
+      const typeLabel = d.type || d.assetType || "-";
+      const baseLines = [
+        `Tipo: ${typeLabel}`,
+        `Marca: ${d.brand || "-"}`,
+        `Modelo: ${d.model || "-"}`,
+        `Serial: ${d.serialNumber || "-"}`,
+      ];
+
+      const isLaptop = /laptop|notebook|ultrabook/i.test(typeLabel);
+      const isCelular = /celular|cellphone|móvil|movil|tablet/i.test(typeLabel);
+      const isDesktop = /desktop|pc|computadora/i.test(typeLabel);
+      const isIPPhone = /ip-phone|ipphone|teléfono ip|telefono ip/i.test(typeLabel);
+      const isPrinter = /printer|impresora/i.test(typeLabel);
+      const isMonitor = /monitor/i.test(typeLabel);
+      const isTablet = /tablet/i.test(typeLabel);
+
+      const purchaseYear = d?.purchaseDate ? new Date(d.purchaseDate).getFullYear() : "-";
+
+      const laptopLines = isLaptop
+        ? [
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
+            `Memoria RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "ssd", "hdd", "disk"])}`,
+            `Cargador: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Maletín/Bolso: ${resolveField(d, ["hasBag", "bagIncluded", "bag", "maletin"], true)}`,
+          ]
+        : [];
+
+      const phoneLines = isCelular
+        ? [
+            `Número Celular: ${resolveField(d, ["chipNumber", "phoneNumber", "phone", "number", "telefono", "numeroCelular", "celular"])}`,
+            `Operadora: ${resolveField(d, ["operator", "operadora", "carrier"])}`,
+            `Memoria RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
+            `Código IMEI: ${resolveField(d, ["imeis", "imei", "imei1"], false, true)}`,
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
+            `Color: ${resolveField(d, ["color"])}`,
+            `Cargador Cel: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Cable de Carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
+            `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
+            `Protector Pantalla: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
+            `Chip Telefónico: ${resolveField(d, ["hasChip", "chip"], true)}`,
+          ]
+        : [];
+
+      const desktopLines = isDesktop
+        ? [
+            `Mouse: ${resolveField(d, ["hasMouse", "mouse"], true)}`,
+            `Teclado: ${resolveField(d, ["hasKeyboard", "keyboard"], true)}`,
+            `Mouse Pad: ${resolveField(d, ["hasMousePad", "mousePad"], true)}`,
+            `Tarjeta WiFi: ${resolveField(d, ["hasWifiCard", "wifiCard"], true)}`,
+            `Adaptador de Memoria: ${resolveField(d, ["hasMemoryAdapter", "memoryAdapter"], true)}`,
+            `Pantalla(s): ${resolveField(d, ["hasScreen", "screen"], true)}`,
+            `HUB: ${resolveField(d, ["hasHub", "hub"], true)}`,
+            `Cable de Poder: ${resolveField(d, ["hasPowerCable", "powerCable"], true)}`,
+          ]
+        : [];
+
+      const ipPhoneLines = isIPPhone
+        ? [
+            `Extensión Telefónica: ${resolveField(d, ["extension"])}`,
+            `Número Telefónico: ${resolveField(d, ["phoneNumber", "number"])}`,
+            `Cargador Incluido: ${resolveField(d, ["hasCharger", "chargerIncluded", "charger"], true)}`,
+          ]
+        : [];
+
+      const printerLines = isPrinter
+        ? [
+            `Tipo de Impresora: ${resolveField(d, ["printerType", "tipo"])}`,
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+            `Dirección IP: ${resolveField(d, ["ipAddress", "ip"])}`,
+            `Función Escáner: ${resolveField(d, ["hasScanner", "scanner"], true)}`,
+            `Impresión a Color: ${resolveField(d, ["colorPrinting", "color"], true)}`,
+            `Cable de Poder: ${resolveField(d, ["hasPowerCable", "powerCable"], true)}`,
+            `Cable USB: ${resolveField(d, ["hasUSBCable", "usbCable"], true)}`,
+          ]
+        : [];
+
+      const monitorLines = isMonitor
+        ? [
+            `Tamaño de Pantalla (pulgadas): ${resolveField(d, ["screenSize"])}`,
+            `Resolución: ${resolveField(d, ["resolution"])}`,
+            `Tipo de Panel: ${resolveField(d, ["panelType"])}`,
+            `Puerto HDMI: ${resolveField(d, ["hasHDMI"], true)}`,
+            `Puerto VGA: ${resolveField(d, ["hasVGA"], true)}`,
+            `Cable de Poder: ${resolveField(d, ["hasPowerCable"], true)}`,
+          ]
+        : [];
+
+      const tabletLines = isTablet && !isCelular
+        ? [
+            `Procesador: ${resolveField(d, ["cpu", "processor", "procesador"])} - ${purchaseYear}`,
+            `Memoria RAM (GB): ${resolveField(d, ["ram", "memory", "memoria"])}`,
+            `Almacenamiento (GB): ${resolveField(d, ["storage", "almacenamiento", "internalStorage"])}`,
+            `Color: ${resolveField(d, ["color"])}`,
+            `Cargador: ${resolveField(d, ["hasCellCharger", "hasCharger", "chargerIncluded", "charger", "cargador"], true)}`,
+            `Cable de Carga: ${resolveField(d, ["hasChargingCable", "chargingCable"], true)}`,
+            `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
+          ]
+        : [];
+
+      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...monitorLines, ...tabletLines];
+      const displayLines = allLines.filter((line) => !line.includes(": -") && !line.endsWith(": No"));
+      return { displayLines: displayLines.length ? displayLines : baseLines, typeLabel };
+    };
+
+    const boxWidth = (pageWidth - 30) / 2;
+    const boxMargin = 6;
+
+    const drawDeviceDetailBox = (d: any, xOffset: number, boxH: number) => {
+      const { displayLines, typeLabel } = getDeviceLines(d);
+      const detailLineHeight = 2.8;
+
+      doc.setFillColor(248, 250, 252);
+      doc.rect(xOffset, currentY, boxWidth, boxH, "F");
+
+      doc.setDrawColor(41, 128, 185);
+      doc.setLineWidth(0.8);
+      doc.rect(xOffset, currentY, boxWidth, boxH);
+
+      doc.setFillColor(31, 110, 170);
+      doc.rect(xOffset, currentY, boxWidth, 7, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(6);
+      doc.setTextColor(255, 255, 255);
+      const titleText = `${d.code || "SIN-CODIGO"} | ${String(typeLabel).toUpperCase()}`;
+      doc.text(titleText, xOffset + 2, currentY + 4.5);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6);
+      doc.setTextColor(40, 40, 40);
+
+      let ly = currentY + 10;
+      const contentWidth = boxWidth - 4;
+      for (let i = 0; i < displayLines.length; i++) {
+        const wrapped = doc.splitTextToSize(displayLines[i], contentWidth);
+        doc.text(wrapped, xOffset + 2, ly);
+        ly += detailLineHeight * wrapped.length;
+      }
+    };
+
+    const calculateBoxHeight = (d: any): number => {
+      const { displayLines } = getDeviceLines(d);
+      const detailLineHeight = 2.8;
+      return 8 + displayLines.length * detailLineHeight + 3;
+    };
+
+    for (let i = 0; i < sharedAssets.length; i += 2) {
+      const d1 = sharedAssets[i];
+      const d2 = sharedAssets[i + 1];
+
+      const height1 = calculateBoxHeight(d1);
+      const height2 = d2 ? calculateBoxHeight(d2) : 0;
+      const rowHeight = Math.max(height1, height2);
+
+      if (currentY + rowHeight > pageHeight - 35) {
+        doc.addPage();
+        addHeader();
+        currentY = 30;
+      }
+
+      drawDeviceDetailBox(d1, 12, rowHeight);
+      if (d2) {
+        drawDeviceDetailBox(d2, 12 + boxWidth + boxMargin, rowHeight);
+      }
+
+      currentY += rowHeight + 4;
+    }
 
     // Espacio para observaciones
     if (currentY > pageHeight - 60) {
@@ -303,13 +503,12 @@ const GenerateGroupActaModal = ({
     doc.text(acceptanceLines, 15, currentY);
     currentY += acceptanceLines.length * 3.2 + 8;
 
-    const colWidth = (pageWidth - 30) / 2;
     const leftColX = 15;
-    const rightColX = leftColX + colWidth + 10;
+    const signatureWidth = pageWidth - 30;
 
-    // Crear una sección de firma por cada participante
-    allParticipants.forEach((participant, index) => {
-      if (currentY > pageHeight - 58) {
+    // Crear una sección de firma "Aceptado por" por cada participante
+    allParticipants.forEach((participant) => {
+      if (currentY > pageHeight - 45) {
         doc.addPage();
         addHeader();
         currentY = 35;
@@ -318,7 +517,6 @@ const GenerateGroupActaModal = ({
       doc.setDrawColor(0, 0, 0);
       doc.setLineWidth(0.2);
 
-      // Columna izquierda: Aceptado por (persona receptora)
       doc.setFontSize(8);
       doc.setFont("helvetica", "bold");
       doc.text("Aceptado por:", leftColX, currentY);
@@ -326,38 +524,51 @@ const GenerateGroupActaModal = ({
       doc.setFont("helvetica", "normal");
       doc.setFontSize(7);
       const lineY1 = currentY + 10;
-      doc.line(leftColX, lineY1, leftColX + colWidth, lineY1);
+      doc.line(leftColX, lineY1, leftColX + signatureWidth, lineY1);
       doc.text(participant.userName || "Nombre del colaborador", leftColX, lineY1 + 3);
 
       const lineY2 = currentY + 18;
       doc.text("C.I.: ", leftColX, lineY2);
-      doc.line(leftColX + 8, lineY2, leftColX + colWidth, lineY2);
+      doc.line(leftColX + 8, lineY2, leftColX + signatureWidth, lineY2);
       doc.text(participant.nationalId || "No especificado", leftColX + 10, lineY2 - 0.8);
 
       const lineY3 = currentY + 26;
       doc.setFontSize(8);
       doc.text("Firma: ", leftColX, lineY3);
-      doc.line(leftColX + 10, lineY3, leftColX + colWidth, lineY3);
+      doc.line(leftColX + 10, lineY3, leftColX + signatureWidth, lineY3);
 
       const lineY4 = currentY + 34;
       doc.text("Fecha: ____ / ____ / _______", leftColX, lineY4);
 
-      // Columna derecha: Entregado por (responsable TechResources)
-      doc.setFontSize(8);
-      doc.setFont("helvetica", "bold");
-      doc.text("Entregado por:", rightColX, currentY);
-
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7);
-      doc.text(subscriberName, rightColX, lineY1 - 2);
-      doc.text("Nombre completo del responsable de entrega", rightColX, lineY1 + 3);
-      doc.text(`C.I.: ${subscriberCI}`, rightColX, lineY2);
-      doc.text("Firma: ", rightColX, lineY3);
-      doc.line(rightColX + 10, lineY3, rightColX + colWidth, lineY3);
-      doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, rightColX, lineY4);
-
-      currentY += 44;
+      currentY += 42;
     });
+
+    // "Entregado por" solo una vez
+    if (currentY > pageHeight - 40) {
+      doc.addPage();
+      addHeader();
+      currentY = 35;
+    }
+
+    doc.setDrawColor(0, 0, 0);
+    doc.setLineWidth(0.2);
+    doc.setFontSize(8);
+    doc.setFont("helvetica", "bold");
+    doc.text("Entregado por:", leftColX, currentY);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    const deliveryLine1 = currentY + 10;
+    const deliveryLine2 = currentY + 18;
+    const deliveryLine3 = currentY + 26;
+    const deliveryLine4 = currentY + 34;
+
+    doc.text(subscriberName, leftColX, deliveryLine1 - 2);
+    doc.text("Nombre completo del responsable de entrega", leftColX, deliveryLine1 + 3);
+    doc.text(`C.I.: ${subscriberCI}`, leftColX, deliveryLine2);
+    doc.text("Firma: ", leftColX, deliveryLine3);
+    doc.line(leftColX + 10, deliveryLine3, leftColX + signatureWidth, deliveryLine3);
+    doc.text(`Fecha: ${today.toLocaleDateString("es-ES")}`, leftColX, deliveryLine4);
 
     // Pie de página
     addFooterToAllPages();
