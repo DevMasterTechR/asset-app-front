@@ -102,6 +102,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // DESACTIVADO: No cerrar sesión automáticamente. El usuario solo puede cerrar sesión manualmente.
   // useSessionKeepAlive(!!user, logoutAndRedirect, { sessionMinutes: 15, warningSeconds: 30 });
 
+  // Heartbeat para evitar que el backend (Render/Supabase) se duerma por inactividad.
+  // Mantiene la sesión y la conexión a la bd activa enviando un ping cada 3 minutos.
+  useEffect(() => {
+    if (!user) return;
+    const intervalId = setInterval(() => {
+      authApi.keepAlive().catch(() => {});
+    }, 3 * 60 * 1000); // 3 minutos
+    return () => clearInterval(intervalId);
+  }, [user]);
+
   const login = async (username: string, password: string): Promise<AuthUser> => {
     const response = await authApi.login({ username, password });
 
