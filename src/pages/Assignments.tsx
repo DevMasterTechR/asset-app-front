@@ -147,7 +147,12 @@ export default function Assignments() {
         return assetType !== 'security';
       });
 
-      setAssignments(assignmentsWithoutSecurity as Assignment[]);
+      // Mapear branchName para cada asignación
+      const assignmentsWithBranchName = assignmentsWithoutSecurity.map((a: any) => ({
+        ...a,
+        branchName: a.branchName || (branchesArray.find((b: any) => Number(b.id) === Number(a.branchId))?.name ?? '-')
+      }));
+      setAssignments(assignmentsWithBranchName as Assignment[]);
 
       setPeople(sortByString((peopleArray || []).map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName })), (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()));
       // Mostrar únicamente activos disponibles para asignación, excluyendo dispositivos de seguridad

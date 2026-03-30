@@ -85,11 +85,19 @@ export default function People() {
 
       // peopleRes can be either array or paginated object
       if (Array.isArray(peopleRes)) {
-        setPeople(sortPeopleByName(peopleRes));
+        const peopleWithBranchName = peopleRes.map((p: any) => ({
+          ...p,
+          branchName: p.branchName || (branchesData.find((b: any) => Number(b.id) === Number(p.branchId))?.name ?? '-')
+        }));
+        setPeople(sortPeopleByName(peopleWithBranchName));
         setTotalItems(peopleRes.length);
         setTotalPages(1);
       } else {
-        setPeople(sortPeopleByName(peopleRes.data));
+        const peopleWithBranchName = peopleRes.data.map((p: any) => ({
+          ...p,
+          branchName: p.branchName || (branchesData.find((b: any) => Number(b.id) === Number(p.branchId))?.name ?? '-')
+        }));
+        setPeople(sortPeopleByName(peopleWithBranchName));
         setTotalItems(peopleRes.data.length);
         setTotalPages(1);
         setPage(pageParam);

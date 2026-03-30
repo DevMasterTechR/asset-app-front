@@ -213,7 +213,12 @@ function DevicesPage() {
           setTotalPages(Math.max(1, Math.ceil(devicesList.length / limit)));
         }
 
-        const sorted = sortByString(devicesList, (d: any) => (d.assetCode || '').toString());
+        // Mapear branchName para cada dispositivo
+        const devicesWithBranchName = devicesList.map((d: any) => ({
+          ...d,
+          branchName: d.branchName || d.branch?.name || (branches.find(b => b.id === d.branchId)?.name ?? '-')
+        }));
+        const sorted = sortByString(devicesWithBranchName, (d: any) => (d.assetCode || '').toString());
         setDevices(sorted);
       } else {
         throw devicesRes.reason ?? new Error('Error cargando dispositivos');
