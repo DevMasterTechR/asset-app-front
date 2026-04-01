@@ -7,14 +7,14 @@ export type DeviceStatus = "available" | "assigned" | "loaned" | "maintenance" |
 export interface Device {
   id: string;
   assetCode?: string;
-  type: string;
-  brand: string;
-  model: string;
-  serialNumber: string;
+  type?: string;
+  brand?: string;
+  model?: string;
+  serialNumber?: string;
   purchaseDate?: string;
   deliveryDate?: string;
   receivedDate?: string;
-  status: DeviceStatus;
+  status?: DeviceStatus | string;
   assignedTo?: string;
 }
 
@@ -23,8 +23,10 @@ interface DevicesTableProps {
   showCode?: boolean;
 }
 
-const getDeviceIcon = (type: string) => {
-  switch (type.toLowerCase()) {
+const getDeviceIcon = (type?: string) => {
+  const normalizedType = (type || '').toLowerCase();
+
+  switch (normalizedType) {
     case "laptop":
       return <Laptop className="h-4 w-4" />;
     case "monitor":
@@ -145,23 +147,24 @@ export const DevicesTable = ({ devices, showCode }: DevicesTableProps) => {
           {devices.map((device) => {
             const isOld = isOlderThanFiveYears(device.purchaseDate);
             const typeClass = isOld ? 'text-red-700 font-semibold animate-[pulse_0.9s_ease-in-out_infinite]' : '';
+            const typeLabel = (device.type || 'sin-tipo').replace(/[-_]/g, ' ');
             return (
               <TableRow key={device.id}>
                 <TableCell>
                   <div className={`flex items-center gap-2 ${typeClass}`}>
                     {getDeviceIcon(device.type)}
-                    <span className="font-medium capitalize">{device.type.replace(/[-_]/g, ' ')}</span>
+                    <span className="font-medium capitalize">{typeLabel}</span>
                   </div>
                 </TableCell>
               {/* render asset code cell if present on device */}
               {showCode ? <TableCell className="font-mono text-sm">{device.assetCode || '-'}</TableCell> : null}
 
-              <TableCell>{device.brand}</TableCell>
-              <TableCell>{device.model}</TableCell>
+              <TableCell>{device.brand || '-'}</TableCell>
+              <TableCell>{device.model || '-'}</TableCell>
               <TableCell className="text-sm">{formatDate(device.purchaseDate)}</TableCell>
               <TableCell className="text-sm">{formatDate(device.deliveryDate)}</TableCell>
               <TableCell className="text-sm">{formatDate(device.receivedDate)}</TableCell>
-              <TableCell className="font-mono text-sm">{device.serialNumber}</TableCell>
+              <TableCell className="font-mono text-sm">{device.serialNumber || '-'}</TableCell>
               <TableCell>{getStatusBadge(device.status)}</TableCell>
               <TableCell>
                 {device.assignedTo ? (
