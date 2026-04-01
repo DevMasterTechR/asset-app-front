@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import Pagination from '@/components/Pagination';
 import { Button } from "@/components/ui/button";
-import DevicesTable from '@/components/DevicesTable';
+import { DevicesTable } from '@/components/DevicesTable';
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
