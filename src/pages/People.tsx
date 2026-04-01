@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import Layout from "@/components/Layout";
 import Pagination from '@/components/Pagination';
 import { Button } from "@/components/ui/button";
+import DevicesTable from '@/components/DevicesTable';
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +54,32 @@ const statusLabelMap = {
 };
 
 export default function People() {
+    // Estado para modal de dispositivos T.I.
+    const [tiModalOpen, setTiModalOpen] = useState(false);
+    const [tiDevices, setTiDevices] = useState([]);
+    const [tiLoading, setTiLoading] = useState(false);
+    const [tiPerson, setTiPerson] = useState<Person | null>(null);
+
+    // Función para abrir modal y cargar dispositivos T.I. de la persona
+    const openTiModal = async (person: Person) => {
+      setTiPerson(person);
+      setTiModalOpen(true);
+      setTiLoading(true);
+      try {
+        if (person.tiAssetIds && person.tiAssetIds.length > 0) {
+          // Traer todos los dispositivos y filtrar los de la persona
+          const allAssetsRes = await import('@/api/devices').then(m => m.devicesApi.getAll(undefined, 1, 999999));
+          const allAssets = Array.isArray(allAssetsRes) ? allAssetsRes : (allAssetsRes as any)?.data || [];
+          const devices = allAssets.filter((a: any) => person.tiAssetIds.includes(a.id));
+          setTiDevices(devices);
+        } else {
+          setTiDevices([]);
+        }
+      } catch (e) {
+        setTiDevices([]);
+      }
+      setTiLoading(false);
+    };
   const { toast } = useToast();
   const [searchTerm, setSearchTerm] = useState("");
   const [people, setPeople] = useState<Person[]>([]);
@@ -388,7 +415,12 @@ export default function People() {
                     </TableCell>
                     <TableCell>
                       {person.tiAssetIds && person.tiAssetIds.length > 0 ? (
-                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                        <Badge
+                          variant="outline"
+                          className="bg-blue-50 text-blue-700 border-blue-200 cursor-pointer hover:bg-blue-100"
+                          onClick={() => openTiModal(person)}
+                          title="Ver dispositivos T.I. asignados"
+                        >
                           {person.tiAssetIds.length} activo{person.tiAssetIds.length > 1 ? 's' : ''}
                         </Badge>
                       ) : '-'}
@@ -443,6 +475,33 @@ export default function People() {
             </div>
           )}
         </div>
+
+      {/* Modal de dispositivos T.I. */}
+      {tiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-40">
+          <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full p-6 relative">
+            <button
+              className="absolute top-2 right-2 text-gray-500 hover:text-gray-700"
+              onClick={() => setTiModalOpen(false)}
+              aria-label="Cerrar"
+            >
+              ×
+            </button>
+            <h2 className="text-xl font-bold mb-2">Dispositivos T.I. asignados</h2>
+            <p className="mb-4 text-muted-foreground">
+              {tiPerson?.firstName} {tiPerson?.lastName} ({tiPerson?.username})
+            </p>
+            {tiLoading ? (
+              <div className="text-center py-8">Cargando dispositivos...</div>
+            ) : tiDevices.length > 0 ? (
+              <DevicesTable devices={tiDevices} showCode={true} />
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">No hay dispositivos T.I. asignados.</div>
+            )}
+          </div>
+        </div>
+      )}
+
       </Layout>
 
       <PersonFormModal
