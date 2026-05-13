@@ -17,7 +17,7 @@ export interface Device {
   status?: DeviceStatus | string;
   assignedTo?: string;
 }
-
+//hola
 interface DevicesTableProps {
   devices: Device[];
   showCode?: boolean;

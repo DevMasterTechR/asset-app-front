@@ -26,6 +26,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { DateTimePicker } from '@/components/ui/DateTimePicker';
 import { Device, CreateDeviceDto, DeviceStatus, devicesApi } from '@/api/devices';
+import { peopleApi } from '@/api/people';
 import { extractArray } from '@/lib/extractData';
 import { assignmentsApi } from '@/api/assignments';
 import { sortBranchesByName } from '@/lib/sort';
@@ -389,7 +390,8 @@ export default function DeviceFormModal({
           
           if (newDevice && formData.assignedPersonId) {
             // Obtener información de la persona
-            const allPeople = await fetch('/api/people').then(r => r.json()).catch(() => []);
+            const allPeopleRes = await peopleApi.getAll(undefined, 1, 5000).catch(() => []);
+            const allPeople = extractArray<any>(allPeopleRes);
             const person = Array.isArray(allPeople) ? allPeople.find((p: any) => String(p.id) === String(formData.assignedPersonId)) : null;
             
             if (person) {
