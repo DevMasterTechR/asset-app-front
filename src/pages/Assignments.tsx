@@ -286,6 +286,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Teclado
@@ -297,6 +298,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Monitor
@@ -308,6 +310,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Mousepad
@@ -319,6 +322,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Soporte
@@ -330,6 +334,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // HUB
@@ -341,6 +346,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Adaptador Memoria
@@ -352,6 +358,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Adaptador Red
@@ -363,6 +370,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
 
@@ -375,6 +383,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             // Siempre asignar cargador y cable si es celular/tablet
@@ -387,6 +396,7 @@ export default function Assignments() {
                   assignmentDate: converted.assignmentDate,
                   deliveryCondition: converted.deliveryCondition,
                   deliveryNotes: 'Asignación automática junto con celular/tablet',
+                  parentAssignmentId: result.assignment.id,
                 }));
               }
               if (selectedChargingCableId) {
@@ -397,6 +407,7 @@ export default function Assignments() {
                   assignmentDate: converted.assignmentDate,
                   deliveryCondition: converted.deliveryCondition,
                   deliveryNotes: 'Asignación automática junto con celular/tablet',
+                  parentAssignmentId: result.assignment.id,
                 }));
               }
             }
@@ -464,6 +475,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Teclado
@@ -475,6 +487,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Monitor
@@ -486,6 +499,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Mousepad
@@ -497,6 +511,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Soporte
@@ -508,6 +523,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // HUB
@@ -519,6 +535,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Adaptador Memoria
@@ -530,6 +547,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Adaptador Red
@@ -541,6 +559,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
 
@@ -553,6 +572,7 @@ export default function Assignments() {
               assignmentDate: converted.assignmentDate,
               deliveryCondition: converted.deliveryCondition,
               deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
             }));
           }
           // Siempre asignar cargador y cable si es celular/tablet
@@ -565,6 +585,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con celular/tablet',
+                parentAssignmentId: result.assignment.id,
               }));
             }
             if (selectedChargingCableId) {
@@ -575,6 +596,7 @@ export default function Assignments() {
                 assignmentDate: converted.assignmentDate,
                 deliveryCondition: converted.deliveryCondition,
                 deliveryNotes: 'Asignación automática junto con celular/tablet',
+                parentAssignmentId: result.assignment.id,
               }));
             }
           }
