@@ -15,6 +15,7 @@ import autoTable from "jspdf-autotable";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { assignmentsApi } from "@/api/assignments";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface GenerateActaRecepcionModalProps {
   open: boolean;
@@ -28,14 +29,117 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   const { toast } = useToast();
   const [observations, setObservations] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+
+  const getDeviceKey = (d: any) => String(d.assignmentId || d.code || d.id);
+
+  const typeOf = (d: any) => String(d?.assetType || d?.type || '').toLowerCase();
+  const isLaptop = (t: string) => /laptop|notebook|ultrabook|portatil|portátil/.test(t);
+  const isCelular = (t: string) => /celular|cellphone|móvil|tablet/.test(t);
+  const isDesktop = (t: string) => /desktop|pc|computadora/.test(t);
+
+  const isLaptopAccessory = (t: string) => {
+    return (
+      /cargador-laptop|cargador laptop|laptop charger/.test(t) ||
+      /mouse|ratón|raton/.test(t) ||
+      /teclado|keyboard/.test(t) ||
+      /mousepad|mouse pad/.test(t) ||
+      /soporte|stand|support/.test(t) ||
+      /adaptador-memoria|memory adapter|adaptador memoria/.test(t) ||
+      /adaptador-red|network adapter|adaptador red/.test(t) ||
+      /hub/.test(t)
+    );
+  };
+
+  const isCelularAccessory = (t: string) => {
+    return (
+      /cargador-celular|cargador celular|cell charger/.test(t) ||
+      /cable-carga|cable carga|charging cable/.test(t) ||
+      /funda|estuche|case/.test(t) ||
+      /mica|screen protector|protector/.test(t)
+    );
+  };
+
+  const getDeviceSuffix = (code?: string) => {
+    if (!code) return "";
+    const match = code.match(/-?\s*(\d+)$/);
+    return match ? match[1] : "";
+  };
 
   // Las observaciones de recepción se ingresan manualmente
   // ya que describen el estado en que se recibe el equipo
   useEffect(() => {
     if (open) {
       setObservations("");
+      if (user?.devices) {
+        setSelectedKeys(user.devices.map((d: any) => getDeviceKey(d)));
+      } else {
+        setSelectedKeys([]);
+      }
     }
-  }, [open]);
+  }, [open, user]);
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked && user?.devices) {
+      setSelectedKeys(user.devices.map((d: any) => getDeviceKey(d)));
+    } else {
+      setSelectedKeys([]);
+    }
+  };
+
+  const handleSelectDevice = (d: any, checked: boolean) => {
+    const key = getDeviceKey(d);
+    let newSelected = [...selectedKeys];
+
+    const dType = typeOf(d);
+    const dSuffix = getDeviceSuffix(d.code);
+
+    const relatedKeys: string[] = [];
+
+    if (isLaptop(dType) || isDesktop(dType)) {
+      if (user?.devices) {
+        user.devices.forEach((other: any) => {
+          const otherType = typeOf(other);
+          if (isLaptopAccessory(otherType)) {
+            const otherSuffix = getDeviceSuffix(other.code);
+            if (!dSuffix || !otherSuffix || dSuffix === otherSuffix) {
+              relatedKeys.push(getDeviceKey(other));
+            }
+          }
+        });
+      }
+    } else if (isCelular(dType)) {
+      if (user?.devices) {
+        user.devices.forEach((other: any) => {
+          const otherType = typeOf(other);
+          if (isCelularAccessory(otherType)) {
+            const otherSuffix = getDeviceSuffix(other.code);
+            if (!dSuffix || !otherSuffix || dSuffix === otherSuffix) {
+              relatedKeys.push(getDeviceKey(other));
+            }
+          }
+        });
+      }
+    }
+
+    if (checked) {
+      if (!newSelected.includes(key)) {
+        newSelected.push(key);
+      }
+      relatedKeys.forEach((rKey) => {
+        if (!newSelected.includes(rKey)) {
+          newSelected.push(rKey);
+        }
+      });
+    } else {
+      newSelected = newSelected.filter((k) => k !== key);
+      relatedKeys.forEach((rKey) => {
+        newSelected = newSelected.filter((k) => k !== rKey);
+      });
+    }
+
+    setSelectedKeys(newSelected);
+  };
 
   const generatedBy = currentUser?.firstName && currentUser?.lastName 
     ? `${currentUser.firstName} ${currentUser.lastName}` 
@@ -97,6 +201,14 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   };
 
   const handleGeneratePDF = async () => {
+    if (selectedKeys.length === 0) {
+      toast({
+        title: "Error",
+        description: "Debe seleccionar al menos un equipo para generar el acta de recepción.",
+        variant: "destructive",
+      });
+      return;
+    }
     // Las observaciones ahora pueden estar vacías, se rellenarán con "Ninguna" automáticamente
     const finalObservations = observations && observations.trim() ? observations : "Ninguna";
 
@@ -504,7 +616,9 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
     // Dibujar dispositivos en pares
     // Orden: equipo general (laptop y accesorios) -> celular y accesorios -> otros (impresora, telefono IP, etc.)
     const devices = (() => {
-      const original = Array.isArray(user.devices) ? [...user.devices] : [];
+      const original = Array.isArray(user.devices) 
+        ? user.devices.filter((d: any) => selectedKeys.includes(getDeviceKey(d))) 
+        : [];
       const typeOf = (d: any) => String(d?.assetType || d?.type || '').toLowerCase();
 
       const isLaptop = (t: string) => /laptop|notebook|ultrabook|portatil|portátil/.test(t);
@@ -682,7 +796,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
 
     setIsUpdating(true);
     try {
-      const updatePromises = user.devices.map((device: any) => {
+      const selectedDevices = user.devices.filter((d: any) => selectedKeys.includes(getDeviceKey(d)));
+      const updatePromises = selectedDevices.map((device: any) => {
         const assignmentId = device.assignmentId;
         if (!assignmentId) return Promise.resolve();
         return assignmentsApi.updateActaRecepcionStatus(String(assignmentId), 'acta_generada');
@@ -746,13 +861,29 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             </div>
           </div>
 
-          {/* Tabla de equipos */}
+          {/* Equipos Seleccionados */}
           <div>
-            <h3 className="font-semibold mb-2">Equipos a Recibir</h3>
-            <div className="border rounded-lg overflow-auto max-h-48">
+            <div className="flex items-center justify-between mb-2">
+              <h3 className="font-semibold text-gray-700">Equipos Seleccionados</h3>
+              <div className="flex items-center gap-2 bg-gray-50 px-3 py-1 rounded-md border border-gray-200">
+                <Checkbox
+                  id="select-all-devices"
+                  checked={
+                    user?.devices?.length > 0 &&
+                    selectedKeys.length === user.devices.length
+                  }
+                  onCheckedChange={(checked) => handleSelectAll(!!checked)}
+                />
+                <Label htmlFor="select-all-devices" className="text-xs font-semibold text-gray-600 cursor-pointer select-none">
+                  Seleccionar Todos
+                </Label>
+              </div>
+            </div>
+            <div className="border rounded-lg overflow-auto max-h-48 shadow-sm">
               <table className="w-full text-sm">
                 <thead className="bg-muted">
                   <tr>
+                    <th className="px-3 py-2 text-left w-10">Sel.</th>
                     <th className="px-3 py-2 text-left">#</th>
                     <th className="px-3 py-2 text-left">Código</th>
                     <th className="px-3 py-2 text-left">Tipo</th>
@@ -764,22 +895,33 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
                 </thead>
                 <tbody>
                   {user?.devices && user.devices.length > 0 ? (
-                    user.devices.map((d: any, idx: number) => (
-                      <tr key={idx} className="border-t">
-                        <td className="px-3 py-2">{idx + 1}</td>
-                        <td className="px-3 py-2 font-mono text-xs">{d.code || "SIN-CODIGO"}</td>
-                        <td className="px-3 py-2">{d.assetType || d.type || "-"}</td>
-                        <td className="px-3 py-2">{d.brand || "-"}</td>
-                        <td className="px-3 py-2">{d.model || "-"}</td>
-                        <td className="px-3 py-2 text-xs">{d.serialNumber || "-"}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={d.deliveryNotes || "-"}>
-                          {d.deliveryNotes || "-"}
-                        </td>
-                      </tr>
-                    ))
+                    user.devices.map((d: any, idx: number) => {
+                      const key = getDeviceKey(d);
+                      const isSelected = selectedKeys.includes(key);
+                      return (
+                        <tr key={idx} className="border-t hover:bg-slate-50 transition-colors">
+                          <td className="px-3 py-2">
+                            <Checkbox
+                              checked={isSelected}
+                              onCheckedChange={(checked) => handleSelectDevice(d, !!checked)}
+                              aria-label={`Seleccionar ${d.code || "equipo"}`}
+                            />
+                          </td>
+                          <td className="px-3 py-2">{idx + 1}</td>
+                          <td className="px-3 py-2 font-mono text-xs">{d.code || "SIN-CODIGO"}</td>
+                          <td className="px-3 py-2">{d.assetType || d.type || "-"}</td>
+                          <td className="px-3 py-2">{d.brand || "-"}</td>
+                          <td className="px-3 py-2">{d.model || "-"}</td>
+                          <td className="px-3 py-2 text-xs">{d.serialNumber || "-"}</td>
+                          <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={d.deliveryNotes || "-"}>
+                            {d.deliveryNotes || "-"}
+                          </td>
+                        </tr>
+                      );
+                    })
                   ) : (
                     <tr>
-                      <td colSpan={7} className="px-3 py-2 text-center text-muted-foreground">
+                      <td colSpan={8} className="px-3 py-2 text-center text-muted-foreground">
                         Sin equipos asignados
                       </td>
                     </tr>
@@ -787,6 +929,11 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
                 </tbody>
               </table>
             </div>
+            {selectedKeys.length === 0 && (
+              <p className="text-xs font-semibold text-red-500 mt-2 flex items-center gap-1">
+                ⚠️ Debe seleccionar al menos 1 equipo para poder descargar el acta.
+              </p>
+            )}
           </div>
 
           {/* Observaciones */}
@@ -821,7 +968,11 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleGeneratePDF} className="gap-2">
+            <Button 
+              onClick={handleGeneratePDF} 
+              className="gap-2"
+              disabled={selectedKeys.length === 0 || isUpdating}
+            >
               <Download className="h-4 w-4" />
               Descargar PDF
             </Button>
