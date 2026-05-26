@@ -119,7 +119,7 @@ export default function Assignments() {
   const [pendingReassignmentData, setPendingReassignmentData] = useState<{
     data: CreateAssignmentDto;
     converted: any;
-    multiPersonIds: string[];
+    multiPersonIds: Array<string | number>;
   } | null>(null);
   const [currentReassignmentAttempt, setCurrentReassignmentAttempt] = useState(0);
 
@@ -171,16 +171,15 @@ export default function Assignments() {
   };
 
   const handleCreate = async (data: CreateAssignmentDto) => {
+    const converted = {
+      ...data,
+      assignmentDate: convertLocalToUTCISOString(data.assignmentDate)
+    };
+    const personIds = (data as any).personIds as string[] | undefined;
+    const multiPersonIds = personIds && personIds.length > 1 ? personIds : [data.personId];
+
     try {
-      const converted = {
-        ...data,
-        assignmentDate: convertLocalToUTCISOString(data.assignmentDate)
-      };
-      
       // Detectar si hay múltiples personas a asignar
-      const personIds = (data as any).personIds as string[] | undefined;
-      const multiPersonIds = personIds && personIds.length > 1 ? personIds : [data.personId];
-      
       // Si hay múltiples personas, crear asignaciones para cada una
       if (multiPersonIds.length > 1) {
         let mainAssetResult: any = null;
@@ -851,43 +850,8 @@ export default function Assignments() {
         }
       }
 
-      // --- Lógica para devolver periféricos asociados ---
-      // Buscar la asignación original para obtener el assetId y sus atributos
-      const assignmentObj = assignments.find(a => String(a.id) === String(assignmentToReturn));
-      let assetObj = null;
-      if (assignmentObj) {
-        try {
-          assetObj = await devicesApi.getById(Number(assignmentObj.assetId));
-        } catch { }
-      }
-      if (assetObj && assetObj.attributesJson) {
-        const {
-          selectedMouseId,
-          hasKeyboard, selectedKeyboardId,
-          hasMonitor, selectedMonitorId,
-          hasMousePad, selectedMousePadId,
-          hasStand, selectedStandId,
-          hasHub, selectedHubId,
-          hasMemoryAdapter, selectedMemoryAdapterId,
-          hasNetworkAdapter, selectedNetworkAdapterId
-        } = assetObj.attributesJson;
-        // Buscar todas las asignaciones activas de la persona para estos periféricos (en todas las asignaciones, no solo las disponibles)
-        const perifIds = [
-          selectedMouseId,
-          selectedKeyboardId,
-          selectedMonitorId,
-          selectedMousePadId,
-          selectedStandId,
-          selectedHubId,
-          selectedMemoryAdapterId,
-          selectedNetworkAdapterId
-        ].filter(Boolean);
-        const personId = assignmentObj?.personId;
-        // Buscar asignaciones activas de estos periféricos para la misma persona (en todas las asignaciones)
-        const activeAssignments = assignments.filter(a => perifIds.includes(a.assetId) && a.personId === personId && !a.returnDate);
-        await Promise.all(activeAssignments.map(a => assignmentsApi.registerReturn(a.id, returnCondition, '[Auto] Devolución junto con laptop.')));
-      }
-      // --- Fin lógica devolución periféricos ---
+      // El backend ya aplica la cascada a periféricos heredados.
+      await loadAssignments();
 
       toast({
         title: "Éxito",

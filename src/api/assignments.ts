@@ -22,6 +22,7 @@ export interface CreateAssignmentDto {
   assetId: string | number
   personId: string | number
   branchId?: string | number
+  parentAssignmentId?: string | number
   assignmentDate?: string
   deliveryCondition: 'excellent' | 'good' | 'fair' | 'poor'
   deliveryNotes?: string
