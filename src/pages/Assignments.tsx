@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import {
   Table,
@@ -14,6 +15,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Search, Plus, PackageCheck, Pencil, Trash2, Download } from "lucide-react";
+import jsPDF from "jspdf";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -110,7 +112,7 @@ export default function Assignments() {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
   const [selectedAssignment, setSelectedAssignment] = useState<Assignment | null>(null);
-  const [viewMode, setViewMode] = useState<'active' | 'history'>('active');
+  const [viewMode, setViewMode] = useState<'active' | 'history' | 'inherited'>('active');
   const [returnModalOpen, setReturnModalOpen] = useState(false);
   const [assignmentToReturn, setAssignmentToReturn] = useState<string | null>(null);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -122,6 +124,14 @@ export default function Assignments() {
     multiPersonIds: Array<string | number>;
   } | null>(null);
   const [currentReassignmentAttempt, setCurrentReassignmentAttempt] = useState(0);
+
+  // Operaciones -> Asignaciones Heredadas
+  const [inheritedLeaderId, setInheritedLeaderId] = useState<string>('');
+  const [inheritedResponsibleNames, setInheritedResponsibleNames] = useState('');
+  const [inheritedResponsibleLastNames, setInheritedResponsibleLastNames] = useState('');
+  const [inheritedAssetId, setInheritedAssetId] = useState<string>('');
+  const [inheritedCondition, setInheritedCondition] = useState<'excellent' | 'good' | 'fair' | 'poor'>('good');
+  const [inheritedExtraNotes, setInheritedExtraNotes] = useState('');
 
   useEffect(() => {
     loadAssignments();
@@ -189,7 +199,7 @@ export default function Assignments() {
           const personId = multiPersonIds[index];
           const isFirst = index === 0;
           
-          // Mostrar progreso
+          //Mostrar Progreso
           if (!isFirst) {
             toast({
               title: "Creando asignaciones...",
@@ -985,6 +995,133 @@ export default function Assignments() {
     setPreviewOpen(true);
   };
 
+  const getPersonFullName = (personId: string | number) => {
+    const person = people.find((p) => String(p.id) === String(personId));
+    if (!person) return '-';
+    return `${person.firstName} ${person.lastName}`.trim();
+  };
+
+  const selectedInheritedAsset = assets.find((a) => String(a.id) === String(inheritedAssetId));
+  const selectedInheritedLeaderName = inheritedLeaderId ? getPersonFullName(inheritedLeaderId) : '-';
+  const inheritedResponsibleFullName = `${inheritedResponsibleNames} ${inheritedResponsibleLastNames}`.trim();
+
+  const validateInheritedForm = () => {
+    if (!inheritedLeaderId) {
+      toast({
+        title: 'Campo requerido',
+        description: 'Selecciona un líder para la asignación heredada.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    if (!inheritedResponsibleNames.trim() || !inheritedResponsibleLastNames.trim()) {
+      toast({
+        title: 'Campo requerido',
+        description: 'Ingresa nombres y apellidos del responsable que recibe.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    if (!inheritedAssetId) {
+      toast({
+        title: 'Campo requerido',
+        description: 'Selecciona el equipo a heredar.',
+        variant: 'destructive',
+      });
+      return false;
+    }
+    return true;
+  };
+
+  const generateInheritedActa = (kind: 'entrega' | 'recepcion') => {
+    if (!validateInheritedForm()) return;
+
+    const doc = new jsPDF();
+    const now = new Date();
+    const title = kind === 'entrega' ? 'ACTA DE ENTREGA - ASIGNACION HEREDADA' : 'ACTA DE RECEPCION - ASIGNACION HEREDADA';
+    const filePrefix = kind === 'entrega' ? 'Acta_Entrega_Heredada' : 'Acta_Recepcion_Heredada';
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(13);
+    doc.text('ACTIVOS TI - SISTEMA DE GESTION', 105, 16, { align: 'center' });
+    doc.setFontSize(12);
+    doc.text(title, 105, 25, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(10);
+    doc.text(`Fecha: ${format(now, 'dd/MM/yyyy HH:mm', { locale: es })}`, 14, 34);
+    doc.text(`Lider responsable: ${selectedInheritedLeaderName}`, 14, 44);
+    doc.text(`Responsable que recibe: ${inheritedResponsibleFullName}`, 14, 52);
+    doc.text(`Equipo: ${(selectedInheritedAsset?.assetCode || selectedInheritedAsset?.code || '-')}`, 14, 60);
+    doc.text(`Descripcion: ${(selectedInheritedAsset?.brand || '')} ${(selectedInheritedAsset?.model || '')}`.trim() || '-', 14, 68);
+    doc.text(`Condicion reportada: ${conditionLabelMap[inheritedCondition]}`, 14, 76);
+
+    if (inheritedExtraNotes.trim()) {
+      doc.text('Observaciones:', 14, 86);
+      const lines = doc.splitTextToSize(inheritedExtraNotes.trim(), 180);
+      doc.text(lines, 14, 92);
+    }
+
+    const baseY = inheritedExtraNotes.trim() ? 140 : 112;
+    doc.line(20, baseY, 90, baseY);
+    doc.text('Firma lider', 55, baseY + 6, { align: 'center' });
+
+    doc.line(120, baseY, 190, baseY);
+    doc.text('Firma responsable receptor', 155, baseY + 6, { align: 'center' });
+
+    const safeAssetCode = (selectedInheritedAsset?.assetCode || selectedInheritedAsset?.code || 'equipo').replace(/\s+/g, '_');
+    doc.save(`${filePrefix}_${safeAssetCode}_${format(now, 'yyyyMMdd_HHmmss')}.pdf`);
+  };
+
+  const handleCreateInheritedAssignment = async () => {
+    if (!validateInheritedForm()) return;
+
+    try {
+      const result = await assignmentsApi.create({
+        assetId: inheritedAssetId,
+        personId: inheritedLeaderId,
+        deliveryCondition: inheritedCondition,
+        deliveryNotes: [
+          '[HEREDADA]',
+          `Lider responsable: ${selectedInheritedLeaderName}`,
+          `Responsable receptor: ${inheritedResponsibleFullName}`,
+          inheritedExtraNotes.trim() ? `Observaciones: ${inheritedExtraNotes.trim()}` : undefined,
+        ].filter(Boolean).join('\n'),
+      });
+
+      setAssignments((prev) => [result.assignment, ...prev]);
+
+      if (result.asset) {
+        setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
+        try {
+          window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
+        } catch (e) {
+          // noop
+        }
+      }
+
+      toast({
+        title: 'Exito',
+        description: 'Asignacion heredada registrada correctamente.',
+      });
+
+      setInheritedAssetId('');
+      setInheritedExtraNotes('');
+      await loadAssignments();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error?.message || 'No se pudo registrar la asignacion heredada.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const inheritedAssignments = assignments.filter((a: any) => {
+    const notes = String((a as any)?.deliveryNotes || '').toLowerCase();
+    return notes.includes('[heredada]');
+  });
+
   return (
     <>
       <Layout>
@@ -1047,7 +1184,140 @@ export default function Assignments() {
           <div className="flex items-center gap-2 mt-4">
             <Button variant={viewMode === 'active' ? 'default' : 'outline'} onClick={() => setViewMode('active')}>Activos</Button>
             <Button variant={viewMode === 'history' ? 'default' : 'outline'} onClick={() => setViewMode('history')}>Historial</Button>
+            <Button variant={viewMode === 'inherited' ? 'default' : 'outline'} onClick={() => setViewMode('inherited')}>Asignaciones heredadas</Button>
           </div>
+
+          {viewMode === 'inherited' && (
+            <div className="border rounded-lg bg-card p-4 space-y-5">
+              <div>
+                <h2 className="text-lg font-semibold">Asignaciones heredadas</h2>
+                <p className="text-sm text-muted-foreground">Flujo para personal nuevo (pasantes, ingresos recientes) con lider responsable y responsable receptor definido manualmente.</p>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Lider responsable</Label>
+                  <Select value={inheritedLeaderId || undefined} onValueChange={setInheritedLeaderId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un lider" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {people.map((person) => (
+                        <SelectItem key={person.id} value={String(person.id)}>
+                          {person.firstName} {person.lastName}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Equipo</Label>
+                  <Select value={inheritedAssetId || undefined} onValueChange={setInheritedAssetId}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecciona un equipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {assets.map((asset) => (
+                        <SelectItem key={asset.id} value={String(asset.id)}>
+                          {(asset.assetCode || asset.code)} - {asset.brand || ''} {asset.model || ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Nombres del responsable que recibe</Label>
+                  <Input
+                    value={inheritedResponsibleNames}
+                    onChange={(e) => setInheritedResponsibleNames(e.target.value)}
+                    placeholder="Ej: Juan Carlos"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Apellidos del responsable que recibe</Label>
+                  <Input
+                    value={inheritedResponsibleLastNames}
+                    onChange={(e) => setInheritedResponsibleLastNames(e.target.value)}
+                    placeholder="Ej: Perez Ramos"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Condicion de entrega</Label>
+                  <Select value={inheritedCondition} onValueChange={(v: any) => setInheritedCondition(v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="excellent">Excelente</SelectItem>
+                      <SelectItem value="good">Bueno</SelectItem>
+                      <SelectItem value="fair">Regular</SelectItem>
+                      <SelectItem value="poor">Malo</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Observaciones (opcional)</Label>
+                  <Input
+                    value={inheritedExtraNotes}
+                    onChange={(e) => setInheritedExtraNotes(e.target.value)}
+                    placeholder="Notas para acta o detalle de la entrega"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button onClick={() => generateInheritedActa('entrega')} variant="outline">
+                  Acta de Entrega
+                </Button>
+                <Button onClick={() => generateInheritedActa('recepcion')} variant="outline">
+                  Acta de Recepcion
+                </Button>
+                <Button onClick={handleCreateInheritedAssignment} className="bg-blue-600 hover:bg-blue-700 text-white">
+                  Registrar Asignacion Heredada
+                </Button>
+              </div>
+
+              <div className="border rounded-md">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Activo</TableHead>
+                      <TableHead>Lider</TableHead>
+                      <TableHead>Fecha</TableHead>
+                      <TableHead>Detalle</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {inheritedAssignments.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                          Aun no hay asignaciones heredadas registradas.
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      inheritedAssignments.slice(0, 8).map((assignment: any) => {
+                        const asset = assignment.asset || assets.find(a => a.id === String(assignment.assetId));
+                        const person = assignment.person || people.find(p => p.id === String(assignment.personId));
+                        return (
+                          <TableRow key={`inherited-${assignment.id}`}>
+                            <TableCell>{(asset?.assetCode || asset?.code || '-')}</TableCell>
+                            <TableCell>{person ? `${person.firstName} ${person.lastName}` : '-'}</TableCell>
+                            <TableCell>{assignment.assignmentDate ? format(new Date(assignment.assignmentDate), 'PPpp', { locale: es }) : '-'}</TableCell>
+                            <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap max-w-[420px]">{assignment.deliveryNotes || '-'}</TableCell>
+                          </TableRow>
+                        );
+                      })
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
+          )}
 
           {/* Activos (asignados) */}
           {viewMode === 'active' && (
