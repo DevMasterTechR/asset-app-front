@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useToast } from '@/hooks/use-toast';
-import { Laptop, User, Lock, Eye, EyeOff } from 'lucide-react';
+import { User, Lock, Eye, EyeOff } from 'lucide-react';
 
 const ADMIN_ROLES = ['admin', 'administrador', 'Admin'] as const;
 const HR_ROLES = ['recursos humanos', 'human resources', 'rrhh', 'RRHH'] as const;
@@ -99,15 +99,25 @@ export default function Auth() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-primary/5 p-4">
-      <Card className="w-full max-w-md shadow-elegant">
-        <CardHeader className="space-y-1 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-lg bg-primary/10">
-              <Laptop className="h-8 w-8 text-primary" />
+      <Card className="w-full max-w-md shadow-elegant border-border/60 backdrop-blur-sm bg-card/95">
+        <CardHeader className="space-y-4 text-center pb-4">
+          <div className="flex justify-center">
+            <div className="flex items-center gap-3 rounded-2xl border border-border/60 bg-background/80 px-4 py-3 shadow-sm">
+              <img
+                src="/images/techlogo.png"
+                alt="Activos TI"
+                className="h-11 w-11 rounded-lg object-contain"
+              />
+              <div className="text-left leading-tight">
+                <CardTitle className="text-xl font-bold tracking-tight">Activos TI</CardTitle>
+                <CardDescription className="text-xs">Sistema de Gestión</CardDescription>
+              </div>
             </div>
           </div>
-          <CardTitle className="text-2xl font-bold">Sistema de Activos TI</CardTitle>
-          <CardDescription>Inicia sesión para gestionar tus dispositivos</CardDescription>
+          <div className="space-y-1">
+            <CardTitle className="text-2xl font-bold">Iniciar sesión</CardTitle>
+            <CardDescription>Ingresa para gestionar activos, asignaciones y devoluciones</CardDescription>
+          </div>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
