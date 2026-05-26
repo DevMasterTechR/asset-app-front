@@ -14,7 +14,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Plus, PackageCheck, Pencil, Trash2, Download } from "lucide-react";
+import { Search, Plus, PackageCheck, Pencil, Trash2, Download, Check, ChevronsUpDown } from "lucide-react";
 import jsPDF from "jspdf";
 import {
   AlertDialog,
@@ -48,6 +48,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 const conditionVariantMap = {
   excellent: 'success' as const,
@@ -132,6 +135,8 @@ export default function Assignments() {
   const [inheritedAssetId, setInheritedAssetId] = useState<string>('');
   const [inheritedCondition, setInheritedCondition] = useState<'excellent' | 'good' | 'fair' | 'poor'>('good');
   const [inheritedExtraNotes, setInheritedExtraNotes] = useState('');
+  const [leaderComboboxOpen, setLeaderComboboxOpen] = useState(false);
+  const [assetComboboxOpen, setAssetComboboxOpen] = useState(false);
 
   useEffect(() => {
     loadAssignments();
@@ -1033,44 +1038,157 @@ export default function Assignments() {
     return true;
   };
 
-  const generateInheritedActa = (kind: 'entrega' | 'recepcion') => {
-    if (!validateInheritedForm()) return;
+  const generateInheritedActa = (
+    kind: 'entrega' | 'recepcion',
+    context?: {
+      leaderName: string;
+      receiverName: string;
+      equipmentCode: string;
+      equipmentDescription: string;
+      condition: 'excellent' | 'good' | 'fair' | 'poor';
+      notes?: string;
+    },
+  ) => {
+    if (!context && !validateInheritedForm()) return;
 
-    const doc = new jsPDF();
+    const doc = new jsPDF('p', 'mm', 'a4');
     const now = new Date();
-    const title = kind === 'entrega' ? 'ACTA DE ENTREGA - ASIGNACION HEREDADA' : 'ACTA DE RECEPCION - ASIGNACION HEREDADA';
+    const pageWidth = doc.internal.pageSize.getWidth();
+    const pageHeight = doc.internal.pageSize.getHeight();
+    const logoUrl = '/images/techinformeencabezado.png';
+    const title = kind === 'entrega'
+      ? 'ACTA DE ENTREGA DE EQUIPOS TECNOLOGICOS'
+      : 'ACTA DE RECEPCION DE EQUIPOS TECNOLOGICOS';
     const filePrefix = kind === 'entrega' ? 'Acta_Entrega_Heredada' : 'Acta_Recepcion_Heredada';
+    const equipmentCode = context?.equipmentCode ?? (selectedInheritedAsset?.assetCode || selectedInheritedAsset?.code || '-');
+    const equipmentDescription = context?.equipmentDescription ?? (`${selectedInheritedAsset?.brand || ''} ${selectedInheritedAsset?.model || ''}`.trim() || '-');
+    const ownerName = context?.leaderName ?? selectedInheritedLeaderName;
+    const receiverName = context?.receiverName ?? inheritedResponsibleFullName;
+    const inheritedNotes = context?.notes ?? inheritedExtraNotes;
+    const inheritedConditionForActa = context?.condition ?? inheritedCondition;
 
-    doc.setFont('helvetica', 'bold');
-    doc.setFontSize(13);
-    doc.text('ACTIVOS TI - SISTEMA DE GESTION', 105, 16, { align: 'center' });
-    doc.setFontSize(12);
-    doc.text(title, 105, 25, { align: 'center' });
-
-    doc.setFont('helvetica', 'normal');
-    doc.setFontSize(10);
-    doc.text(`Fecha: ${format(now, 'dd/MM/yyyy HH:mm', { locale: es })}`, 14, 34);
-    doc.text(`Lider responsable: ${selectedInheritedLeaderName}`, 14, 44);
-    doc.text(`Responsable que recibe: ${inheritedResponsibleFullName}`, 14, 52);
-    doc.text(`Equipo: ${(selectedInheritedAsset?.assetCode || selectedInheritedAsset?.code || '-')}`, 14, 60);
-    doc.text(`Descripcion: ${(selectedInheritedAsset?.brand || '')} ${(selectedInheritedAsset?.model || '')}`.trim() || '-', 14, 68);
-    doc.text(`Condicion reportada: ${conditionLabelMap[inheritedCondition]}`, 14, 76);
-
-    if (inheritedExtraNotes.trim()) {
-      doc.text('Observaciones:', 14, 86);
-      const lines = doc.splitTextToSize(inheritedExtraNotes.trim(), 180);
-      doc.text(lines, 14, 92);
+    if (!ownerName || ownerName === '-' || !receiverName || receiverName === '-') {
+      toast({
+        title: 'Datos incompletos',
+        description: 'La asignación heredada requiere dueño del equipo y responsable receptor para generar el acta.',
+        variant: 'destructive',
+      });
+      return;
     }
 
-    const baseY = inheritedExtraNotes.trim() ? 140 : 112;
-    doc.line(20, baseY, 90, baseY);
-    doc.text('Firma lider', 55, baseY + 6, { align: 'center' });
+    const addHeader = () => {
+      const logoWidth = 100;
+      const logoHeight = 16;
+      doc.addImage(logoUrl, 'PNG', (pageWidth - logoWidth) / 2, 8, logoWidth, logoHeight);
+    };
 
-    doc.line(120, baseY, 190, baseY);
-    doc.text('Firma responsable receptor', 155, baseY + 6, { align: 'center' });
+    const addFooterToAllPages = () => {
+      const totalPages = doc.getNumberOfPages();
+      for (let i = 1; i <= totalPages; i++) {
+        doc.setPage(i);
+        doc.setFontSize(7);
+        doc.setTextColor(150, 150, 150);
+        const footerText = 'QUITO - QUITO SUR - GUAYAQUIL - CUENCA - MANTA - MACHALA - AMBATO - STO. DOMINGO - LOJA - IBARRA - EXPRESS SANGOLQUI - CARAPUNGO - PORTOVIEJO\\nwww.recursos-tecnologicos.com\\nTelefono: PBX 593 - 02 5133453';
+        const splitFooter = doc.splitTextToSize(footerText, 180);
+        doc.text(splitFooter, pageWidth / 2, pageHeight - 15, { align: 'center' });
 
-    const safeAssetCode = (selectedInheritedAsset?.assetCode || selectedInheritedAsset?.code || 'equipo').replace(/\s+/g, '_');
+        doc.setTextColor(0, 0, 0);
+        doc.text(`${i}/${totalPages}`, pageWidth - 15, pageHeight - 8, { align: 'right' });
+      }
+    };
+
+    addHeader();
+
+    doc.setFontSize(8);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Quito, ${format(now, 'dd/MM/yyyy HH:mm', { locale: es })}`, pageWidth - 15, 32, { align: 'right' });
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.text(title, pageWidth / 2, 40, { align: 'center' });
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8);
+
+    let currentY = 48;
+    const intro = [
+      `En la ciudad de Quito, con fecha ${format(now, 'dd/MM/yyyy HH:mm', { locale: es })},`,
+      `se deja constancia de la ${kind === 'entrega' ? 'entrega' : 'recepcion'} del equipo tecnologico detallado en esta acta heredada.`,
+      `El dueño del equipo (lider) es ${ownerName} y el responsable receptor es ${receiverName}.`,
+    ].join(' ');
+    const introLines = doc.splitTextToSize(intro, 180);
+    doc.text(introLines, 15, currentY);
+    currentY += introLines.length * 4 + 4;
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('DATOS DE LA ASIGNACION HEREDADA', 15, currentY);
+    currentY += 5;
+
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Dueño del equipo (lider): ${ownerName}`, 15, currentY);
+    currentY += 5;
+    doc.text(`Responsable que recibe: ${receiverName}`, 15, currentY);
+    currentY += 5;
+    doc.text(`Equipo: ${equipmentCode}`, 15, currentY);
+    currentY += 5;
+    doc.text(`Descripcion: ${equipmentDescription}`, 15, currentY);
+    currentY += 5;
+    doc.text(`Condicion reportada: ${conditionLabelMap[inheritedConditionForActa]}`, 15, currentY);
+    currentY += 6;
+
+    if (String(inheritedNotes || '').trim()) {
+      doc.setFont('helvetica', 'bold');
+      doc.text('Observaciones:', 15, currentY);
+      doc.setFont('helvetica', 'normal');
+      const lines = doc.splitTextToSize(String(inheritedNotes || '').trim(), 180);
+      doc.text(lines, 15, currentY + 4);
+      currentY += lines.length * 4 + 8;
+    }
+
+    currentY += 10;
+    const leftColX = 20;
+    const rightColX = 115;
+    const lineY = Math.min(currentY + 18, 228);
+
+    doc.setLineWidth(0.2);
+    doc.line(leftColX, lineY, leftColX + 70, lineY);
+    doc.line(rightColX, lineY, rightColX + 70, lineY);
+
+    doc.setFontSize(8);
+    doc.text('Aceptado por (responsable receptor)', leftColX, lineY + 5);
+    doc.text(`Nombre: ${receiverName}`, leftColX, lineY + 10);
+    doc.text('Firma: ____________________', leftColX, lineY + 15);
+
+    doc.text('Entregado por (dueño del equipo)', rightColX, lineY + 5);
+    doc.text(`Nombre: ${ownerName}`, rightColX, lineY + 10);
+    doc.text('Firma: ____________________', rightColX, lineY + 15);
+
+    addFooterToAllPages();
+
+    const safeAssetCode = equipmentCode.replace(/\s+/g, '_');
     doc.save(`${filePrefix}_${safeAssetCode}_${format(now, 'yyyyMMdd_HHmmss')}.pdf`);
+  };
+
+  const parseInheritedNotes = (notes: string) => {
+    const lines = String(notes || '').split('\n').map((l) => l.trim()).filter(Boolean);
+    const receiver = lines.find((l) => l.toLowerCase().startsWith('responsable receptor:'))?.split(':').slice(1).join(':').trim() || '-';
+    const extra = lines.find((l) => l.toLowerCase().startsWith('observaciones:'))?.split(':').slice(1).join(':').trim() || '';
+    return { receiver, extra };
+  };
+
+  const generateInheritedActaFromAssignment = (kind: 'entrega' | 'recepcion', assignment: any) => {
+    const assignmentAsset = assignment.asset || assets.find((a) => String(a.id) === String(assignment.assetId));
+    const assignmentLeader = assignment.person ? `${assignment.person.firstName} ${assignment.person.lastName}` : getPersonFullName(assignment.personId);
+    const parsed = parseInheritedNotes(assignment.deliveryNotes || '');
+
+    generateInheritedActa(kind, {
+      leaderName: assignmentLeader,
+      receiverName: parsed.receiver || '-',
+      equipmentCode: assignmentAsset?.assetCode || assignmentAsset?.code || '-',
+      equipmentDescription: `${assignmentAsset?.brand || ''} ${assignmentAsset?.model || ''}`.trim() || '-',
+      condition: (assignment.deliveryCondition || 'good') as 'excellent' | 'good' | 'fair' | 'poor',
+      notes: parsed.extra || '',
+    });
   };
 
   const handleCreateInheritedAssignment = async () => {
@@ -1197,34 +1315,104 @@ export default function Assignments() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Lider responsable</Label>
-                  <Select value={inheritedLeaderId || undefined} onValueChange={setInheritedLeaderId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un lider" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {people.map((person) => (
-                        <SelectItem key={person.id} value={String(person.id)}>
-                          {person.firstName} {person.lastName}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={leaderComboboxOpen} onOpenChange={setLeaderComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={leaderComboboxOpen}
+                        className="w-full justify-between"
+                      >
+                        {inheritedLeaderId
+                          ? getPersonFullName(inheritedLeaderId)
+                          : "Buscar y seleccionar lider"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[420px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar lider por nombre o apellido..." />
+                        <CommandList>
+                          <CommandEmpty>No se encontraron lideres.</CommandEmpty>
+                          <CommandGroup>
+                            {people.map((person) => {
+                              const fullName = `${person.firstName} ${person.lastName}`.trim();
+                              return (
+                                <CommandItem
+                                  key={person.id}
+                                  value={`${fullName} ${person.id}`}
+                                  onSelect={() => {
+                                    setInheritedLeaderId(String(person.id));
+                                    setLeaderComboboxOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      String(inheritedLeaderId) === String(person.id) ? "opacity-100" : "opacity-0",
+                                    )}
+                                  />
+                                  {fullName}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
                   <Label>Equipo</Label>
-                  <Select value={inheritedAssetId || undefined} onValueChange={setInheritedAssetId}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecciona un equipo" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {assets.map((asset) => (
-                        <SelectItem key={asset.id} value={String(asset.id)}>
-                          {(asset.assetCode || asset.code)} - {asset.brand || ''} {asset.model || ''}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Popover open={assetComboboxOpen} onOpenChange={setAssetComboboxOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={assetComboboxOpen}
+                        className="w-full justify-between"
+                      >
+                        {selectedInheritedAsset
+                          ? `${selectedInheritedAsset.assetCode || selectedInheritedAsset.code} - ${selectedInheritedAsset.brand || ''} ${selectedInheritedAsset.model || ''}`.trim()
+                          : "Buscar y seleccionar equipo"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[520px] p-0" align="start">
+                      <Command>
+                        <CommandInput placeholder="Buscar equipo por codigo, marca o modelo..." />
+                        <CommandList>
+                          <CommandEmpty>No se encontraron equipos disponibles.</CommandEmpty>
+                          <CommandGroup>
+                            {assets.map((asset) => {
+                              const label = `${asset.assetCode || asset.code} ${asset.brand || ''} ${asset.model || ''}`.trim();
+                              return (
+                                <CommandItem
+                                  key={asset.id}
+                                  value={`${label} ${asset.id}`}
+                                  onSelect={() => {
+                                    setInheritedAssetId(String(asset.id));
+                                    setAssetComboboxOpen(false);
+                                  }}
+                                >
+                                  <Check
+                                    className={cn(
+                                      "mr-2 h-4 w-4",
+                                      String(inheritedAssetId) === String(asset.id) ? "opacity-100" : "opacity-0",
+                                    )}
+                                  />
+                                  {asset.assetCode || asset.code} - {asset.brand || ''} {asset.model || ''}
+                                </CommandItem>
+                              );
+                            })}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="space-y-2">
@@ -1271,12 +1459,6 @@ export default function Assignments() {
               </div>
 
               <div className="flex flex-wrap gap-2">
-                <Button onClick={() => generateInheritedActa('entrega')} variant="outline">
-                  Acta de Entrega
-                </Button>
-                <Button onClick={() => generateInheritedActa('recepcion')} variant="outline">
-                  Acta de Recepcion
-                </Button>
                 <Button onClick={handleCreateInheritedAssignment} className="bg-blue-600 hover:bg-blue-700 text-white">
                   Registrar Asignacion Heredada
                 </Button>
@@ -1290,12 +1472,13 @@ export default function Assignments() {
                       <TableHead>Lider</TableHead>
                       <TableHead>Fecha</TableHead>
                       <TableHead>Detalle</TableHead>
+                      <TableHead className="text-right">Acciones</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {inheritedAssignments.length === 0 ? (
                       <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                           Aun no hay asignaciones heredadas registradas.
                         </TableCell>
                       </TableRow>
@@ -1309,6 +1492,22 @@ export default function Assignments() {
                             <TableCell>{person ? `${person.firstName} ${person.lastName}` : '-'}</TableCell>
                             <TableCell>{assignment.assignmentDate ? format(new Date(assignment.assignmentDate), 'PPpp', { locale: es }) : '-'}</TableCell>
                             <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap max-w-[420px]">{assignment.deliveryNotes || '-'}</TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex flex-wrap gap-2 justify-end">
+                                <Button variant="outline" size="sm" onClick={() => generateInheritedActaFromAssignment('entrega', assignment)}>
+                                  Acta Entrega
+                                </Button>
+                                <Button variant="outline" size="sm" onClick={() => generateInheritedActaFromAssignment('recepcion', assignment)}>
+                                  Acta Recepcion
+                                </Button>
+                                <Button variant="ghost" size="sm" onClick={() => openEditModal(assignment)}>
+                                  Editar
+                                </Button>
+                                <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" onClick={() => openDeleteDialog(assignment.id)}>
+                                  Borrar
+                                </Button>
+                              </div>
+                            </TableCell>
                           </TableRow>
                         );
                       })
