@@ -99,10 +99,12 @@ export const assignmentsApi = {
 
   async create(payload: CreateAssignmentDto): Promise<{ assignment: Assignment; asset?: any }> {
     const normalizedBranchId = toOptionalPositiveNumber(payload.branchId)
+    const normalizedParentAssignmentId = toOptionalPositiveNumber(payload.parentAssignmentId)
     const body = {
       assetId: Number(payload.assetId),
       personId: Number(payload.personId),
       branchId: normalizedBranchId,
+      parentAssignmentId: normalizedParentAssignmentId,
       assignmentDate: payload.assignmentDate,
       deliveryCondition: payload.deliveryCondition,
       deliveryNotes: payload.deliveryNotes,
