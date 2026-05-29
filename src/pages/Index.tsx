@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import SearchableSelect from '@/components/ui/searchable-select';
 import jsPDF from "jspdf";
@@ -67,6 +68,8 @@ const Index = () => {
   const [confirmFirmadaRecepcionOpen, setConfirmFirmadaRecepcionOpen] = useState(false);
   const [userToMarkFirmadaRecepcion, setUserToMarkFirmadaRecepcion] = useState<any>(null);
   const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set());
+  const [personDetailsOpen, setPersonDetailsOpen] = useState(false);
+  const [selectedPersonDetails, setSelectedPersonDetails] = useState<any>(null);
   
   // Estados para el flujo después de firmar acta de recepción
   const [postFirmaModalOpen, setPostFirmaModalOpen] = useState(false);
@@ -307,6 +310,7 @@ const Index = () => {
             department: fullPerson?.departmentName || "-",
             branch: dev.branch,
             nationalId: fullPerson?.nationalId || "No especificado",
+            fullPerson,
             devices: [dev],
           });
         } else {
@@ -358,6 +362,62 @@ const Index = () => {
     (people || []).forEach((p: any) => map.set(String(p.id), p));
     return map;
   }, [people]);
+
+  const getReadableValue = (value: any, fallback = '-') => {
+    if (value === undefined || value === null || value === '') return fallback;
+    if (typeof value === 'object') return value.name || value.label || fallback;
+    return String(value);
+  };
+
+  const getPersonForUser = (u: any) => peopleById.get(String(u?.userId)) || u?.fullPerson || {};
+
+  const getDepartmentForUser = (u: any) => {
+    const person = getPersonForUser(u);
+    return getReadableValue(person.department?.name || person.departmentName || u?.department);
+  };
+
+  const getBranchForUser = (u: any) => {
+    const person = getPersonForUser(u);
+    return getReadableValue(person.branch?.name || person.branchName || u?.branch);
+  };
+
+  const getAssetShortCode = (code?: string) => {
+    const value = String(code || '').trim();
+    if (!value) return 'SIN-CODIGO';
+    const match = value.match(/(\d+)\s*$/);
+    return match?.[1] || value;
+  };
+
+  const getDevicePhone = (device: any) => {
+    const attrs = device?.attributesJson || device?.attributes || {};
+    const candidates = [
+      attrs.phoneNumber,
+      attrs.chipNumber,
+      attrs.phone,
+      attrs.number,
+      attrs.telefono,
+      attrs.numeroCelular,
+      attrs.celular,
+      device?.phoneNumber,
+      device?.phone,
+    ];
+    return candidates.map((value) => String(value || '').trim()).find(Boolean) || '';
+  };
+
+  const getMobilePhonesForUser = (u: any) => {
+    const mobileDevices = (u?.devices || []).filter((device: any) => {
+      const type = `${device?.assetType || device?.type || ''}`.toLowerCase();
+      return /celular|cellphone|movil|móvil|tablet/.test(type);
+    });
+
+    const phones = mobileDevices.map(getDevicePhone).filter(Boolean);
+    return Array.from(new Set(phones));
+  };
+
+  const openPersonDetails = (u: any) => {
+    setSelectedPersonDetails(u);
+    setPersonDetailsOpen(true);
+  };
 
   const activeAssignmentsByAsset = useMemo(() => {
     const map = new Map<string, any[]>();
@@ -857,7 +917,14 @@ const Index = () => {
                       displayedUsers.map((u) => (
                         <tr key={u.userId} className="border-b last:border-b-0">
                           <td className="px-4 py-3 font-medium flex items-center gap-2">
-                            {u.userName || 'Desconocido'}
+                            <button
+                              type="button"
+                              onClick={() => openPersonDetails(u)}
+                              className="text-left font-semibold text-blue-700 hover:text-blue-900 hover:underline"
+                              title="Ver informacion de la persona"
+                            >
+                              {u.userName || 'Desconocido'}
+                            </button>
                             <button
                               type="button"
                               onClick={() => openOwnerEditor(u)}
@@ -1269,6 +1336,91 @@ const Index = () => {
             })()}
           </TabsContent>
         </Tabs>
+
+        <Dialog open={personDetailsOpen} onOpenChange={setPersonDetailsOpen}>
+          <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+            {selectedPersonDetails && (() => {
+              const person = getPersonForUser(selectedPersonDetails);
+              const phones = getMobilePhonesForUser(selectedPersonDetails);
+              const devices = selectedPersonDetails.devices || [];
+              const fullName = selectedPersonDetails.userName || `${person.firstName || ''} ${person.lastName || ''}`.trim() || 'Desconocido';
+
+              return (
+                <>
+                  <DialogHeader>
+                    <DialogTitle>Informacion de la persona</DialogTitle>
+                    <DialogDescription>
+                      Datos completos, telefono celular y equipos asignados.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="space-y-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Nombres completos</p>
+                        <p className="font-semibold">{fullName}</p>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Cedula</p>
+                        <p className="font-semibold">{getReadableValue(person.nationalId || selectedPersonDetails.nationalId, 'No registrada')}</p>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Telefono celular</p>
+                        <p className="font-semibold">{phones.length > 0 ? phones.join(' / ') : 'No tiene telefono celular'}</p>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Cantidad de equipos</p>
+                        <p className="font-semibold">{devices.length}</p>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Sucursal</p>
+                        <p className="font-semibold">{getBranchForUser(selectedPersonDetails)}</p>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Departamento</p>
+                        <p className="font-semibold">{getDepartmentForUser(selectedPersonDetails)}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <h4 className="text-sm font-semibold mb-2">Equipos asignados</h4>
+                      <div className="overflow-x-auto rounded-md border">
+                        <table className="w-full text-sm">
+                          <thead className="bg-muted/50 text-left">
+                            <tr>
+                              <th className="px-3 py-2">Codigo</th>
+                              <th className="px-3 py-2">Codigo interno</th>
+                              <th className="px-3 py-2">Tipo</th>
+                              <th className="px-3 py-2">Marca / Modelo</th>
+                              <th className="px-3 py-2">Serie</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {devices.length === 0 ? (
+                              <tr>
+                                <td colSpan={5} className="px-3 py-4 text-center text-muted-foreground">Sin equipos asignados.</td>
+                              </tr>
+                            ) : (
+                              devices.map((device: any, index: number) => (
+                                <tr key={`${device.assetId || device.id}-${index}`} className="border-t">
+                                  <td className="px-3 py-2 font-semibold text-blue-700">{device.code || 'SIN-CODIGO'}</td>
+                                  <td className="px-3 py-2">{getAssetShortCode(device.code)}</td>
+                                  <td className="px-3 py-2 capitalize">{String(device.assetType || device.type || '-').replace(/[-_]/g, ' ')}</td>
+                                  <td className="px-3 py-2">{`${device.brand || ''} ${device.model || ''}`.trim() || '-'}</td>
+                                  <td className="px-3 py-2">{device.serialNumber || '-'}</td>
+                                </tr>
+                              ))
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              );
+            })()}
+          </DialogContent>
+        </Dialog>
 
         {ownerModalOpen && ownerSelection && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
