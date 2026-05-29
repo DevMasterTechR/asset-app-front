@@ -133,6 +133,7 @@ export default function Assignments() {
   const [inheritedResponsibleNames, setInheritedResponsibleNames] = useState('');
   const [inheritedResponsibleLastNames, setInheritedResponsibleLastNames] = useState('');
   const [inheritedAssetId, setInheritedAssetId] = useState<string>('');
+  const [inheritedAssetIds, setInheritedAssetIds] = useState<string[]>([]);
   const [inheritedCondition, setInheritedCondition] = useState<'excellent' | 'good' | 'fair' | 'poor'>('good');
   const [inheritedExtraNotes, setInheritedExtraNotes] = useState('');
   const [leaderComboboxOpen, setLeaderComboboxOpen] = useState(false);
@@ -1007,8 +1008,33 @@ export default function Assignments() {
   };
 
   const selectedInheritedAsset = assets.find((a) => String(a.id) === String(inheritedAssetId));
+  const selectedInheritedAssets = inheritedAssetIds
+    .map((id) => assets.find((a) => String(a.id) === String(id)))
+    .filter(Boolean) as Array<{ id: string; code: string; name: string; brand?: string; model?: string; purchaseDate?: string; assetCode?: string }>;
   const selectedInheritedLeaderName = inheritedLeaderId ? getPersonFullName(inheritedLeaderId) : '-';
   const inheritedResponsibleFullName = `${inheritedResponsibleNames} ${inheritedResponsibleLastNames}`.trim();
+
+  const getInheritedGroupId = (notes: string) => {
+    const match = String(notes || '').match(/\[HEREDADA_GROUP:([^\]]+)\]/i);
+    return match?.[1] || null;
+  };
+
+  const getInheritedGroupAssignments = (assignment: any) => {
+    const groupId = getInheritedGroupId(assignment.deliveryNotes || '');
+    if (!groupId) return [assignment];
+    return assignments.filter((a: any) => String((a as any)?.deliveryNotes || '').includes(`[HEREDADA_GROUP:${groupId}]`));
+  };
+
+  const addInheritedAssetToSelection = () => {
+    if (!inheritedAssetId) return;
+    setInheritedAssetIds((prev) => (prev.includes(inheritedAssetId) ? prev : [...prev, inheritedAssetId]));
+    setInheritedAssetId('');
+    setAssetComboboxOpen(false);
+  };
+
+  const removeInheritedAssetFromSelection = (assetId: string) => {
+    setInheritedAssetIds((prev) => prev.filter((id) => id !== assetId));
+  };
 
   const validateInheritedForm = () => {
     if (!inheritedLeaderId) {
@@ -1027,10 +1053,10 @@ export default function Assignments() {
       });
       return false;
     }
-    if (!inheritedAssetId) {
+    if (inheritedAssetIds.length === 0) {
       toast({
         title: 'Campo requerido',
-        description: 'Selecciona el equipo a heredar.',
+        description: 'Agrega al menos un equipo para la asignación heredada.',
         variant: 'destructive',
       });
       return false;
@@ -1045,6 +1071,7 @@ export default function Assignments() {
       receiverName: string;
       equipmentCode: string;
       equipmentDescription: string;
+      equipmentLines?: string[];
       condition: 'excellent' | 'good' | 'fair' | 'poor';
       notes?: string;
     },
@@ -1062,6 +1089,7 @@ export default function Assignments() {
     const filePrefix = kind === 'entrega' ? 'Acta_Entrega_Heredada' : 'Acta_Recepcion_Heredada';
     const equipmentCode = context?.equipmentCode ?? (selectedInheritedAsset?.assetCode || selectedInheritedAsset?.code || '-');
     const equipmentDescription = context?.equipmentDescription ?? (`${selectedInheritedAsset?.brand || ''} ${selectedInheritedAsset?.model || ''}`.trim() || '-');
+    const equipmentLines = context?.equipmentLines ?? [`${equipmentCode} - ${equipmentDescription}`];
     const ownerName = context?.leaderName ?? selectedInheritedLeaderName;
     const receiverName = context?.receiverName ?? inheritedResponsibleFullName;
     const inheritedNotes = context?.notes ?? inheritedExtraNotes;
@@ -1129,10 +1157,14 @@ export default function Assignments() {
     currentY += 5;
     doc.text(`Responsable que recibe: ${receiverName}`, 15, currentY);
     currentY += 5;
-    doc.text(`Equipo: ${equipmentCode}`, 15, currentY);
-    currentY += 5;
-    doc.text(`Descripcion: ${equipmentDescription}`, 15, currentY);
-    currentY += 5;
+    doc.text('Equipos incluidos:', 15, currentY);
+    currentY += 4;
+    for (const line of equipmentLines) {
+      const wrapped = doc.splitTextToSize(`- ${line}`, 176);
+      doc.text(wrapped, 19, currentY);
+      currentY += wrapped.length * 3.8;
+    }
+    currentY += 1;
     doc.text(`Condicion reportada: ${conditionLabelMap[inheritedConditionForActa]}`, 15, currentY);
     currentY += 6;
 
@@ -1166,7 +1198,8 @@ export default function Assignments() {
     addFooterToAllPages();
 
     const safeAssetCode = equipmentCode.replace(/\s+/g, '_');
-    doc.save(`${filePrefix}_${safeAssetCode}_${format(now, 'yyyyMMdd_HHmmss')}.pdf`);
+    const groupSuffix = equipmentLines.length > 1 ? `_x${equipmentLines.length}` : '';
+    doc.save(`${filePrefix}_${safeAssetCode}${groupSuffix}_${format(now, 'yyyyMMdd_HHmmss')}.pdf`);
   };
 
   const parseInheritedNotes = (notes: string) => {
@@ -1177,15 +1210,23 @@ export default function Assignments() {
   };
 
   const generateInheritedActaFromAssignment = (kind: 'entrega' | 'recepcion', assignment: any) => {
+    const groupAssignments = getInheritedGroupAssignments(assignment);
     const assignmentAsset = assignment.asset || assets.find((a) => String(a.id) === String(assignment.assetId));
     const assignmentLeader = assignment.person ? `${assignment.person.firstName} ${assignment.person.lastName}` : getPersonFullName(assignment.personId);
     const parsed = parseInheritedNotes(assignment.deliveryNotes || '');
+    const equipmentLines = groupAssignments.map((a: any) => {
+      const asset = a.asset || assets.find((x) => String(x.id) === String(a.assetId));
+      const code = asset?.assetCode || asset?.code || '-';
+      const desc = `${asset?.brand || ''} ${asset?.model || ''}`.trim() || '-';
+      return `${code} - ${desc}`;
+    });
 
     generateInheritedActa(kind, {
       leaderName: assignmentLeader,
       receiverName: parsed.receiver || '-',
       equipmentCode: assignmentAsset?.assetCode || assignmentAsset?.code || '-',
       equipmentDescription: `${assignmentAsset?.brand || ''} ${assignmentAsset?.model || ''}`.trim() || '-',
+      equipmentLines,
       condition: (assignment.deliveryCondition || 'good') as 'excellent' | 'good' | 'fair' | 'poor',
       notes: parsed.extra || '',
     });
@@ -1195,35 +1236,40 @@ export default function Assignments() {
     if (!validateInheritedForm()) return;
 
     try {
-      const result = await assignmentsApi.create({
-        assetId: inheritedAssetId,
+      const groupId = `H${Date.now()}`;
+      const [mainAssetId, ...childAssetIds] = inheritedAssetIds;
+      const baseNotes = [
+        '[HEREDADA]',
+        `[HEREDADA_GROUP:${groupId}]`,
+        `Lider responsable: ${selectedInheritedLeaderName}`,
+        `Responsable receptor: ${inheritedResponsibleFullName}`,
+        inheritedExtraNotes.trim() ? `Observaciones: ${inheritedExtraNotes.trim()}` : undefined,
+      ].filter(Boolean).join('\n');
+
+      const parentResult = await assignmentsApi.create({
+        assetId: mainAssetId,
         personId: inheritedLeaderId,
         deliveryCondition: inheritedCondition,
-        deliveryNotes: [
-          '[HEREDADA]',
-          `Lider responsable: ${selectedInheritedLeaderName}`,
-          `Responsable receptor: ${inheritedResponsibleFullName}`,
-          inheritedExtraNotes.trim() ? `Observaciones: ${inheritedExtraNotes.trim()}` : undefined,
-        ].filter(Boolean).join('\n'),
+        deliveryNotes: baseNotes,
       });
 
-      setAssignments((prev) => [result.assignment, ...prev]);
-
-      if (result.asset) {
-        setAssets((prev) => prev.filter((a) => String(a.id) !== String(result.asset.id)));
-        try {
-          window.dispatchEvent(new CustomEvent('asset-updated', { detail: result.asset }));
-        } catch (e) {
-          // noop
-        }
+      for (const childAssetId of childAssetIds) {
+        await assignmentsApi.create({
+          assetId: childAssetId,
+          personId: inheritedLeaderId,
+          parentAssignmentId: parentResult.assignment.id,
+          deliveryCondition: inheritedCondition,
+          deliveryNotes: `${baseNotes}\n[HEREDADA_CHILD]`,
+        });
       }
 
       toast({
         title: 'Exito',
-        description: 'Asignacion heredada registrada correctamente.',
+        description: `Asignacion heredada registrada con ${inheritedAssetIds.length} equipo(s).`,
       });
 
       setInheritedAssetId('');
+      setInheritedAssetIds([]);
       setInheritedExtraNotes('');
       await loadAssignments();
     } catch (error: any) {
@@ -1237,7 +1283,7 @@ export default function Assignments() {
 
   const inheritedAssignments = assignments.filter((a: any) => {
     const notes = String((a as any)?.deliveryNotes || '').toLowerCase();
-    return notes.includes('[heredada]');
+    return notes.includes('[heredada]') && !notes.includes('[heredada_child]');
   });
 
   return (
@@ -1395,7 +1441,6 @@ export default function Assignments() {
                                   value={`${label} ${asset.id}`}
                                   onSelect={() => {
                                     setInheritedAssetId(String(asset.id));
-                                    setAssetComboboxOpen(false);
                                   }}
                                 >
                                   <Check
@@ -1413,6 +1458,30 @@ export default function Assignments() {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  <div className="flex flex-wrap items-center gap-2 mt-2">
+                    <Button type="button" variant="secondary" onClick={addInheritedAssetToSelection} disabled={!inheritedAssetId}>
+                      Agregar equipo
+                    </Button>
+                    {inheritedAssetIds.length > 0 && (
+                      <span className="text-xs text-muted-foreground">{inheritedAssetIds.length} seleccionado(s)</span>
+                    )}
+                  </div>
+                  {selectedInheritedAssets.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {selectedInheritedAssets.map((asset) => (
+                        <Badge key={asset.id} variant="secondary" className="gap-2">
+                          {(asset.assetCode || asset.code)}
+                          <button
+                            type="button"
+                            className="text-xs hover:opacity-70"
+                            onClick={() => removeInheritedAssetFromSelection(String(asset.id))}
+                          >
+                            x
+                          </button>
+                        </Badge>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="space-y-2">
@@ -1484,11 +1553,20 @@ export default function Assignments() {
                       </TableRow>
                     ) : (
                       inheritedAssignments.slice(0, 8).map((assignment: any) => {
-                        const asset = assignment.asset || assets.find(a => a.id === String(assignment.assetId));
+                        const groupAssignments = getInheritedGroupAssignments(assignment);
                         const person = assignment.person || people.find(p => p.id === String(assignment.personId));
+                        const equipmentCodes = groupAssignments
+                          .map((a: any) => {
+                            const asset = a.asset || assets.find((x) => x.id === String(a.assetId));
+                            return asset?.assetCode || asset?.code || '-';
+                          })
+                          .join(', ');
                         return (
                           <TableRow key={`inherited-${assignment.id}`}>
-                            <TableCell>{(asset?.assetCode || asset?.code || '-')}</TableCell>
+                            <TableCell>
+                              <div className="font-medium">{equipmentCodes || '-'}</div>
+                              <div className="text-xs text-muted-foreground">{groupAssignments.length} equipo(s)</div>
+                            </TableCell>
                             <TableCell>{person ? `${person.firstName} ${person.lastName}` : '-'}</TableCell>
                             <TableCell>{assignment.assignmentDate ? format(new Date(assignment.assignmentDate), 'PPpp', { locale: es }) : '-'}</TableCell>
                             <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap max-w-[420px]">{assignment.deliveryNotes || '-'}</TableCell>
