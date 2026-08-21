@@ -1,0 +1,3 @@
+# Los scripts de despliegue SIEMPRE con finales de línea LF:
+# con CRLF, Linux falla con "bad interpreter: /bin/sh^M".
+*.sh text eol=lf
