@@ -30,24 +30,30 @@ VITE_API_URL=$API_URL
 VITE_SEND_BEARER_TOKEN=false
 ENV
 
-# La URL de la API se incrusta en tiempo de build: si cambia, hay que recompilar.
+# pnpm fijado a la misma versión que usa el Dockerfile del back: la última
+# (11.x) aborta con ERR_PNPM_IGNORED_BUILDS por los scripts de esbuild/@swc.
+# Qué paquetes pueden ejecutar scripts se declara en package.json
+# ("pnpm.onlyBuiltDependencies") — esbuild y @swc/core necesitan el suyo.
+#
+# El store va en un volumen: si no, pnpm lo crea dentro del repo (/app/.pnpm-store)
+# y además se pierde la caché entre despliegues.
 docker run --rm \
   -v "$PWD":/app -w /app \
+  -v pnpm-store:/pnpm-store \
   -e CI=true \
   node:22-bookworm-slim \
-  sh -c 'corepack enable && pnpm install --frozen-lockfile && pnpm run build'
+  sh -c 'corepack enable \
+    && corepack prepare pnpm@10.29.3 --activate \
+    && pnpm config set store-dir /pnpm-store --global \
+    && pnpm install --frozen-lockfile \
+    && pnpm run build'
 
 [ -f dist/index.html ] || { echo "✗ El build no generó dist/index.html" >&2; exit 1; }
 
-# Comprobación real: la URL nueva tiene que estar dentro del bundle y la
-# vieja de Render no puede aparecer.
+# Comprobación real: la URL nueva tiene que estar dentro del bundle.
 if ! grep -rqF "$API_URL" dist/assets/*.js; then
   echo "✗ El bundle no contiene $API_URL. Revisa .env.production.local" >&2
   exit 1
-fi
-if grep -rqF "onrender.com" dist/assets/*.js; then
-  echo "⚠ El bundle todavía menciona onrender.com (fallback en src/lib/config.ts)."
-  echo "  No es bloqueante: solo se usa si VITE_API_URL faltara."
 fi
 echo "▸ Publicando en $PUBLICAR_EN..."
 mkdir -p "$PUBLICAR_EN"
