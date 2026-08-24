@@ -30,6 +30,9 @@ export interface CreatePersonDto {
   branchId?: number;
   observation?: string;
   tiAssetIds?: number[];
+  // Código de inventario de la persona (solo números, ej. "406"): se hereda
+  // automáticamente al código de todos sus activos asignados.
+  codigo?: string;
 }
 
 export interface UpdatePersonDto {
@@ -44,6 +47,7 @@ export interface UpdatePersonDto {
   branchId?: number;
   observation?: string;
   tiAssetIds?: number[];
+  codigo?: string;
 }
 
 // ============= PEOPLE API =============
@@ -96,6 +100,9 @@ export const peopleApi = {
     if (data.tiAssetIds !== undefined) {
       cleanedData.tiAssetIds = data.tiAssetIds;
     }
+    if (data.codigo !== undefined) {
+      cleanedData.codigo = data.codigo.trim() || undefined;
+    }
 
 
     const response = await apiFetch(`${API_URL}/people`, { method: 'POST', body: JSON.stringify(cleanedData) });
@@ -127,6 +134,9 @@ export const peopleApi = {
     }
     if (data.tiAssetIds !== undefined) {
       cleanedData.tiAssetIds = data.tiAssetIds;
+    }
+    if (data.codigo !== undefined) {
+      cleanedData.codigo = data.codigo.trim() || undefined;
     }
 
 

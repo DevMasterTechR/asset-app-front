@@ -61,7 +61,8 @@ export default function PersonFormModal({
     branchId: undefined,
     status: 'active',
     observation: '',
-    tiAssetIds: []
+    tiAssetIds: [],
+    codigo: ''
   });
 
     // Autogenerar username cuando se escriben nombre y apellido (solo en modo 'create')
@@ -126,7 +127,8 @@ export default function PersonFormModal({
         branchId: person.branchId ? Number(person.branchId) : undefined,
         status: person.status,
         observation: person.observation || '',
-        tiAssetIds: person.tiAssetIds || []
+        tiAssetIds: person.tiAssetIds || [],
+        codigo: person.codigo || ''
       });
       // Cargar asignaciones activas de la persona
       const loadActiveAssignments = async () => {
@@ -155,7 +157,8 @@ export default function PersonFormModal({
         branchId: undefined,
         status: 'active',
         observation: '',
-        tiAssetIds: []
+        tiAssetIds: [],
+        codigo: ''
       });
       setActiveAssignments([]);
       setTiAssets([]);
@@ -202,6 +205,10 @@ export default function PersonFormModal({
 
       if (formData.observation !== undefined) {
         cleanedData.observation = formData.observation?.trim() || undefined;
+      }
+
+      if (formData.codigo !== undefined) {
+        cleanedData.codigo = formData.codigo?.trim() || undefined;
       }
 
       // Agregar IDs de activos T.I.
@@ -390,6 +397,22 @@ export default function PersonFormModal({
                 placeholder="juan.perez"
               />
             </div>
+          </div>
+
+          {/* Código de inventario */}
+          <div className="space-y-2">
+            <Label htmlFor="codigo">Código</Label>
+            <Input
+              id="codigo"
+              value={formData.codigo || ''}
+              onChange={(e) => handleChange('codigo', e.target.value.replace(/\D+/g, '').slice(0, 6))}
+              placeholder="406"
+              inputMode="numeric"
+            />
+            <p className="text-xs text-muted-foreground">
+              Solo números. Se hereda automáticamente al código de todos los activos ya
+              asignados a esta persona (ej.: código 406 → LAPT-406, CARGL-406).
+            </p>
           </div>
 
           {/* Contraseña */}

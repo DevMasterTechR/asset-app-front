@@ -373,6 +373,7 @@ export default function People() {
                 <TableRow>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Persona {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('nationalId')}>Cédula {sort.key === 'nationalId' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead>Código</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario {sort.key === 'username' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('department')}>Departamento {sort.key === 'department' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('role')}>Rol {sort.key === 'role' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
@@ -401,6 +402,7 @@ export default function People() {
                       </div>
                     </TableCell>
                     <TableCell className="font-mono text-sm">{person.nationalId}</TableCell>
+                    <TableCell className="font-mono text-sm">{person.codigo || '-'}</TableCell>
                     <TableCell className="text-sm">{person.username || '-'}</TableCell>
                     <TableCell className="text-sm">{getDepartmentName(person.departmentId)}</TableCell>
                     <TableCell className="text-sm">{getRoleName(person.roleId)}</TableCell>

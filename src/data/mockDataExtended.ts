@@ -32,6 +32,7 @@ export interface Person {
   branchId: number;
   observation?: string;
   tiAssetIds?: number[];
+  codigo?: string;
 }
 
 export interface AssetAttributes {
