@@ -466,10 +466,10 @@ function DevicesPage() {
     }
   };
 
-  const handleDelete = async () => {
-    if (!selectedDevice) return;
+  const handleDelete = async (reason?: string) => {
+    if (!selectedDevice || !reason) return;
     try {
-      await devicesApi.delete(selectedDevice.id);
+      await devicesApi.delete(selectedDevice.id, reason);
       toast({ title: 'Éxito', description: 'Dispositivo eliminado correctamente' });
       await loadData();
       setDeleteModalOpen(false);
@@ -704,8 +704,10 @@ function DevicesPage() {
         onOpenChange={setDeleteModalOpen}
         onConfirm={handleDelete}
         title="¿Eliminar dispositivo?"
-        description="Esta acción no se puede deshacer. El dispositivo será eliminado permanentemente."
+        description="El dispositivo dejará de aparecer en los listados y se desasignará de su responsable, pero su historial se conserva para auditoría."
         itemName={selectedDevice ? `${selectedDevice.brand} ${selectedDevice.model} (${selectedDevice.assetCode})` : undefined}
+        requireReason
+        reasonLabel="Motivo de la eliminación (obligatorio)"
       />
 
       {previewOpen && (

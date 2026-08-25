@@ -129,8 +129,8 @@ export const devicesApi = {
     return response.json();
   },
 
-  async delete(id: number): Promise<void> {
-    const response = await apiFetch(`/assets/${id}`, { method: 'DELETE' });
+  async delete(id: number, reason: string): Promise<void> {
+    const response = await apiFetch(`/assets/${id}?reason=${encodeURIComponent(reason)}`, { method: 'DELETE' });
     await handleApiError(response);
   },
 

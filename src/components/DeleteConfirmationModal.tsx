@@ -1,6 +1,7 @@
 // src/components/DeleteConfirmationModal.tsx
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import {
   AlertDialog,
   AlertDialogContent,
@@ -14,10 +15,14 @@ import { Loader2, AlertTriangle } from 'lucide-react';
 interface DeleteConfirmationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => Promise<void>;
+  onConfirm: (reason?: string) => Promise<void>;
   title: string;
   description: string;
   itemName?: string;
+  // Si se activa, pide un motivo de texto obligatorio antes de confirmar
+  // (para eliminaciones que son borrado lógico, no destructivas de verdad).
+  requireReason?: boolean;
+  reasonLabel?: string;
 }
 
 export default function DeleteConfirmationModal({
@@ -26,15 +31,20 @@ export default function DeleteConfirmationModal({
   onConfirm,
   title,
   description,
-  itemName
+  itemName,
+  requireReason,
+  reasonLabel,
 }: DeleteConfirmationModalProps) {
   const [loading, setLoading] = useState(false);
+  const [reason, setReason] = useState('');
 
   const handleConfirm = async () => {
+    if (requireReason && !reason.trim()) return;
     setLoading(true);
     try {
-      await onConfirm();
+      await onConfirm(requireReason ? reason.trim() : undefined);
       onOpenChange(false);
+      setReason('');
     } catch (error) {
       console.error('Error al eliminar:', error);
     } finally {
@@ -61,6 +71,17 @@ export default function DeleteConfirmationModal({
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
+        {requireReason && (
+          <div className="space-y-1.5 pt-1">
+            <label className="text-sm font-medium">{reasonLabel || 'Motivo de la eliminación (obligatorio)'}</label>
+            <Textarea
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              placeholder="Explica por qué se elimina este registro..."
+              disabled={loading}
+            />
+          </div>
+        )}
         <AlertDialogFooter>
           <Button
             variant="outline"
@@ -72,7 +93,7 @@ export default function DeleteConfirmationModal({
           <Button
             variant="destructive"
             onClick={handleConfirm}
-            disabled={loading}
+            disabled={loading || (requireReason && !reason.trim())}
           >
             {loading ? (
               <>
