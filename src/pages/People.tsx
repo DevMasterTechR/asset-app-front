@@ -252,6 +252,29 @@ export default function People() {
     setPreviewOpen(true);
   };
 
+  // Se definen ANTES de usarse en el ordenamiento (sort.apply más abajo):
+  // como son "const", referenciarlas antes de esta línea revienta con
+  // "Cannot access before initialization" — eso rompía el ordenamiento por
+  // Departamento/Rol/Sucursal (dejaba la página en blanco), pero no el de
+  // Usuario/Cédula/Persona, que no las necesitan.
+  const getBranchName = (id?: number) => {
+    if (!id) return '-';
+    const branch = branches.find(b => b.id === id);
+    return branch?.name || '-';
+  };
+
+  const getDepartmentName = (id?: number) => {
+    if (!id) return '-';
+    const dept = departments.find(d => d.id === id);
+    return dept?.name || '-';
+  };
+
+  const getRoleName = (id?: number) => {
+    if (!id) return '-';
+    const role = roles.find(r => r.id === id);
+    return role?.name || '-';
+  };
+
   const filteredPeople = people.filter((person) => {
     const search = searchTerm.toLowerCase().trim();
     if (!search) return true;
@@ -301,23 +324,14 @@ export default function People() {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
   };
 
-  const getBranchName = (id?: number) => {
-    if (!id) return '-';
-    const branch = branches.find(b => b.id === id);
-    return branch?.name || '-';
-  };
-
-  const getDepartmentName = (id?: number) => {
-    if (!id) return '-';
-    const dept = departments.find(d => d.id === id);
-    return dept?.name || '-';
-  };
-
-  const getRoleName = (id?: number) => {
-    if (!id) return '-';
-    const role = roles.find(r => r.id === id);
-    return role?.name || '-';
-  };
+  // Flechita junto a cada cabecera ordenable: tenue (↕) si no es la columna
+  // activa (para que se note que se puede hacer clic ahí), y marcada
+  // (▲/▼) en la que sí está ordenando ahora mismo.
+  const flechaOrden = (key: string) => (
+    <span style={{ opacity: sort.key === key ? 1 : 0.35, marginLeft: 4, display: 'inline-block' }}>
+      {sort.key === key ? (sort.dir === 'asc' ? '▲' : '▼') : '↕'}
+    </span>
+  );
 
   return (
     <>
@@ -371,14 +385,14 @@ export default function People() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Persona {sort.key === 'name' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('nationalId')}>Cédula {sort.key === 'nationalId' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Persona{flechaOrden('name')}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('nationalId')}>Cédula{flechaOrden('nationalId')}</TableHead>
                   <TableHead>Código</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario {sort.key === 'username' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('department')}>Departamento {sort.key === 'department' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('role')}>Rol {sort.key === 'role' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal {sort.key === 'branch' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
-                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('status')}>Estado {sort.key === 'status' ? (sort.dir === 'asc' ? '▲' : '▼') : ''}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario{flechaOrden('username')}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('department')}>Departamento{flechaOrden('department')}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('role')}>Rol{flechaOrden('role')}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('branch')}>Sucursal{flechaOrden('branch')}</TableHead>
+                  <TableHead className="cursor-pointer" onClick={() => sort.toggle('status')}>Estado{flechaOrden('status')}</TableHead>
                   <TableHead>Observación</TableHead>
                   <TableHead>T.I.</TableHead>
                   <TableHead className="text-right">Acciones</TableHead>
