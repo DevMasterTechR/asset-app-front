@@ -108,27 +108,34 @@ const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
   { value: 'decommissioned', label: 'Dado de baja' },
 ];
 
-// Prefijos estandarizados para assetCode
+// Prefijos estandarizados para assetCode.
+//
+// SIN ESPACIOS alrededor del guion. Los llevaban ("CARG - "), y eso creaba
+// codigos que NO coincidian con los que genera hwid-server ("CARG-007"): el
+// mismo cargador terminaba dos veces en el inventario, uno asignado y otro
+// suelto, y al intentar asignarlo saltaba un choque de codigo. Es tambien el
+// origen de los "LAPT - 006" viejos que hay que normalizar al comparar en
+// varios puntos del backend.
 const CODE_PREFIXES: Record<string, string> = {
-  laptop: 'LAPT - ',
-  celular: 'CEL - ',
-  mouse: 'MOSE - ',
-  mousepad: 'MPAD - ',
-  soporte: 'SPLP - ',
-  monitor: 'MONT - ',
-  teclado: 'TECLA - ',
-  desktop: 'PC - ',
-  tablet: 'TAB - ',
-  server: 'SERV - ',
-  printer: 'IMPR - ',
-  'adaptador-memoria': 'ADMM - ',
-  'adaptador-red': 'ARED - ',
-  hub: 'HUB - ',
-  usb: 'USB - ',
-  'ip-phone': 'TLIP - ',
-  'cargador-laptop': 'CARGL - ',
-  'cargador-celular': 'CARG - ',
-  'cable-carga': 'CARGC - ',
+  laptop: 'LAPT-',
+  celular: 'CEL-',
+  mouse: 'MOSE-',
+  mousepad: 'MPAD-',
+  soporte: 'SPLP-',
+  monitor: 'MONT-',
+  teclado: 'TECLA-',
+  desktop: 'PC-',
+  tablet: 'TAB-',
+  server: 'SERV-',
+  printer: 'IMPR-',
+  'adaptador-memoria': 'ADMM-',
+  'adaptador-red': 'ARED-',
+  hub: 'HUB-',
+  usb: 'USB-',
+  'ip-phone': 'TLIP-',
+  'cargador-laptop': 'CARGL-',
+  'cargador-celular': 'CARG-',
+  'cable-carga': 'CARGC-',
 } as const;
 
 export default function DeviceFormModal({

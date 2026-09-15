@@ -306,7 +306,6 @@ function DevicesPage() {
         return <Mouse className="h-4 w-4" />;
       case 'móvil':
       case 'celular':
-      case 'celular':
         return <Smartphone className="h-4 w-4" />;
       case 'servidor':
       case 'server':
