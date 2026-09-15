@@ -34,8 +34,10 @@ import {
   Printer,
   Download,
   Usb,
+  History,
 } from 'lucide-react';
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
+import { DeviceHistoryModal } from '@/components/DeviceHistoryModal';
 import { peopleApi } from '@/api/people';
 import * as catalogsApi from '@/api/catalogs';
 import { loansApi } from '@/api/loans';
@@ -121,6 +123,8 @@ function DevicesPage() {
   const [bulkModalOpen, setBulkModalOpen] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [selectedDevice, setSelectedDevice] = useState<Device | null>(null);
+  // Equipo cuyo historial se está mirando. null = modal cerrado.
+  const [historialDe, setHistorialDe] = useState<Device | null>(null);
   const [formMode, setFormMode] = useState<'create' | 'edit'>('create');
   const [previewOpen, setPreviewOpen] = useState(false);
   const [loanAlert, setLoanAlert] = useState<string | null>(null);
@@ -645,6 +649,14 @@ function DevicesPage() {
                         <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              title="Ver quién ha tenido este equipo"
+                              onClick={() => setHistorialDe(device)}
+                            >
+                              <History className="h-4 w-4" />
+                            </Button>
                             <Button variant="ghost" size="icon" onClick={() => handleEdit(device)}>
                               <Edit className="h-4 w-4" />
                             </Button>
@@ -689,6 +701,12 @@ function DevicesPage() {
           </div>
         </div>
       </div>
+
+      <DeviceHistoryModal
+        open={historialDe !== null}
+        onOpenChange={(abierto) => { if (!abierto) setHistorialDe(null); }}
+        device={historialDe}
+      />
 
       <DeviceFormModal
         open={formModalOpen}
