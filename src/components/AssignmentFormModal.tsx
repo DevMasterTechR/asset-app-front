@@ -125,6 +125,13 @@ export default function AssignmentFormModal({
       alert("Por favor selecciona al menos una persona para la asignación")
       return
     }
+
+    // Sin esto, con el desplegable vacío se enviaba assetId 0 y el servidor
+    // respondía "Activo con ID 0 no encontrado", que no le dice nada a nadie.
+    if (!formData.assetId) {
+      alert("Por favor selecciona el equipo que se va a asignar")
+      return
+    }
     
     // Verificar si el equipo tiene ≥5 años de antigüedad
     if (formData.assetId) {

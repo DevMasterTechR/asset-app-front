@@ -49,21 +49,33 @@ declare global {
   }
 }
 
-async function reloadAvailableAccessories() {
+/**
+ * Accesorios que se pueden enlazar a un equipo.
+ *
+ * Ademas de los libres, se incluyen los que YA son de la misma persona: si
+ * GISELLA ya tiene su cargador asignado, al abrir la ficha de su celular la
+ * lista salia vacia y no habia forma de dejar constancia de que ese cargador
+ * es el de ese celular. Un accesorio de otra persona NO aparece, que es lo
+ * que evita volver a mezclar equipos entre companeros.
+ */
+async function reloadAvailableAccessories(personId?: number | string | null) {
   try {
     const res = await devicesApi.getAll(undefined, 1, 2000);
     const all = extractArray<any>(res) || [];
-    window.__availableMice = all.filter(d => d.assetType === 'mouse' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableTeclados = all.filter(d => d.assetType === 'teclado' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableMonitores = all.filter(d => d.assetType === 'monitor' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableStands = all.filter(d => d.assetType === 'soporte' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableMemoryAdapters = all.filter(d => d.assetType === 'adaptador-memoria' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableNetworkAdapters = all.filter(d => d.assetType === 'adaptador-red' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableHubs = all.filter(d => d.assetType === 'hub' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableMousepads = all.filter(d => d.assetType === 'mousepad' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableLaptopChargers = all.filter(d => d.assetType === 'cargador-laptop' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableCellChargers = all.filter(d => d.assetType === 'cargador-celular' && d.status === 'available' && !d.assignedPersonId);
-    window.__availableChargingCables = all.filter(d => d.assetType === 'cable-carga' && d.status === 'available' && !d.assignedPersonId);
+    const libreODeLaPersona = (d: any) =>
+      (d.status === 'available' && !d.assignedPersonId) ||
+      (personId != null && String(d.assignedPersonId) === String(personId));
+    window.__availableMice = all.filter(d => d.assetType === 'mouse' && libreODeLaPersona(d));
+    window.__availableTeclados = all.filter(d => d.assetType === 'teclado' && libreODeLaPersona(d));
+    window.__availableMonitores = all.filter(d => d.assetType === 'monitor' && libreODeLaPersona(d));
+    window.__availableStands = all.filter(d => d.assetType === 'soporte' && libreODeLaPersona(d));
+    window.__availableMemoryAdapters = all.filter(d => d.assetType === 'adaptador-memoria' && libreODeLaPersona(d));
+    window.__availableNetworkAdapters = all.filter(d => d.assetType === 'adaptador-red' && libreODeLaPersona(d));
+    window.__availableHubs = all.filter(d => d.assetType === 'hub' && libreODeLaPersona(d));
+    window.__availableMousepads = all.filter(d => d.assetType === 'mousepad' && libreODeLaPersona(d));
+    window.__availableLaptopChargers = all.filter(d => d.assetType === 'cargador-laptop' && libreODeLaPersona(d));
+    window.__availableCellChargers = all.filter(d => d.assetType === 'cargador-celular' && libreODeLaPersona(d));
+    window.__availableChargingCables = all.filter(d => d.assetType === 'cable-carga' && libreODeLaPersona(d));
   } catch (e) {
     console.error('Error cargando accesorios:', e);
   }
@@ -176,9 +188,12 @@ export default function DeviceFormModal({
   const [assignToPersonChecked, setAssignToPersonChecked] = useState(false);
   const [pendingAssignment, setPendingAssignment] = useState<{ deviceCode: string; deviceName: string; personName: string; deviceId: string; personId: string } | null>(null);
 
+  // Se recarga tambien cuando cambia la persona del equipo: la lista incluye
+  // los accesorios que ya son de ella, asi que si cambia el dueno la lista
+  // deja de corresponder.
   useEffect(() => {
-    if (open) reloadAvailableAccessories();
-  }, [open]);
+    if (open) reloadAvailableAccessories(formData.assignedPersonId ?? device?.assignedPersonId ?? null);
+  }, [open, formData.assignedPersonId, device?.assignedPersonId]);
 
   useEffect(() => {
     const pending = getAttrValue('pendingNewAccessory');
@@ -1283,7 +1298,7 @@ export default function DeviceFormModal({
             if (key) handleAttributeChange(key, created.id);
             setShowAccessoryModal(false);
             setPendingNewAccessory(null);
-            await reloadAvailableAccessories();
+            await reloadAvailableAccessories(formData.assignedPersonId ?? device?.assignedPersonId ?? null);
           }}
           mode="create"
           branches={branches}
