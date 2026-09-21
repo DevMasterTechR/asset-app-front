@@ -136,7 +136,12 @@ const CODE_PREFIXES: Record<string, string> = {
   soporte: 'SPLP-',
   monitor: 'MONT-',
   teclado: 'TECLA-',
-  desktop: 'PC-',
+  // DESK y no PC: es el prefijo que usa HWIDApp (ver assetTypeFromPrefix en
+  // hwid-server). Con dos prefijos distintos para el mismo tipo, la misma
+  // computadora entraba como "PC-003" si se cargaba a mano y como "DESK-003"
+  // si la registraba el programa -- dos filas para una sola maquina, y el
+  // indice unico no lo atrapa porque son codigos legitimamente distintos.
+  desktop: 'DESK-',
   tablet: 'TAB-',
   server: 'SERV-',
   printer: 'IMPR-',
