@@ -112,6 +112,7 @@ const deviceTypes = [
   { value: 'server', label: 'Servidor' },
   { value: 'printer', label: 'Impresora' },
   { value: 'ip-phone', label: 'Teléfono IP' },
+  { value: 'lector-codigos', label: 'Lector de Códigos de Barras' },
 ];
 
 const statusOptions: Array<{ value: DeviceStatus; label: string }> = [
@@ -153,6 +154,7 @@ const CODE_PREFIXES: Record<string, string> = {
   'cargador-laptop': 'CARGL-',
   'cargador-celular': 'CARG-',
   'cable-carga': 'CARGC-',
+  'lector-codigos': 'LECT-',
 } as const;
 
 export default function DeviceFormModal({

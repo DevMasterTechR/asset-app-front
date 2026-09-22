@@ -35,6 +35,7 @@ import {
   Download,
   Usb,
   History,
+  ScanBarcode,
 } from 'lucide-react';
 import { devicesApi, Device, CreateDeviceDto } from '@/api/devices';
 import { DeviceHistoryModal } from '@/components/DeviceHistoryModal';
@@ -319,6 +320,9 @@ function DevicesPage() {
       case 'ip-phone':
       case 'teléfono ip':
         return <Phone className="h-4 w-4" />;
+      case 'lector-codigos':
+      case 'lector de códigos de barras':
+        return <ScanBarcode className="h-4 w-4" />;
       case 'mousepad':
         return <Square className="h-4 w-4" />;
       case 'usb':

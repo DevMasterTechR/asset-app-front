@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Laptop, Monitor, Keyboard, Mouse, Smartphone, Server, PlugZap, Cable, Plug, Square, Phone, Printer } from "lucide-react";
+import { Laptop, Monitor, Keyboard, Mouse, Smartphone, Server, PlugZap, Cable, Plug, Square, Phone, Printer, ScanBarcode } from "lucide-react";
 
 export type DeviceStatus = "available" | "assigned" | "loaned" | "maintenance" | "retired" | "decommissioned" | "ti";
 
@@ -56,6 +56,8 @@ const getDeviceIcon = (type?: string) => {
       return <Cable className="h-4 w-4" />;
     case "printer":
       return <Printer className="h-4 w-4" />;
+    case "lector-codigos":
+      return <ScanBarcode className="h-4 w-4" />;
     default:
       return <Laptop className="h-4 w-4" />;
   }
