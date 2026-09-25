@@ -466,6 +466,43 @@ export default function DeviceFormModal({
     }));
   };
 
+  // DOS LINEAS POR CELULAR
+  // ======================
+  // Un celular dual SIM lleva dos numeros, cada uno con su operadora. Los dos
+  // van en los campos de siempre ("chipNumber" y "operator") separados por
+  // " / ": es exactamente el formato que ya escribe hwid-server (ver
+  // attributesParaCelular) y el que leen las actas de entrega. Inventar campos
+  // nuevos habria obligado a tocar hwid, el backend y el acta, y ademas habria
+  // dejado fuera los dos numeros que hwid ya tiene cargados.
+  //
+  // La operadora que falte se guarda como "—" para que las dos listas queden
+  // alineadas: leyendo "0991111111 / 0992222222" contra "CLARO / —" se sabe
+  // cual es de cual, cosa que se perderia si la lista de operadoras tuviera un
+  // elemento menos.
+  const lineasChip = (): { numero: string; operadora: string }[] => {
+    const partir = (v: unknown) => String(v ?? '').split('/').map(x => x.trim());
+    const numeros = partir(getAttrValue('chipNumber'));
+    const operadoras = partir(getAttrValue('operator'));
+    return [0, 1].map(i => ({
+      numero: numeros[i] ?? '',
+      operadora: operadoras[i] === '—' ? '' : (operadoras[i] ?? ''),
+    }));
+  };
+
+  const setLineaChip = (indice: number, campo: 'numero' | 'operadora', valor: string) => {
+    const lineas = lineasChip();
+    lineas[indice] = { ...lineas[indice], [campo]: valor };
+    // Manda el NUMERO: una operadora suelta sin numero no es una linea.
+    const haySegunda = Boolean(lineas[1].numero.trim());
+    const numeros = haySegunda ? `${lineas[0].numero} / ${lineas[1].numero}` : lineas[0].numero;
+    const operadoras = haySegunda
+      ? `${lineas[0].operadora || '—'} / ${lineas[1].operadora || '—'}`
+      : lineas[0].operadora;
+    handleAttributeChange('chipNumber', numeros);
+    handleAttributeChange('phoneNumber', numeros);
+    handleAttributeChange('operator', operadoras);
+  };
+
   const getAttrValue = (key: string): any => formData.attributesJson?.[key];
 
   const branchOptions = useMemo(() => sortBranchesByName(branches).map(b => ({ label: b.name, value: b.id.toString() })), [branches]);
@@ -777,11 +814,31 @@ export default function DeviceFormModal({
                 <Label htmlFor="hasChip">¿Tiene chip?</Label>
               </div>
               {getAttrValue('hasChip') && (
-                <div className="ml-8 space-y-2">
-                  <Label>Operadora</Label>
-                  <Input value={String(getAttrValue('operator') || '')} onChange={e => handleAttributeChange('operator', e.target.value)} placeholder="Movistar, Claro..." />
-                  <Label>Número del chip</Label>
-                  <Input value={String(getAttrValue('chipNumber') || '')} onChange={e => handleAttributeChange('chipNumber', e.target.value)} placeholder="+593..." />
+                <div className="ml-8 space-y-4">
+                  {[0, 1].map(i => {
+                    const linea = lineasChip()[i];
+                    return (
+                      <div key={i} className="space-y-2">
+                        <Label className="text-xs uppercase tracking-wide text-muted-foreground">
+                          {i === 0 ? 'Primera línea' : 'Segunda línea (opcional)'}
+                        </Label>
+                        <Input
+                          value={linea.operadora}
+                          onChange={e => setLineaChip(i, 'operadora', e.target.value)}
+                          placeholder="Operadora: Movistar, Claro..."
+                        />
+                        <Input
+                          value={linea.numero}
+                          onChange={e => setLineaChip(i, 'numero', e.target.value)}
+                          placeholder={i === 0 ? 'Número del chip' : 'Número del segundo chip'}
+                        />
+                      </div>
+                    );
+                  })}
+                  <p className="text-xs text-muted-foreground">
+                    Si el celular tiene dos chips, llena también la segunda línea: las dos
+                    salen en el acta de entrega.
+                  </p>
                 </div>
               )}
             </div>
