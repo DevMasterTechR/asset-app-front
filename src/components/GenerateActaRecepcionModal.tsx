@@ -44,6 +44,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
       /mouse|ratón|raton/.test(t) ||
       /teclado|keyboard/.test(t) ||
       /mousepad|mouse pad/.test(t) ||
+      /lector/.test(t) ||
       /soporte|stand|support/.test(t) ||
       /adaptador-memoria|memory adapter|adaptador memoria/.test(t) ||
       /adaptador-red|network adapter|adaptador red/.test(t) ||
@@ -437,6 +438,15 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
           ]
         : [];
 
+      // Lector de códigos de barras
+      const isLectorCodigos = /lector/i.test(typeLabel);
+      const lectorLines = isLectorCodigos
+        ? [
+            `Tipo de Conexión: ${resolveField(d, ["connectionType", "connection"])}`,
+            `Color: ${resolveField(d, ["color"])}`,
+          ]
+        : [];
+
       // Mousepad
       const isMousepad = /mousepad|mouse pad/i.test(typeLabel);
       const mousepadLines = isMousepad
@@ -540,7 +550,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
           ]
         : [];
-      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...hubLines, ...usbLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines, ...mouseLines, ...tecladoLines, ...monitorLines, ...tabletLines];
+      const allLines = [...baseLines, ...laptopLines, ...phoneLines, ...desktopLines, ...ipPhoneLines, ...printerLines, ...cableLines, ...soporteLines, ...mousepadLines, ...lectorLines, ...hubLines, ...usbLines, ...adapterMemoryLines, ...adapterNetworkLines, ...chargerLaptopLines, ...chargerCellLines, ...mouseLines, ...tecladoLines, ...monitorLines, ...tabletLines];
       
       // Separar baseLines de atributos específicos
       const baseLineCount = baseLines.length;
@@ -626,6 +636,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
       const isMouse = (t: string) => /mouse|ratón|raton/.test(t);
       const isTeclado = (t: string) => /teclado|keyboard/.test(t);
       const isMousepad = (t: string) => /mousepad|mouse pad/.test(t);
+      const isLectorCodigos = (t: string) => /lector/.test(t);
       const isAdapterMemory = (t: string) => /adaptador-memoria|memory adapter|adaptador memoria/.test(t);
       const isAdapterNetwork = (t: string) => /adaptador-red|network adapter|adaptador red/.test(t);
       const isHub = (t: string) => /hub/.test(t);
@@ -646,6 +657,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
         if (isMouse(t)) return 30;
         if (isTeclado(t)) return 40;
         if (isMousepad(t)) return 50;
+        if (isLectorCodigos(t)) return 55;
         if (isAdapterMemory(t)) return 60;
         if (isAdapterNetwork(t)) return 65;
         if (isHub(t)) return 70;

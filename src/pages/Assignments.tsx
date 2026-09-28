@@ -278,6 +278,7 @@ export default function Assignments() {
             hasTeclado, selectedTecladoId,
             hasMonitor, selectedMonitorId,
             hasMousepad, selectedMousepadId,
+            hasBarcodeReader, selectedBarcodeReaderId,
             hasCharger, selectedChargerId,
             hasStand, selectedStandId,
             hasHub, selectedHubId,
@@ -320,6 +321,18 @@ export default function Assignments() {
             if (hasMonitor && selectedMonitorId) {
               perifAssignments.push(assignmentsApi.create({
                 assetId: selectedMonitorId,
+                personId,
+                branchId: converted.branchId,
+                assignmentDate: converted.assignmentDate,
+                deliveryCondition: converted.deliveryCondition,
+                deliveryNotes: 'Asignación automática junto con laptop',
+                parentAssignmentId: result.assignment.id,
+              }));
+            }
+            // Lector de códigos
+            if (hasBarcodeReader && selectedBarcodeReaderId) {
+              perifAssignments.push(assignmentsApi.create({
+                assetId: selectedBarcodeReaderId,
                 personId,
                 branchId: converted.branchId,
                 assignmentDate: converted.assignmentDate,
@@ -471,6 +484,7 @@ export default function Assignments() {
             hasTeclado, selectedTecladoId,
             hasMonitor, selectedMonitorId,
             hasMousepad, selectedMousepadId,
+            hasBarcodeReader, selectedBarcodeReaderId,
             hasCharger, selectedChargerId,
             hasStand, selectedStandId,
             hasHub, selectedHubId,
@@ -509,6 +523,18 @@ export default function Assignments() {
           if (hasMonitor && selectedMonitorId) {
             perifAssignments.push(assignmentsApi.create({
               assetId: selectedMonitorId,
+              personId: converted.personId,
+              branchId: converted.branchId,
+              assignmentDate: converted.assignmentDate,
+              deliveryCondition: converted.deliveryCondition,
+              deliveryNotes: 'Asignación automática junto con laptop',
+              parentAssignmentId: result.assignment.id,
+            }));
+          }
+          // Lector de códigos
+          if (hasBarcodeReader && selectedBarcodeReaderId) {
+            perifAssignments.push(assignmentsApi.create({
+              assetId: selectedBarcodeReaderId,
               personId: converted.personId,
               branchId: converted.branchId,
               assignmentDate: converted.assignmentDate,

@@ -43,6 +43,7 @@ declare global {
     __availableNetworkAdapters?: Array<any>;
     __availableHubs?: Array<any>;
     __availableMousepads?: Array<any>;
+    __availableBarcodeReaders?: Array<any>;
     __availableLaptopChargers?: Array<any>;
     __availableCellChargers?: Array<any>;
     __availableChargingCables?: Array<any>;
@@ -73,6 +74,7 @@ async function reloadAvailableAccessories(personId?: number | string | null) {
     window.__availableNetworkAdapters = all.filter(d => d.assetType === 'adaptador-red' && libreODeLaPersona(d));
     window.__availableHubs = all.filter(d => d.assetType === 'hub' && libreODeLaPersona(d));
     window.__availableMousepads = all.filter(d => d.assetType === 'mousepad' && libreODeLaPersona(d));
+    window.__availableBarcodeReaders = all.filter(d => d.assetType === 'lector-codigos' && libreODeLaPersona(d));
     window.__availableLaptopChargers = all.filter(d => d.assetType === 'cargador-laptop' && libreODeLaPersona(d));
     window.__availableCellChargers = all.filter(d => d.assetType === 'cargador-celular' && libreODeLaPersona(d));
     window.__availableChargingCables = all.filter(d => d.assetType === 'cable-carga' && libreODeLaPersona(d));
@@ -746,6 +748,7 @@ export default function DeviceFormModal({
             {renderAccessoryBlock('hasNetworkAdapter', '¿Tiene adaptador de red?', 'hasNetworkAdapterRadio', 'selectedNetworkAdapterId', 'adaptador-red', window.__availableNetworkAdapters ?? [])}
             {renderAccessoryBlock('hasHub', '¿Tiene HUB?', 'hasHubRadio', 'selectedHubId', 'hub', window.__availableHubs ?? [])}
             {renderAccessoryBlock('hasMousepad', '¿Tiene mousepad?', 'hasMousepadRadio', 'selectedMousepadId', 'mousepad', window.__availableMousepads ?? [])}
+            {renderAccessoryBlock('hasBarcodeReader', '¿Tiene lector de códigos (pistola)?', 'hasBarcodeReaderRadio', 'selectedBarcodeReaderId', 'lector-codigos', window.__availableBarcodeReaders ?? [])}
             {renderAccessoryBlock('hasLaptopCharger', '¿Tiene cargador?', 'hasLaptopChargerRadio', 'selectedLaptopChargerId', 'cargador-laptop', window.__availableLaptopChargers ?? [])}
           </>
         );
@@ -1022,6 +1025,31 @@ export default function DeviceFormModal({
                 value={String(getAttrValue('color') || '')}
                 onChange={e => handleAttributeChange('color', e.target.value)}
                 placeholder="Negro, RGB, Gris, etc."
+              />
+            </div>
+          </>
+        );
+
+      // Lector de códigos de barras (la "pistola"). Marca, modelo y serie
+      // van en los campos generales; aquí lo propio del lector. Son los mismos
+      // datos que pide HWIDApp, para que lleguen iguales por los dos lados.
+      case 'lector-codigos':
+        return (
+          <>
+            <div className="space-y-2">
+              <Label>Tipo de conexión</Label>
+              <Input
+                value={String(getAttrValue('connectionType') || '')}
+                onChange={e => handleAttributeChange('connectionType', e.target.value)}
+                placeholder="USB, Inalámbrico, Bluetooth"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Color</Label>
+              <Input
+                value={String(getAttrValue('color') || '')}
+                onChange={e => handleAttributeChange('color', e.target.value)}
+                placeholder="Negro, Gris, etc."
               />
             </div>
           </>
@@ -1354,6 +1382,7 @@ export default function DeviceFormModal({
               'adaptador-red': 'selectedNetworkAdapterId',
               hub: 'selectedHubId',
               mousepad: 'selectedMousepadId',
+              'lector-codigos': 'selectedBarcodeReaderId',
               'cargador-laptop': 'selectedLaptopChargerId',
               'cargador-celular': 'selectedCellChargerId',
               'cable-carga': 'selectedChargingCableId',
