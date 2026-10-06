@@ -24,6 +24,7 @@ import { useToast } from '@/hooks/use-toast';
 import SearchableSelect from '@/components/ui/searchable-select';
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { descargarReporteExcel } from "@/lib/reporteExcel";
 
 const Index = () => {
   const { toast } = useToast();
@@ -494,6 +495,22 @@ const Index = () => {
     setGroupActaModalOpen(true);
   };
 
+  // Reporte general en Excel: una fila por persona con su código y todos sus
+  // equipos (ver lib/reporteExcel.ts). Es el botón principal; el PDF de antes
+  // sigue disponible al lado.
+  const [generandoExcel, setGenerandoExcel] = useState(false);
+  const downloadExcel = async () => {
+    setGenerandoExcel(true);
+    try {
+      await descargarReporteExcel(people, devicesRaw);
+    } catch (e) {
+      console.error('No se pudo generar el Excel:', e);
+      toast({ title: 'No se pudo generar el Excel', description: String((e as any)?.message || e), variant: 'destructive' });
+    } finally {
+      setGenerandoExcel(false);
+    }
+  };
+
   const downloadReport = () => {
     const doc = new jsPDF();
     const data = getReportData();
@@ -836,9 +853,13 @@ const Index = () => {
         {/* Acciones y buscador */}
         <div className="mt-4 space-y-3">
           <div className="flex justify-end gap-2">
-             <Button variant="destructive" className="gap-2" onClick={() => downloadReport()}>
-              <Download className="h-4 w-4" />
-             Descargar Reporte General PDF
+            <Button className="gap-2 bg-green-700 hover:bg-green-800 text-white" onClick={downloadExcel} disabled={generandoExcel || loading}>
+              {generandoExcel ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
+              Descargar Reporte General (Excel)
+            </Button>
+            <Button variant="outline" className="gap-2" onClick={() => downloadReport()}>
+              <FileText className="h-4 w-4" />
+              PDF
             </Button>
             <Button onClick={loadData} disabled={loading}>
               {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
