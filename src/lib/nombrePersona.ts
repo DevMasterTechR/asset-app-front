@@ -10,8 +10,8 @@
 // Antes se partía en la primera palabra (nombre) y el resto (apellido), y 45
 // personas quedaron con el segundo nombre metido en el apellido.
 //
-// Código de persona: primer nombre + inicial del primer apellido + número
-// (BRYANQ406). Es la etiqueta que llevan todos los equipos de esa persona.
+// Código de persona: primer nombre + inicial del primer apellido + número de
+// sucursal (BRYANQ1). Es la etiqueta que llevan todos los equipos de esa persona.
 
 const PARTICULAS = new Set(['DE', 'DEL', 'LA', 'LAS', 'LOS', 'Y', 'SAN', 'SANTA', 'VAN', 'VON', 'DA', 'DI', 'DO', 'DOS']);
 
@@ -59,7 +59,7 @@ export function separarNombre(nombreCompleto: string): { nombres: string; apelli
   };
 }
 
-/** BRYANQ406. Vacío si falta el nombre o el número. */
+/** BRYANQ1. Vacío si falta el nombre o el número de sucursal. */
 export function codigoPersona(nombreCompleto: string, numero: unknown): string {
   const n = String(numero ?? '').replace(/\D+/g, '');
   if (!n) return '';
@@ -68,5 +68,11 @@ export function codigoPersona(nombreCompleto: string, numero: unknown): string {
   const primerNombre = b[0][b[0].length - 1];
   const primerApellido = b.length >= 4 ? b[b.length - 2] : b[1];
   const inicial = primerApellido[primerApellido.length - 1][0];
-  return `${primerNombre}${inicial}${n.padStart(3, '0')}`;
+  return `${primerNombre}${inicial}${n}`;
+}
+
+/** Código de persona a partir de un registro de persona de Gestor ({firstName, lastName, branchId}). */
+export function codigoDePersona(p: any): string {
+  if (!p) return '';
+  return codigoPersona(`${p.firstName ?? ''} ${p.lastName ?? ''}`, p.branchId);
 }

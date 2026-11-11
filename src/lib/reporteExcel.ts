@@ -118,7 +118,7 @@ export async function descargarReporteExcel(people: any[], devices: any[]) {
     const suyos = (equiposPorPersona.get(String(p.id)) || [])
       .sort((a, b) => texto(a.assetCode).localeCompare(texto(b.assetCode)));
     const fila: Record<string, unknown> = {
-      codigo: codigoPersona(nombre, p.codigo),
+      codigo: codigoPersona(nombre, p.branchId),
       numero: texto(p.codigo),
       nombres,
       apellidos,
@@ -166,7 +166,7 @@ export async function descargarReporteExcel(people: any[], devices: any[]) {
       serie: texto(d.serialNumber),
       estado: ESTADOS[texto(d.status)] ?? texto(d.status),
       sucursal: texto(d.branch?.name),
-      codigoPersona: p ? codigoPersona(nombre, p.codigo) : '',
+      codigoPersona: p ? codigoPersona(nombre, p.branchId) : '',
       persona: nombre,
       cedula: texto(p?.nationalId),
     });
