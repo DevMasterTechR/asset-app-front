@@ -50,6 +50,7 @@ import DeleteConfirmationModal from '@/components/DeleteConfirmationModal';
 import PreviewDevicesReportModal from '@/reports/PreviewDevicesReportModal';
 import { Person } from '@/data/mockDataExtended';
 
+import { CodigoPersona } from '@/components/CodigoPersona';
 // Calcula la diferencia en días entre dos fechas
 const diffDays = (from: string, to: string) => {
   try {
@@ -649,7 +650,7 @@ function DevicesPage() {
                           })()}
                         </TableCell>
                         <TableCell className="text-sm">{getBranchName(device.branchId)}</TableCell>
-                        <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}</TableCell>
+                        <TableCell className="text-sm">{getPersonName(device.assignedPersonId)}<div><CodigoPersona person={people.find(p => Number(p.id) === device.assignedPersonId)} /></div></TableCell>
                         <TableCell className="text-right">
                           <div className="flex items-center justify-end gap-2">
                             <Button

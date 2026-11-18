@@ -6,6 +6,7 @@ import { DevicesTable } from '@/components/DevicesTable';
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { codigoDePersona } from "@/lib/nombrePersona";
 import {
   Table,
   TableBody,
@@ -41,6 +42,7 @@ import {
 } from "@/components/ui/select";
 import PreviewPeopleReportModal from '@/reports/PreviewPeopleReportModal';
 
+import { CodigoPersona } from '@/components/CodigoPersona';
 const statusVariantMap = {
   active: 'success' as const,
   inactive: 'default' as const,
@@ -289,6 +291,7 @@ export default function People() {
       (person.lastName || '').toLowerCase().includes(search) ||
       (person.nationalId || '').toLowerCase().includes(search) ||
       (person.username || '').toLowerCase().includes(search) ||
+      codigoDePersona(person).toLowerCase().includes(search) ||
       (person.observation || '').toLowerCase().includes(search) ||
       departmentName.toLowerCase().includes(search) ||
       roleName.toLowerCase().includes(search) ||
@@ -388,6 +391,7 @@ export default function People() {
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('name')}>Persona{flechaOrden('name')}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('nationalId')}>Cédula{flechaOrden('nationalId')}</TableHead>
                   <TableHead>Código</TableHead>
+                  <TableHead>Código de persona</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('username')}>Usuario{flechaOrden('username')}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('department')}>Departamento{flechaOrden('department')}</TableHead>
                   <TableHead className="cursor-pointer" onClick={() => sort.toggle('role')}>Rol{flechaOrden('role')}</TableHead>
@@ -417,6 +421,7 @@ export default function People() {
                     </TableCell>
                     <TableCell className="font-mono text-sm">{person.nationalId}</TableCell>
                     <TableCell className="font-mono text-sm">{person.codigo || '-'}</TableCell>
+                    <TableCell><CodigoPersona person={person} /></TableCell>
                     <TableCell className="text-sm">{person.username || '-'}</TableCell>
                     <TableCell className="text-sm">{getDepartmentName(person.departmentId)}</TableCell>
                     <TableCell className="text-sm">{getRoleName(person.roleId)}</TableCell>

@@ -52,6 +52,8 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { cn } from "@/lib/utils";
 
+import { CodigoPersona } from '@/components/CodigoPersona';
+import { codigoDePersona } from '@/lib/nombrePersona';
 const conditionVariantMap = {
   excellent: 'success' as const,
   good: 'default' as const,
@@ -110,7 +112,7 @@ export default function Assignments() {
   const [searchTerm, setSearchTerm] = useState("");
   const [assignments, setAssignments] = useState<Assignment[]>([]);
   const [assets, setAssets] = useState<Array<{ id: string; code: string; name: string; brand?: string; model?: string; purchaseDate?: string; assetCode?: string }>>([]);
-  const [people, setPeople] = useState<Array<{ id: string; firstName: string; lastName: string }>>([]);
+  const [people, setPeople] = useState<Array<{ id: string; firstName: string; lastName: string; codigo?: string }>>([]);
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState<'create' | 'edit'>('create');
@@ -170,7 +172,7 @@ export default function Assignments() {
       }));
       setAssignments(assignmentsWithBranchName as Assignment[]);
 
-      setPeople(sortByString((peopleArray || []).map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName })), (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()));
+      setPeople(sortByString((peopleArray || []).map((p: any) => ({ id: String(p.id), firstName: p.firstName, lastName: p.lastName, codigo: p.codigo })), (p: any) => `${p.firstName || ''} ${p.lastName || ''}`.trim()));
       // Mostrar únicamente activos disponibles para asignación, excluyendo dispositivos de seguridad
       setAssets(sortAssetsByName((assetsArray || [])
         .filter((a: any) => (a.status || '').toString() === 'available' && a.assetType !== 'security')
@@ -981,14 +983,16 @@ export default function Assignments() {
     if (assignment.returnDate) return false;
     const assetCode = (assignment as any).asset?.assetCode?.toLowerCase() || assets.find(a => a.id === String(assignment.assetId))?.code?.toLowerCase() || '';
     const personName = (assignment as any).person ? `${(assignment as any).person.firstName} ${(assignment as any).person.lastName}`.toLowerCase() : (people.find(p => p.id === String(assignment.personId)) ? `${people.find(p => p.id === String(assignment.personId))!.firstName} ${people.find(p => p.id === String(assignment.personId))!.lastName}`.toLowerCase() : '');
-    return assetCode.includes(term) || personName.includes(term);
+    const codigoDePersona_ = codigoDePersona(people.find(p => p.id === String(assignment.personId)) || (assignment as any).person).toLowerCase();
+    return assetCode.includes(term) || personName.includes(term) || codigoDePersona_.includes(term);
   });
 
   const filteredHistory = assignments.filter((assignment) => {
     if (!assignment.returnDate) return false;
     const assetCode = (assignment as any).asset?.assetCode?.toLowerCase() || assets.find(a => a.id === String(assignment.assetId))?.code?.toLowerCase() || '';
     const personName = (assignment as any).person ? `${(assignment as any).person.firstName} ${(assignment as any).person.lastName}`.toLowerCase() : (people.find(p => p.id === String(assignment.personId)) ? `${people.find(p => p.id === String(assignment.personId))!.firstName} ${people.find(p => p.id === String(assignment.personId))!.lastName}`.toLowerCase() : '');
-    return assetCode.includes(term) || personName.includes(term);
+    const codigoDePersona_ = codigoDePersona(people.find(p => p.id === String(assignment.personId)) || (assignment as any).person).toLowerCase();
+    return assetCode.includes(term) || personName.includes(term) || codigoDePersona_.includes(term);
   });
 
   const sort = useSort();
@@ -1593,7 +1597,7 @@ export default function Assignments() {
                               <div className="font-medium">{equipmentCodes || '-'}</div>
                               <div className="text-xs text-muted-foreground">{groupAssignments.length} equipo(s)</div>
                             </TableCell>
-                            <TableCell>{person ? `${person.firstName} ${person.lastName}` : '-'}</TableCell>
+                            <TableCell>{person ? <>{`${person.firstName} ${person.lastName}`}<div><CodigoPersona person={people.find(p => p.id === String(assignment.personId)) || person} /></div></> : '-'}</TableCell>
                             <TableCell>{assignment.assignmentDate ? format(new Date(assignment.assignmentDate), 'PPpp', { locale: es }) : '-'}</TableCell>
                             <TableCell className="text-xs text-muted-foreground whitespace-pre-wrap max-w-[420px]">{assignment.deliveryNotes || '-'}</TableCell>
                             <TableCell className="text-right">
@@ -1661,7 +1665,7 @@ export default function Assignments() {
                               <p className={`text-sm ${isOld ? 'text-red-600' : 'text-muted-foreground'}`}>{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
+                          <TableCell className="font-medium">{person ? <>{`${person.firstName} ${person.lastName}`}<div><CodigoPersona person={people.find(p => p.id === String(assignment.personId)) || person} /></div></> : 'N/A'}</TableCell>
                           <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
                           <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
                           <TableCell><Badge variant={conditionVariantMap[assignment.deliveryCondition]}>{conditionLabelMap[assignment.deliveryCondition]}</Badge></TableCell>
@@ -1737,7 +1741,7 @@ export default function Assignments() {
                               <p className="text-sm text-muted-foreground">{(asset?.brand || '') + ' ' + (asset?.model || '')}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium">{person ? `${person.firstName} ${person.lastName}` : 'N/A'}</TableCell>
+                          <TableCell className="font-medium">{person ? <>{`${person.firstName} ${person.lastName}`}<div><CodigoPersona person={people.find(p => p.id === String(assignment.personId)) || person} /></div></> : 'N/A'}</TableCell>
                           <TableCell className="text-sm">{branch ? branch.name : 'N/A'}</TableCell>
                           <TableCell className="text-sm">{format(new Date(assignment.assignmentDate), 'PPpp', { locale: es })}</TableCell>
                           <TableCell className="text-sm">{assignment.returnDate ? format(new Date(assignment.returnDate), 'PPpp', { locale: es }) : '-'}</TableCell>

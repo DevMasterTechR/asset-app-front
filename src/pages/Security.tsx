@@ -44,6 +44,8 @@ import { Person } from '@/data/mockDataExtended';
 import { assignmentsApi, type CreateAssignmentDto } from '@/api/assignments';
 import type { Assignment } from '@/data/mockDataExtended';
 
+import { CodigoPersona } from '@/components/CodigoPersona';
+import { codigoDePersona } from '@/lib/nombrePersona';
 // Función para convertir URLs de galería de Imgur a URLs directas de imagen
 const convertImgurUrl = (url: string): string => {
   if (!url) return url;
@@ -207,7 +209,8 @@ function SecurityPage() {
     const search = assignmentSearchTerm.toLowerCase();
     const matchesSearch = search === '' ||
       (device?.assetCode?.toLowerCase().includes(search)) ||
-      (`${person?.firstName || ''} ${person?.lastName || ''}`.toLowerCase().includes(search));
+      (`${person?.firstName || ''} ${person?.lastName || ''}`.toLowerCase().includes(search)) ||
+      codigoDePersona(person).toLowerCase().includes(search);
     return matchesView && matchesSearch;
   });
 
@@ -589,7 +592,7 @@ function SecurityPage() {
                     filteredAssignments.map((assignment: any) => (
                       <TableRow key={assignment.id}>
                          <TableCell className="font-medium">{devices.find(d => String(d.id) === String(assignment.assetId))?.assetCode || '-'}</TableCell>
-                         <TableCell>{`${people.find(p => String(p.id) === String(assignment.personId))?.firstName || ''} ${people.find(p => String(p.id) === String(assignment.personId))?.lastName || ''}`.trim() || '-'}</TableCell>
+                         <TableCell>{`${people.find(p => String(p.id) === String(assignment.personId))?.firstName || ''} ${people.find(p => String(p.id) === String(assignment.personId))?.lastName || ''}`.trim() || '-'}<div><CodigoPersona person={people.find(p => String(p.id) === String(assignment.personId))} /></div></TableCell>
                         <TableCell>{new Date(assignment.assignmentDate).toLocaleDateString('es-ES')}</TableCell>
                         {assignmentViewMode === 'active' && (
                           <TableCell>{assignment.expectedReturnDate ? new Date(assignment.expectedReturnDate).toLocaleDateString('es-ES') : '-'}</TableCell>

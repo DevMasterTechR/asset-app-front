@@ -19,6 +19,8 @@ import { Input } from "@/components/ui/input";
 import { RefreshCw, Loader2, Search, Users, Package, AlertCircle, Pencil, Download, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { CodigoPersona } from "@/components/CodigoPersona";
+import { codigoDePersona } from "@/lib/nombrePersona";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from '@/hooks/use-toast';
 import SearchableSelect from '@/components/ui/searchable-select';
@@ -283,9 +285,13 @@ const Index = () => {
           assignmentId: a.id,
           assetId: a.assetId,
           purchaseDate: fullAsset?.purchaseDate || fullAsset?.purchase_date || a.asset?.purchaseDate || a.asset?.purchase_date,
+          // Solo para el acta (si se marca la casilla); no se muestra en tablas ni en las apps.
+          purchasePrice: fullAsset?.purchasePrice ?? fullAsset?.purchase_price ?? a.asset?.purchasePrice,
           branchId: a.branchId || a.branch?.id || a.asset?.branchId,
           attributesJson: fullAsset?.attributesJson || a.asset?.attributesJson || {},
           deliveryNotes: a.deliveryNotes || '',
+          // Observaciones del propio dispositivo (campo "notes" de la ficha): pasan al acta.
+          assetNotes: String(fullAsset?.notes ?? a.asset?.notes ?? '').trim(),
           // actaStatus ahora viene de la asignación (AssignmentHistory), no del dispositivo
           actaStatus: a.actaStatus || 'no_generada',
           actaFirmadaAt: a.actaFirmadaAt || null,
@@ -474,6 +480,7 @@ const Index = () => {
         serialNumber: d.serialNumber || '-',
         purchaseDate: d.purchaseDate || d.purchase_date,
         attributesJson: d.attributesJson || d.attributes || {},
+        notes: d.assetNotes || '',
         participants: Array.from(participantsMap.values()),
       });
     });
@@ -759,7 +766,7 @@ const Index = () => {
     
     if (bothCompleted) return false; // Van al historial
     
-    return `${u.userName} ${u.email} ${u.department} ${u.branch}`
+    return `${u.userName} ${u.email} ${u.department} ${u.branch} ${codigoDePersona(getPersonForUser(u))}`
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
   });
@@ -946,6 +953,7 @@ const Index = () => {
                             >
                               {u.userName || 'Desconocido'}
                             </button>
+                            <CodigoPersona person={getPersonForUser(u)} className="rounded bg-slate-100 px-1.5 py-0.5" />
                             <button
                               type="button"
                               onClick={() => openOwnerEditor(u)}
@@ -1237,7 +1245,7 @@ const Index = () => {
               });
               
               const filteredCompletedUsers = completedUsers.filter((u) =>
-                `${u.userName} ${u.email} ${u.department} ${u.branch}`
+                `${u.userName} ${u.email} ${u.department} ${u.branch} ${codigoDePersona(getPersonForUser(u))}`
                   .toLowerCase()
                   .includes(searchTerm.toLowerCase())
               );
@@ -1275,7 +1283,7 @@ const Index = () => {
                         ) : (
                           displayedHistorial.map((u) => (
                             <tr key={u.userId} className="border-b last:border-b-0">
-                              <td className="px-4 py-3 font-medium">{u.userName || 'Desconocido'}</td>
+                              <td className="px-4 py-3 font-medium">{u.userName || 'Desconocido'} <CodigoPersona person={getPersonForUser(u)} className="ml-1 rounded bg-slate-100 px-1.5 py-0.5" /></td>
                               <td className="px-4 py-3 text-muted-foreground">{u.branch || '-'}</td>
                               <td className="px-4 py-3">
                                 <div className="flex flex-wrap gap-2">
@@ -1380,6 +1388,10 @@ const Index = () => {
                       <div className="rounded-md border p-3">
                         <p className="text-xs text-muted-foreground">Nombres completos</p>
                         <p className="font-semibold">{fullName}</p>
+                      </div>
+                      <div className="rounded-md border p-3">
+                        <p className="text-xs text-muted-foreground">Código de persona</p>
+                        <p className="font-mono font-bold">{codigoDePersona(person) || '-'}</p>
                       </div>
                       <div className="rounded-md border p-3">
                         <p className="text-xs text-muted-foreground">Cedula</p>

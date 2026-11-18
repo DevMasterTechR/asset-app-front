@@ -42,6 +42,8 @@ import LoanFormModal from "@/components/LoanFormModal";
 import ReturnLoanModal from "@/components/ReturnLoanModal";
 import Pagination, { DEFAULT_PAGE_SIZE } from "@/components/Pagination";
 
+import { CodigoPersona } from "@/components/CodigoPersona";
+import { codigoDePersona } from "@/lib/nombrePersona";
 const conditionVariantMap = {
   excellent: "success" as const,
   good: "default" as const,
@@ -64,7 +66,7 @@ export default function Loans() {
     Array<{ id: string; code: string; name: string; assetCode?: string }>
   >([]);
   const [people, setPeople] = useState<
-    Array<{ id: string; firstName: string; lastName: string }>
+    Array<{ id: string; firstName: string; lastName: string; codigo?: string }>
   >([]);
   const [branches, setBranches] = useState<Array<{ id: number; name: string }>>(
     []
@@ -115,6 +117,7 @@ export default function Loans() {
             id: String(p.id),
             firstName: p.firstName,
             lastName: p.lastName,
+            codigo: p.codigo,
           })),
           (p: any) => `${p.firstName || ""} ${p.lastName || ""}`.trim()
         )
@@ -170,7 +173,8 @@ export default function Loans() {
     return (
       assetCode.toLowerCase().includes(searchLower) ||
       assetName.includes(searchLower) ||
-      personName.includes(searchLower)
+      personName.includes(searchLower) ||
+      codigoDePersona(people.find((p) => p.id === String(loan.personId)) || loan.person).toLowerCase().includes(searchLower)
     );
   });
 
@@ -188,7 +192,8 @@ export default function Loans() {
     return (
       assetCode.toLowerCase().includes(searchLower) ||
       assetName.includes(searchLower) ||
-      personName.includes(searchLower)
+      personName.includes(searchLower) ||
+      codigoDePersona(people.find((p) => p.id === String(loan.personId)) || loan.person).toLowerCase().includes(searchLower)
     );
   });
 
@@ -408,6 +413,7 @@ export default function Loans() {
                       <TableCell>
                         {loan.person?.firstName || ""}{" "}
                         {loan.person?.lastName || ""}
+                        <div><CodigoPersona person={people.find((p) => p.id === String(loan.personId)) || loan.person} /></div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{loan.loanDays} días</Badge>
@@ -517,6 +523,7 @@ export default function Loans() {
                       <TableCell>
                         {loan.person?.firstName || ""}{" "}
                         {loan.person?.lastName || ""}
+                        <div><CodigoPersona person={people.find((p) => p.id === String(loan.personId)) || loan.person} /></div>
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">{loan.loanDays} días</Badge>
@@ -649,6 +656,9 @@ export default function Loans() {
                     <p className="font-semibold">
                       {detailsLoan.person?.firstName}{" "}
                       {detailsLoan.person?.lastName}
+                    </p>
+                    <p>
+                      <CodigoPersona person={people.find((p) => p.id === String(detailsLoan.personId)) || detailsLoan.person} />
                     </p>
                   </div>
                   <div>

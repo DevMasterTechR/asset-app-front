@@ -9,12 +9,14 @@ import {
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Download } from "lucide-react";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { assignmentsApi } from "@/api/assignments";
+import { lineasPrecioYDepreciacion, hayCelularConPrecio } from "@/lib/depreciacion";
 
 interface GenerateActaModalProps {
   open: boolean;
@@ -28,6 +30,8 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
   const { toast } = useToast();
   const [observations, setObservations] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
+  // Precio de compra y depreciación de los celulares: solo van en el PDF si se marca.
+  const [incluirPrecio, setIncluirPrecio] = useState(false);
 
   // Generar observaciones dinámicas desde las notas de cada asignación
   const generateObservationsFromDevices = () => {
@@ -43,11 +47,18 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
         return !isAutomatic;
       })
       .map((d: any) => d.deliveryNotes.trim());
-    
-    if (notesPerDevice.length === 0) return "";
-    
-    // Cada observación en una línea separada (sin código, sin espacio extra)
-    return notesPerDevice.join("\n");
+
+    // Observaciones de la ficha de cada dispositivo (campo "notes"): se heredan
+    // al acta con su código, para saber de qué equipo habla cada una.
+    const notesDeFicha = user.devices
+      .filter((d: any) => String(d.assetNotes || "").trim())
+      .map((d: any) => `${d.code || "SIN-CODIGO"}: ${String(d.assetNotes).trim().replace(/\s+/g, " ")}`);
+
+    const todas = [...notesPerDevice, ...notesDeFicha];
+    if (todas.length === 0) return "";
+
+    // Cada observación en una línea separada
+    return todas.join("\n");
   };
 
   useEffect(() => {
@@ -56,6 +67,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
       const autoObservations = generateObservationsFromDevices();
       // Si no hay observaciones, automáticamente poner "Ninguna"
       setObservations(autoObservations && autoObservations.trim() ? autoObservations : "Ninguna");
+      setIncluirPrecio(false);
       
       console.log("Usuario en GenerateActaModal:", user);
       if (user?.devices) {
@@ -320,6 +332,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
             `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
             `Protector Pantalla: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
             `Chip Telefónico: ${resolveField(d, ["hasChip", "chip"], true)}`,
+            ...(incluirPrecio ? lineasPrecioYDepreciacion(d) : []),
           ]
         : [];
 
@@ -1069,6 +1082,24 @@ g) Modificación física sin autorización.`;
               className="min-h-20"
             />
           </div>
+
+          {/* Precio de compra y depreciación (solo celulares, solo en el PDF) */}
+          {hayCelularConPrecio(user?.devices) && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <Checkbox
+                id="incluir-precio"
+                checked={incluirPrecio}
+                onCheckedChange={(checked) => setIncluirPrecio(!!checked)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="incluir-precio" className="cursor-pointer text-sm leading-snug">
+                Incluir precio de compra y valor depreciado de los celulares
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Depreciación del 20% por cada año completo desde la fecha de compra. Solo aparece en este PDF.
+                </span>
+              </Label>
+            </div>
+          )}
 
           {/* Generado por */}
           <div className="space-y-2">

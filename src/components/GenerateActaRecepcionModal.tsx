@@ -16,6 +16,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { assignmentsApi } from "@/api/assignments";
 import { Checkbox } from "@/components/ui/checkbox";
+import { lineasPrecioYDepreciacion } from "@/lib/depreciacion";
 
 interface GenerateActaRecepcionModalProps {
   open: boolean;
@@ -30,6 +31,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   const [observations, setObservations] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
+  // Precio de compra y depreciación de los celulares: solo van en el PDF si se marca.
+  const [incluirPrecio, setIncluirPrecio] = useState(false);
 
   const getDeviceKey = (d: any) => String(d.assignmentId || d.code || d.id);
 
@@ -72,6 +75,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   useEffect(() => {
     if (open) {
       setObservations("");
+      setIncluirPrecio(false);
       if (user?.devices) {
         setSelectedKeys(user.devices.map((d: any) => getDeviceKey(d)));
       } else {
@@ -382,6 +386,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
             `Protector Pantalla: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
             `Chip Telefónico: ${resolveField(d, ["hasChip", "chip"], true)}`,
+            ...(incluirPrecio ? lineasPrecioYDepreciacion(d) : []),
           ]
         : [];
 
@@ -962,6 +967,28 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
               className="min-h-20"
             />
           </div>
+
+          {/* Precio de compra y depreciación (solo celulares seleccionados, solo en el PDF) */}
+          {(user?.devices || []).some((d: any) =>
+            selectedKeys.includes(getDeviceKey(d)) &&
+            /celular|cellphone|móvil|movil|tablet/i.test(String(d.assetType || d.type || '')) &&
+            lineasPrecioYDepreciacion(d).length > 0
+          ) && (
+            <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
+              <Checkbox
+                id="incluir-precio"
+                checked={incluirPrecio}
+                onCheckedChange={(checked) => setIncluirPrecio(!!checked)}
+                className="mt-0.5"
+              />
+              <Label htmlFor="incluir-precio" className="cursor-pointer text-sm leading-snug">
+                Incluir precio de compra y valor depreciado de los celulares
+                <span className="block text-xs font-normal text-muted-foreground">
+                  Depreciación del 20% por cada año completo desde la fecha de compra. Solo aparece en este PDF.
+                </span>
+              </Label>
+            </div>
+          )}
 
           {/* Generado por */}
           <div className="space-y-2">

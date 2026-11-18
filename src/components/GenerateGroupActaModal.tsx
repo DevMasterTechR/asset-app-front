@@ -29,6 +29,7 @@ export interface GroupActaAsset {
   serialNumber?: string;
   purchaseDate?: string;
   attributesJson?: any;
+  notes?: string;
   participants: GroupActaParticipant[];
 }
 
@@ -447,8 +448,13 @@ const GenerateGroupActaModal = ({
     doc.setFontSize(8);
     doc.setFont("helvetica", "normal");
     currentY += 5;
-    doc.text("Ninguna", 15, currentY);
-    currentY += 7;
+    // Observaciones de la ficha de cada equipo compartido (una línea por equipo).
+    const lineasObs = sharedAssets
+      .filter((a) => (a.notes || "").trim())
+      .map((a) => `${a.code}: ${(a.notes || "").trim().replace(/\s+/g, " ")}`);
+    const splitObs = doc.splitTextToSize(lineasObs.length ? lineasObs.join("\n") : "Ninguna", 180);
+    doc.text(splitObs, 15, currentY);
+    currentY += splitObs.length * 4 + 3;
 
     const legalText1 = `El receptor de los equipos tecnológicos (en adelante, el/la/los/las colaboradores) es responsable de su uso adecuado y del mantenimiento en condiciones óptimas, conforme a las instrucciones y políticas establecidas por la empresa.`;
     const splitLegal1 = doc.splitTextToSize(legalText1, 180);
