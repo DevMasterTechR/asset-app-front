@@ -1,6 +1,7 @@
 // Depreciación de equipos para las actas de entrega/recepción.
-// Regla: 20% por cada año COMPLETO transcurrido desde la fecha de compra
-// (5 años => 100%, el valor no baja de $0). Es solo informativo para el acta
+// Regla: 20% anual, prorrateado por MES (20/12 = 1,6667% por mes) y contando solo
+// mes y año de la compra (el día no cuenta). A los 60 meses llega al 100% y el
+// valor no baja de $0. Es solo informativo para el acta
 // y vive solo en Gestor: las apps de celular/Windows no lo muestran.
 
 export const DEPRECIACION_ANUAL = 0.2;
@@ -8,7 +9,7 @@ export const DEPRECIACION_ANUAL = 0.2;
 export interface Depreciacion {
   precio: number;
   fechaCompra: Date;
-  aniosCompletos: number;
+  mesesTranscurridos: number;
   porcentaje: number; // 0..100
   valorActual: number;
 }
@@ -40,14 +41,15 @@ const MESES = [
 export const formatoMesAnio = (d: Date) => `${MESES[d.getMonth()]} ${d.getFullYear()}`;
 
 /**
- * Años completos entre dos fechas, contando por mes y año (el día no cuenta),
- * para que coincida con lo que se imprime en el acta: comprado en septiembre
- * 2025 cumple el año en septiembre 2026.
+ * Meses transcurridos entre dos fechas, contando solo mes y año (el día no
+ * cuenta), para que coincida con lo que se imprime en el acta: comprado en
+ * septiembre 2025, en noviembre 2026 han pasado 14 meses.
  */
-export const aniosCompletos = (desde: Date, hasta: Date) => {
-  const meses = (hasta.getFullYear() - desde.getFullYear()) * 12 + (hasta.getMonth() - desde.getMonth());
-  return Math.max(0, Math.floor(meses / 12));
-};
+export const mesesTranscurridos = (desde: Date, hasta: Date) =>
+  Math.max(0, (hasta.getFullYear() - desde.getFullYear()) * 12 + (hasta.getMonth() - desde.getMonth()));
+
+/** 23.33 -> "23,33"; 20 -> "20" (hasta 2 decimales, sin ceros de sobra). */
+const formatoPorcentaje = (n: number) => String(Math.round(n * 100) / 100).replace('.', ',');
 
 /**
  * Devuelve null si falta el precio o la fecha de compra: sin ambos no se
@@ -62,11 +64,11 @@ export const calcularDepreciacion = (
   const fecha = aFecha(fechaCompra);
   if (precio === null || fecha === null) return null;
 
-  const anios = aniosCompletos(fecha, hoy);
-  const porcentaje = Math.min(100, Math.round(anios * DEPRECIACION_ANUAL * 100));
+  const meses = mesesTranscurridos(fecha, hoy);
+  const porcentaje = Math.min(100, (meses * DEPRECIACION_ANUAL * 100) / 12);
   const valorActual = Math.max(0, Math.round(precio * (1 - porcentaje / 100) * 100) / 100);
 
-  return { precio, fechaCompra: fecha, aniosCompletos: anios, porcentaje, valorActual };
+  return { precio, fechaCompra: fecha, mesesTranscurridos: meses, porcentaje, valorActual };
 };
 
 /**
@@ -82,7 +84,7 @@ export const lineasPrecioYDepreciacion = (d: any, hoy: Date = new Date()): strin
     return [
       `Fecha de compra: ${formatoMesAnio(dep.fechaCompra)}`,
       `Precio de compra: ${formatoDinero(dep.precio)}`,
-      `Depreciación (20% anual): ${dep.porcentaje}% (${dep.aniosCompletos} ${dep.aniosCompletos === 1 ? 'año' : 'años'})`,
+      `Depreciación (20% anual): ${formatoPorcentaje(dep.porcentaje)}%`,
       `Valor actual: ${formatoDinero(dep.valorActual)}`,
     ];
   }
