@@ -11,7 +11,6 @@ export interface Depreciacion {
   aniosCompletos: number;
   porcentaje: number; // 0..100
   valorActual: number;
-  depreciadoTotalmenteEl: Date;
 }
 
 const aFecha = (v: unknown): Date | null => {
@@ -32,20 +31,22 @@ const aNumero = (v: unknown): number | null => {
 export const formatoDinero = (n: number) =>
   `$${n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export const formatoFecha = (d: Date) => {
-  const dd = String(d.getDate()).padStart(2, '0');
-  const mm = String(d.getMonth() + 1).padStart(2, '0');
-  return `${dd}/${mm}/${d.getFullYear()}`;
-};
+const MESES = [
+  'enero', 'febrero', 'marzo', 'abril', 'mayo', 'junio',
+  'julio', 'agosto', 'septiembre', 'octubre', 'noviembre', 'diciembre',
+];
 
-/** Años completos entre dos fechas (respeta mes y día de la compra). */
+/** "septiembre 2025": el acta muestra solo mes y año, nunca el día exacto. */
+export const formatoMesAnio = (d: Date) => `${MESES[d.getMonth()]} ${d.getFullYear()}`;
+
+/**
+ * Años completos entre dos fechas, contando por mes y año (el día no cuenta),
+ * para que coincida con lo que se imprime en el acta: comprado en septiembre
+ * 2025 cumple el año en septiembre 2026.
+ */
 export const aniosCompletos = (desde: Date, hasta: Date) => {
-  let anios = hasta.getFullYear() - desde.getFullYear();
-  const aunNoCumple =
-    hasta.getMonth() < desde.getMonth() ||
-    (hasta.getMonth() === desde.getMonth() && hasta.getDate() < desde.getDate());
-  if (aunNoCumple) anios -= 1;
-  return Math.max(0, anios);
+  const meses = (hasta.getFullYear() - desde.getFullYear()) * 12 + (hasta.getMonth() - desde.getMonth());
+  return Math.max(0, Math.floor(meses / 12));
 };
 
 /**
@@ -65,10 +66,7 @@ export const calcularDepreciacion = (
   const porcentaje = Math.min(100, Math.round(anios * DEPRECIACION_ANUAL * 100));
   const valorActual = Math.max(0, Math.round(precio * (1 - porcentaje / 100) * 100) / 100);
 
-  const fin = new Date(fecha);
-  fin.setFullYear(fin.getFullYear() + Math.round(1 / DEPRECIACION_ANUAL));
-
-  return { precio, fechaCompra: fecha, aniosCompletos: anios, porcentaje, valorActual, depreciadoTotalmenteEl: fin };
+  return { precio, fechaCompra: fecha, aniosCompletos: anios, porcentaje, valorActual };
 };
 
 /**
@@ -82,7 +80,7 @@ export const lineasPrecioYDepreciacion = (d: any, hoy: Date = new Date()): strin
   const dep = calcularDepreciacion(precioCrudo, fechaCruda, hoy);
   if (dep) {
     return [
-      `Fecha de compra: ${formatoFecha(dep.fechaCompra)}`,
+      `Fecha de compra: ${formatoMesAnio(dep.fechaCompra)}`,
       `Precio de compra: ${formatoDinero(dep.precio)}`,
       `Depreciación (20% anual): ${dep.porcentaje}% (${dep.aniosCompletos} ${dep.aniosCompletos === 1 ? 'año' : 'años'})`,
       `Valor actual: ${formatoDinero(dep.valorActual)}`,
