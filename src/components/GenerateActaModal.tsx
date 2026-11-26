@@ -17,6 +17,7 @@ import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { assignmentsApi } from "@/api/assignments";
 import { lineasPrecioYDepreciacion, hayCelularConPrecio } from "@/lib/depreciacion";
+import { notaReal } from "@/lib/notasAutomaticas";
 
 interface GenerateActaModalProps {
   open: boolean;
@@ -37,16 +38,11 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
   const generateObservationsFromDevices = () => {
     if (!user?.devices || user.devices.length === 0) return "";
     
-    // Filtrar solo las observaciones reales (no las automáticas)
+    // Filtrar solo las observaciones reales (no las automáticas, incluida
+    // "Asignación creada automáticamente por la sincronización con HWIDApp").
     const notesPerDevice = user.devices
-      .filter((d: any) => {
-        const notes = d.deliveryNotes?.trim();
-        if (!notes) return false;
-        // Excluir notas automáticas
-        const isAutomatic = /asignación automática/i.test(notes);
-        return !isAutomatic;
-      })
-      .map((d: any) => d.deliveryNotes.trim());
+      .map((d: any) => notaReal(d.deliveryNotes))
+      .filter(Boolean);
 
     // Observaciones de la ficha de cada dispositivo (campo "notes"): se heredan
     // al acta con su código, para saber de qué equipo habla cada una.
@@ -1051,8 +1047,8 @@ g) Modificación física sin autorización.`;
                         <td className="px-3 py-2">{d.brand || "-"}</td>
                         <td className="px-3 py-2">{d.model || "-"}</td>
                         <td className="px-3 py-2 text-xs">{d.serialNumber || "-"}</td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={d.deliveryNotes || "-"}>
-                          {d.deliveryNotes || "-"}
+                        <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={notaReal(d.deliveryNotes) || "-"}>
+                          {notaReal(d.deliveryNotes) || "-"}
                         </td>
                       </tr>
                     ))

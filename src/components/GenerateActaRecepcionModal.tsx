@@ -17,6 +17,7 @@ import { useToast } from "@/hooks/use-toast";
 import { assignmentsApi } from "@/api/assignments";
 import { Checkbox } from "@/components/ui/checkbox";
 import { lineasPrecioYDepreciacion } from "@/lib/depreciacion";
+import { notaReal } from "@/lib/notasAutomaticas";
 
 interface GenerateActaRecepcionModalProps {
   open: boolean;
@@ -930,8 +931,8 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
                           <td className="px-3 py-2">{d.brand || "-"}</td>
                           <td className="px-3 py-2">{d.model || "-"}</td>
                           <td className="px-3 py-2 text-xs">{d.serialNumber || "-"}</td>
-                          <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={d.deliveryNotes || "-"}>
-                            {d.deliveryNotes || "-"}
+                          <td className="px-3 py-2 text-xs text-muted-foreground max-w-[150px] truncate" title={notaReal(d.deliveryNotes) || "-"}>
+                            {notaReal(d.deliveryNotes) || "-"}
                           </td>
                         </tr>
                       );
