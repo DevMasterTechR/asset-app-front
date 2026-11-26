@@ -347,28 +347,28 @@ export default function DeviceFormModal({
       const phoneRaw = String(getAttrValue('phoneNumber') || '').trim();
       const phoneNormalized = phoneRaw.replace(/\s+/g, '').replace(/[^+0-9]/g, '');
       if ((formData.assetType === 'celular' || formData.assetType === 'tablet') && phoneNormalized) {
-        try {
-          const check = await devicesApi.checkPhone(phoneNormalized);
-          if (check?.exists && !(mode === 'edit' && String(check.deviceId) === String(device?.id))) {
-            setServerError('El número telefónico ya está registrado en otro dispositivo.');
-            setLoading(false);
-            return;
-          }
-        } catch (err) {
-          const res = await devicesApi.getAll(undefined, 1, 1000);
-          const allDevices = extractArray<any>(res) || [];
-          const conflict = allDevices.find((d: any) => {
-            const pn = d.attributesJson?.phoneNumber || d.attributesJson?.phone || '';
-            const pnn = String(pn).trim().replace(/\s+/g, '').replace(/[^+0-9]/g, '');
-            if (!pnn) return false;
-            if (mode === 'edit' && String(d.id) === String(device?.id)) return false;
-            return pnn === phoneNormalized;
-          });
-          if (conflict) {
-            setServerError('El número telefónico ya está registrado en otro dispositivo.');
-            setLoading(false);
-            return;
-          }
+        // Se busca el equipo que ya tiene el número para decir CUÁL es
+        // (código, tipo y a quién está asignado); antes solo decía "otro
+        // dispositivo" y había que adivinar.
+        const res = await devicesApi.getAll(undefined, 1, 10000);
+        const allDevices = extractArray<any>(res) || [];
+        const conflict = allDevices.find((d: any) => {
+          const pn = d.attributesJson?.phoneNumber || d.attributesJson?.phone || '';
+          const pnn = String(pn).trim().replace(/\s+/g, '').replace(/[^+0-9]/g, '');
+          if (!pnn) return false;
+          if (mode === 'edit' && String(d.id) === String(device?.id)) return false;
+          return pnn === phoneNormalized;
+        });
+        if (conflict) {
+          const persona = conflict.assignedPerson
+            ? `${conflict.assignedPerson.firstName || ''} ${conflict.assignedPerson.lastName || ''}`.trim()
+            : '';
+          const equipo = [conflict.assetCode, conflict.brand, conflict.model].filter(Boolean).join(' ');
+          const serie = conflict.serialNumber ? ` (serie ${conflict.serialNumber})` : '';
+          const dueno = persona ? `, asignado a ${persona}` : ', sin persona asignada';
+          setServerError(`El número ${phoneRaw} ya está en el dispositivo ${equipo || `#${conflict.id}`}${serie}${dueno}.`);
+          setLoading(false);
+          return;
         }
       }
 
