@@ -16,7 +16,7 @@ import autoTable from "jspdf-autotable";
 import { useAuth } from "@/context/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { assignmentsApi } from "@/api/assignments";
-import { lineasPrecioYDepreciacion, hayCelularConPrecio } from "@/lib/depreciacion";
+import { lineasPrecioYDepreciacion, hayEquipoConPrecio } from "@/lib/depreciacion";
 import { notaReal } from "@/lib/notasAutomaticas";
 
 interface GenerateActaModalProps {
@@ -31,7 +31,7 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
   const { toast } = useToast();
   const [observations, setObservations] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
-  // Precio de compra y depreciación de los celulares: solo van en el PDF si se marca.
+  // Precio de compra y depreciación de los equipos: solo van en el PDF si se marca.
   const [incluirPrecio, setIncluirPrecio] = useState(false);
 
   // Generar observaciones dinámicas desde las notas de cada asignación
@@ -328,7 +328,6 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
             `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
             `Protector Pantalla: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
             `Chip Telefónico: ${resolveField(d, ["hasChip", "chip"], true)}`,
-            ...(incluirPrecio ? lineasPrecioYDepreciacion(d) : []),
           ]
         : [];
 
@@ -535,6 +534,9 @@ const GenerateActaModal = ({ open, onOpenChange, user, onActaGenerated }: Genera
         ];
       }
 
+      // Precio y depreciación al final del recuadro de CUALQUIER equipo con precio
+      // (mouse, mousepad, cargador comprado aparte...). Sin precio no sale nada.
+      if (incluirPrecio) displayLines = [...displayLines, ...lineasPrecioYDepreciacion(d)];
       return { displayLines, typeLabel };
     };
 
@@ -1079,8 +1081,8 @@ g) Modificación física sin autorización.`;
             />
           </div>
 
-          {/* Precio de compra y depreciación (solo celulares, solo en el PDF) */}
-          {hayCelularConPrecio(user?.devices) && (
+          {/* Precio de compra y depreciación (equipos con precio, solo en el PDF) */}
+          {hayEquipoConPrecio(user?.devices) && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
               <Checkbox
                 id="incluir-precio"
@@ -1089,9 +1091,9 @@ g) Modificación física sin autorización.`;
                 className="mt-0.5"
               />
               <Label htmlFor="incluir-precio" className="cursor-pointer text-sm leading-snug">
-                Incluir precio de compra y valor depreciado de los celulares
+                Incluir precio de compra y valor depreciado de los equipos
                 <span className="block text-xs font-normal text-muted-foreground">
-                  Depreciación del 20% anual (por mes) desde la fecha de compra; el valor nunca baja de $50. Solo aparece en este PDF.
+                  Depreciación del 20% anual (por mes) desde la fecha de compra; el valor nunca baja de $50 (o de su precio, si costó menos). Solo aparece en este PDF.
                 </span>
               </Label>
             </div>

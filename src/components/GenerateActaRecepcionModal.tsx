@@ -32,7 +32,7 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
   const [observations, setObservations] = useState("");
   const [isUpdating, setIsUpdating] = useState(false);
   const [selectedKeys, setSelectedKeys] = useState<string[]>([]);
-  // Precio de compra y depreciación de los celulares: solo van en el PDF si se marca.
+  // Precio de compra y depreciación de los equipos: solo van en el PDF si se marca.
   const [incluirPrecio, setIncluirPrecio] = useState(false);
 
   const getDeviceKey = (d: any) => String(d.assignmentId || d.code || d.id);
@@ -387,7 +387,6 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             `Funda/Estuche: ${resolveField(d, ["hasCase", "case", "funda", "estuche"], true)}`,
             `Protector Pantalla: ${resolveField(d, ["hasMicas", "hasMica", "hasScreenProtector", "screenProtector", "mica"], true)}`,
             `Chip Telefónico: ${resolveField(d, ["hasChip", "chip"], true)}`,
-            ...(incluirPrecio ? lineasPrecioYDepreciacion(d) : []),
           ]
         : [];
 
@@ -583,6 +582,9 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
         ];
       }
 
+      // Precio y depreciación al final del recuadro de CUALQUIER equipo con precio
+      // (mouse, mousepad, cargador comprado aparte...). Sin precio no sale nada.
+      if (incluirPrecio) displayLines = [...displayLines, ...lineasPrecioYDepreciacion(d)];
       return { displayLines, typeLabel };
     };
 
@@ -969,10 +971,9 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
             />
           </div>
 
-          {/* Precio de compra y depreciación (solo celulares seleccionados, solo en el PDF) */}
+          {/* Precio de compra y depreciación (equipos seleccionados con precio, solo en el PDF) */}
           {(user?.devices || []).some((d: any) =>
             selectedKeys.includes(getDeviceKey(d)) &&
-            /celular|cellphone|móvil|movil|tablet/i.test(String(d.assetType || d.type || '')) &&
             lineasPrecioYDepreciacion(d).length > 0
           ) && (
             <div className="flex items-start gap-2 rounded-md border border-amber-200 bg-amber-50 p-3">
@@ -983,9 +984,9 @@ const GenerateActaRecepcionModal = ({ open, onOpenChange, user, onActaGenerated 
                 className="mt-0.5"
               />
               <Label htmlFor="incluir-precio" className="cursor-pointer text-sm leading-snug">
-                Incluir precio de compra y valor depreciado de los celulares
+                Incluir precio de compra y valor depreciado de los equipos
                 <span className="block text-xs font-normal text-muted-foreground">
-                  Depreciación del 20% anual (por mes) desde la fecha de compra; el valor nunca baja de $50. Solo aparece en este PDF.
+                  Depreciación del 20% anual (por mes) desde la fecha de compra; el valor nunca baja de $50 (o de su precio, si costó menos). Solo aparece en este PDF.
                 </span>
               </Label>
             </div>

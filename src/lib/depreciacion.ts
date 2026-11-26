@@ -106,9 +106,6 @@ export const lineasPrecioYDepreciacion = (d: any, hoy: Date = new Date()): strin
   return [];
 };
 
-/** ¿Hay al menos un celular/tablet con precio de compra? (para mostrar la casilla) */
-export const hayCelularConPrecio = (devices: any[] | undefined | null) =>
-  (devices || []).some((d) => {
-    const tipo = String(d?.assetType || d?.type || '');
-    return /celular|cellphone|móvil|movil|tablet/i.test(tipo) && lineasPrecioYDepreciacion(d).length > 0;
-  });
+/** ¿Hay al menos un equipo (de cualquier tipo) con precio de compra? (para mostrar la casilla) */
+export const hayEquipoConPrecio = (devices: any[] | undefined | null) =>
+  (devices || []).some((d) => lineasPrecioYDepreciacion(d).length > 0);

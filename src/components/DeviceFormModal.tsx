@@ -31,6 +31,7 @@ import { extractArray } from '@/lib/extractData';
 import { assignmentsApi } from '@/api/assignments';
 import { sortBranchesByName } from '@/lib/sort';
 import { generateUniqueCodes } from '@/lib/generateUniqueCode';
+import { calcularDepreciacion, formatoDinero } from '@/lib/depreciacion';
 import { Loader2 } from 'lucide-react';
 
 declare global {
@@ -1281,6 +1282,26 @@ export default function DeviceFormModal({
                   onChange={e => handleChange('purchasePrice', e.target.value === '' ? undefined : Number(e.target.value))}
                   placeholder="0.00"
                 />
+                {(() => {
+                  // Valor actual con la misma regla del acta (20% anual por mes, mínimo $50).
+                  const dep = calcularDepreciacion(formData.purchasePrice, formData.purchaseDate);
+                  if (!dep) {
+                    return (
+                      <p className="text-xs text-muted-foreground">
+                        {formData.purchasePrice != null && !formData.purchaseDate
+                          ? 'Pon la fecha de compra para calcular el valor actual.'
+                          : 'Si vino incluido con otro equipo (p. ej. el cargador del celular), déjalo vacío.'}
+                      </p>
+                    );
+                  }
+                  return (
+                    <p className="text-xs text-muted-foreground">
+                      Valor actual: <span className="font-semibold text-foreground">{formatoDinero(dep.valorActual)}</span>
+                      {' '}· depreciación {Math.round(dep.porcentaje * 100) / 100}%
+                      {dep.enValorMinimo ? ' (valor mínimo)' : ''}
+                    </p>
+                  );
+                })()}
               </div>
               <div className="space-y-2">
                 <Label>Fecha de entrega</Label>
