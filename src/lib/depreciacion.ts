@@ -1,10 +1,13 @@
 // Depreciación de equipos para las actas de entrega/recepción.
 // Regla: 20% anual, prorrateado por MES (20/12 = 1,6667% por mes) y contando solo
-// mes y año de la compra (el día no cuenta). A los 60 meses llega al 100% y el
-// valor no baja de $0. Es solo informativo para el acta
-// y vive solo en Gestor: las apps de celular/Windows no lo muestran.
+// mes y año de la compra (el día no cuenta). A los 60 meses (5 años) llega al
+// 100%, pero el valor nunca baja de VALOR_MINIMO ($50): así nadie entiende que
+// un equipo viejo "es gratis" y no lo cuida. Si el equipo costó menos de $50,
+// el mínimo es su propio precio. Es solo informativo para el acta y vive solo
+// en Gestor: las apps de celular/Windows no lo muestran.
 
 export const DEPRECIACION_ANUAL = 0.2;
+export const VALOR_MINIMO = 50;
 
 export interface Depreciacion {
   precio: number;
@@ -12,6 +15,8 @@ export interface Depreciacion {
   mesesTranscurridos: number;
   porcentaje: number; // 0..100
   valorActual: number;
+  /** true cuando el valor quedó en el mínimo fijo y no en el cálculo del 20% anual */
+  enValorMinimo: boolean;
 }
 
 const aFecha = (v: unknown): Date | null => {
@@ -66,9 +71,12 @@ export const calcularDepreciacion = (
 
   const meses = mesesTranscurridos(fecha, hoy);
   const porcentaje = Math.min(100, (meses * DEPRECIACION_ANUAL * 100) / 12);
-  const valorActual = Math.max(0, Math.round(precio * (1 - porcentaje / 100) * 100) / 100);
+  const calculado = Math.max(0, Math.round(precio * (1 - porcentaje / 100) * 100) / 100);
+  const minimo = Math.min(VALOR_MINIMO, precio);
+  const enValorMinimo = calculado < minimo;
+  const valorActual = enValorMinimo ? minimo : calculado;
 
-  return { precio, fechaCompra: fecha, mesesTranscurridos: meses, porcentaje, valorActual };
+  return { precio, fechaCompra: fecha, mesesTranscurridos: meses, porcentaje, valorActual, enValorMinimo };
 };
 
 /**
@@ -85,7 +93,9 @@ export const lineasPrecioYDepreciacion = (d: any, hoy: Date = new Date()): strin
       `Fecha de compra: ${formatoMesAnio(dep.fechaCompra)}`,
       `Precio de compra: ${formatoDinero(dep.precio)}`,
       `Depreciación (20% anual): ${formatoPorcentaje(dep.porcentaje)}%`,
-      `Valor actual: ${formatoDinero(dep.valorActual)}`,
+      dep.enValorMinimo
+        ? `Valor actual: ${formatoDinero(dep.valorActual)} (valor mínimo)`
+        : `Valor actual: ${formatoDinero(dep.valorActual)}`,
     ];
   }
 

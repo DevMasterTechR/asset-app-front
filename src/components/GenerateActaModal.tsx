@@ -1091,7 +1091,7 @@ g) Modificación física sin autorización.`;
               <Label htmlFor="incluir-precio" className="cursor-pointer text-sm leading-snug">
                 Incluir precio de compra y valor depreciado de los celulares
                 <span className="block text-xs font-normal text-muted-foreground">
-                  Depreciación del 20% por cada año completo desde la fecha de compra. Solo aparece en este PDF.
+                  Depreciación del 20% anual (por mes) desde la fecha de compra; el valor nunca baja de $50. Solo aparece en este PDF.
                 </span>
               </Label>
             </div>
