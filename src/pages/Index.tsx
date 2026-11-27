@@ -411,14 +411,33 @@ const Index = () => {
     return candidates.map((value) => String(value || '').trim()).find(Boolean) || '';
   };
 
+  // Cada línea del celular con su operadora. Con dos chips el formulario guarda
+  // "0991111111 / 0992222222" y "CLARO / MOVISTAR" (o "—" si falta una), en el
+  // mismo orden: se emparejan por posición.
+  const getDevicePhoneLines = (device: any): { numero: string; operadora: string }[] => {
+    const attrs = device?.attributesJson || device?.attributes || {};
+    const partir = (v: unknown) => String(v ?? '').split('/').map((x) => x.trim());
+    const numeros = partir(getDevicePhone(device)).filter(Boolean);
+    const operadoras = partir(attrs.operator || attrs.operadora || attrs.carrier);
+    return numeros.map((numero, i) => {
+      // Si hay un solo nombre de operadora para varios números, vale para todos.
+      const op = operadoras.length === 1 ? operadoras[0] : operadoras[i];
+      return { numero, operadora: op && op !== '—' ? op.toUpperCase() : '' };
+    });
+  };
+
   const getMobilePhonesForUser = (u: any) => {
     const mobileDevices = (u?.devices || []).filter((device: any) => {
       const type = `${device?.assetType || device?.type || ''}`.toLowerCase();
       return /celular|cellphone|movil|móvil|tablet/.test(type);
     });
 
-    const phones = mobileDevices.map(getDevicePhone).filter(Boolean);
-    return Array.from(new Set(phones));
+    const vistos = new Set<string>();
+    return mobileDevices.flatMap(getDevicePhoneLines).filter((l: { numero: string }) => {
+      if (vistos.has(l.numero)) return false;
+      vistos.add(l.numero);
+      return true;
+    });
   };
 
   const openPersonDetails = (u: any) => {
@@ -1399,7 +1418,18 @@ const Index = () => {
                       </div>
                       <div className="rounded-md border p-3">
                         <p className="text-xs text-muted-foreground">Telefono celular</p>
-                        <p className="font-semibold">{phones.length > 0 ? phones.join(' / ') : 'No tiene telefono celular'}</p>
+                        {phones.length > 0 ? (
+                          phones.map((l: { numero: string; operadora: string }) => (
+                            <p key={l.numero} className="font-semibold">
+                              {l.numero}
+                              <span className="ml-2 text-xs font-medium text-muted-foreground">
+                                {l.operadora || 'Sin operadora'}
+                              </span>
+                            </p>
+                          ))
+                        ) : (
+                          <p className="font-semibold">No tiene telefono celular</p>
+                        )}
                       </div>
                       <div className="rounded-md border p-3">
                         <p className="text-xs text-muted-foreground">Cantidad de equipos</p>
