@@ -1283,8 +1283,9 @@ export default function DeviceFormModal({
                   placeholder="0.00"
                 />
                 {(() => {
-                  // Valor actual con la misma regla del acta (20% anual por mes, mínimo $50).
-                  const dep = calcularDepreciacion(formData.purchasePrice, formData.purchaseDate);
+                  // Valor actual con la misma regla del acta (20% anual por mes; mínimo
+                  // $50 solo en laptops y celulares).
+                  const dep = calcularDepreciacion(formData.purchasePrice, formData.purchaseDate, formData.assetType);
                   if (!dep) {
                     return (
                       <p className="text-xs text-muted-foreground">

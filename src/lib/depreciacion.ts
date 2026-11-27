@@ -1,13 +1,24 @@
 // Depreciación de equipos para las actas de entrega/recepción.
 // Regla: 20% anual, prorrateado por MES (20/12 = 1,6667% por mes) y contando solo
 // mes y año de la compra (el día no cuenta). A los 60 meses (5 años) llega al
-// 100%, pero el valor nunca baja de VALOR_MINIMO ($50): así nadie entiende que
-// un equipo viejo "es gratis" y no lo cuida. Si el equipo costó menos de $50,
-// el mínimo es su propio precio. Es solo informativo para el acta y vive solo
-// en Gestor: las apps de celular/Windows no lo muestran.
+// 100%.
+// - Laptops y celulares (y tablets): el valor nunca baja de VALOR_MINIMO ($50),
+//   para que nadie entienda que un equipo viejo "es gratis" y no lo cuide. Si
+//   costó menos de $50, el mínimo es su propio precio.
+// - Todo lo demás (mouse, mousepad, cargadores, soportes...): depreciación
+//   normal, sin mínimo, hasta $0.
+// Es solo informativo para el acta y vive solo en Gestor: las apps de
+// celular/Windows no lo muestran.
 
 export const DEPRECIACION_ANUAL = 0.2;
 export const VALOR_MINIMO = 50;
+
+/**
+ * ¿Este tipo de equipo tiene el valor mínimo de $50? (laptops, celulares, tablets)
+ * Tipo EXACTO: "cargador-celular" o "cargador-laptop" son accesorios y no lo llevan.
+ */
+export const tieneValorMinimo = (tipo: unknown) =>
+  /^(laptop|notebook|ultrabook|celular|cellphone|m[oó]vil|tablet)$/i.test(String(tipo || '').trim());
 
 export interface Depreciacion {
   precio: number;
@@ -63,6 +74,7 @@ const formatoPorcentaje = (n: number) => String(Math.round(n * 100) / 100).repla
 export const calcularDepreciacion = (
   precioCompra: unknown,
   fechaCompra: unknown,
+  tipoEquipo: unknown,
   hoy: Date = new Date(),
 ): Depreciacion | null => {
   const precio = aNumero(precioCompra);
@@ -72,7 +84,7 @@ export const calcularDepreciacion = (
   const meses = mesesTranscurridos(fecha, hoy);
   const porcentaje = Math.min(100, (meses * DEPRECIACION_ANUAL * 100) / 12);
   const calculado = Math.max(0, Math.round(precio * (1 - porcentaje / 100) * 100) / 100);
-  const minimo = Math.min(VALOR_MINIMO, precio);
+  const minimo = tieneValorMinimo(tipoEquipo) ? Math.min(VALOR_MINIMO, precio) : 0;
   const enValorMinimo = calculado < minimo;
   const valorActual = enValorMinimo ? minimo : calculado;
 
@@ -87,7 +99,7 @@ export const lineasPrecioYDepreciacion = (d: any, hoy: Date = new Date()): strin
   const precioCrudo = d?.purchasePrice ?? d?.attributesJson?.purchasePrice;
   const fechaCruda = d?.purchaseDate ?? d?.attributesJson?.purchaseDate;
 
-  const dep = calcularDepreciacion(precioCrudo, fechaCruda, hoy);
+  const dep = calcularDepreciacion(precioCrudo, fechaCruda, d?.assetType || d?.type, hoy);
   if (dep) {
     return [
       `Fecha de compra: ${formatoMesAnio(dep.fechaCompra)}`,
